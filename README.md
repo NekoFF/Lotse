@@ -22,6 +22,8 @@ Reihenfolge der Verarbeitung: **Sicherheitsfilter → Zuordnung → Praxisliste*
 - Kein eigener Server, keine laufenden Kosten. Die App ist eine **Progressive Web App** und läuft komplett im Browser.
 - Installierbar auf Android und iPhone über „Zum Home-Bildschirm“.
 - Jeder Push auf `main` startet die Tests, baut die App und veröffentlicht sie auf GitHub Pages (`.github/workflows/deploy.yml`).
+- Projektseite mit Umfrage: https://nekoff.github.io/Lotse/ · App: https://nekoff.github.io/Lotse/app/
+- `site/` enthält die Projektseite. Bewertungen landen in Supabase; Besucher dürfen nur einfügen.
 
 ## Lokal starten
 

@@ -3,9 +3,9 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
-// GitHub Pages liefert das Projekt unter https://<nutzer>.github.io/lotse/ aus.
+// GitHub Pages: Projektseite unter https://nekoff.github.io/Lotse/, die App unter /Lotse/app/.
 export default defineConfig({
-  base: "/lotse/",
+  base: "/Lotse/app/",
   plugins: [
     react(),
     VitePWA({
@@ -16,8 +16,8 @@ export default defineConfig({
         short_name: "Lotse",
         description: "Vom Anliegen bis zur Tür.",
         lang: "de",
-        start_url: "/lotse/",
-        scope: "/lotse/",
+        start_url: "/Lotse/app/",
+        scope: "/Lotse/app/",
         display: "standalone",
         orientation: "portrait",
         background_color: "#f2f2f7",

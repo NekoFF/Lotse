@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Lotse – vom Anliegen bis zur Tür. Projektarbeit, Werner-von-Siemens-Schule.">
+<link rel="icon" type="image/png" href="app/favicon.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Lotse</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: Scrollytelling. Links die Erzählung in Schritten, rechts eine feststehende App-Bühne,
+   die sich mit dem Scrollen verändert: Chat → Zuordnung → Liste → Karte → Störung → Ankunft → Notfall. */
+:root{
+  --bg:#f4f5f7; --surface:#ffffff; --surface-2:#f0f2f5;
+  --ink:#0d1015; --muted:#5b6270; --faint:#8a909b; --line:#e1e4e9;
+  --accent:#2447e6; --accent-soft:#e7ecfd;
+  --crit:#d4392c; --crit-soft:#fdebe9; --good:#1b8556;
+  --map-bg:#eceff3; --map-minor:#dde2e8; --map-major:#c8d0da; --river:#cfdcf0;
+  --car:#c97a12;
+  --ff:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;
+  --ff-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0d11; --surface:#141820; --surface-2:#1a1f29;
+  --ink:#eceef2; --muted:#9aa1ad; --faint:#6c7380; --line:#242a35;
+  --accent:#7d95ff; --accent-soft:#1c2440;
+  --crit:#ff6d60; --crit-soft:#2e1714; --good:#4cc48a;
+  --map-bg:#10141b; --map-minor:#1c222c; --map-major:#28303c; --river:#17243a;
+  --car:#f0a646;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0d11; --surface:#141820; --surface-2:#1a1f29;
+  --ink:#eceef2; --muted:#9aa1ad; --faint:#6c7380; --line:#242a35;
+  --accent:#7d95ff; --accent-soft:#1c2440;
+  --crit:#ff6d60; --crit-soft:#2e1714; --good:#4cc48a;
+  --map-bg:#10141b; --map-minor:#1c222c; --map-major:#28303c; --river:#17243a;
+  --car:#f0a646;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--ff);font-size:17px;line-height:1.55;margin:0;-webkit-font-smoothing:antialiased}
+.in{max-width:1200px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.025em;text-wrap:balance}
+p{margin:0}
+.mono{font-family:var(--ff-mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* ---------- Kopf ---------- */
+.top{display:flex;justify-content:space-between;align-items:center;padding-block:22px}
+.word{font-weight:800;font-size:20px;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
+.word i{width:10px;height:10px;border-radius:50%;background:var(--accent);display:block}
+.top span{font-size:14px;color:var(--muted)}
+.hero{padding-block:clamp(48px,9vw,120px) clamp(48px,8vw,100px);display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(36px,5vw,72px);align-items:center}
+@media(max-width:860px){.hero{grid-template-columns:1fr}}
+.glance{position:relative;height:440px;width:100%;max-width:460px;justify-self:end}
+@media(max-width:860px){.glance{justify-self:stretch;height:auto;max-width:none;display:grid;gap:12px}.glance svg{display:none}.gl{position:relative;left:auto;right:auto;top:auto;bottom:auto;width:auto}.gl1{margin-right:14%}.gl2{margin-left:14%}.gl3{margin-right:6%}}
+.glance svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.gl{position:absolute;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:0 30px 60px -40px rgba(12,20,40,.5),0 1px 3px rgba(12,20,40,.05)}
+.gl small{display:block;font-size:12px;color:var(--faint)}
+.gl1{left:0;top:0;width:min(80%,300px);padding:14px 16px}
+.hero .gl1 p{margin-top:8px;max-width:none;background:var(--accent);color:#fff;border-radius:16px;border-bottom-right-radius:5px;padding:10px 13px;font-size:15px;line-height:1.35}
+.gl2{right:0;top:148px;width:min(70%,270px);padding:16px 18px}
+.gl2 b{display:block;font-size:28px;font-weight:800;letter-spacing:-.03em;margin-top:2px;line-height:1.1}
+.gl2 span{display:block;font-size:13.5px;color:var(--muted);margin-top:6px}
+.gl3{left:6%;bottom:0;width:min(84%,340px);padding:18px 20px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.gl3 .big{font-family:var(--ff-mono);font-size:56px;font-weight:600;letter-spacing:-.03em;line-height:.9;margin-top:6px}
+.gl3 .r{text-align:right;font-size:13px;color:var(--muted);line-height:1.45}
+.gl3 .r b{color:var(--ink);font-weight:600}
+@media(prefers-reduced-motion:no-preference){
+  .gl{animation:glin .8s cubic-bezier(.2,.8,.2,1) both}
+  .gl2{animation-delay:.18s}.gl3{animation-delay:.36s}
+  @keyframes glin{from{opacity:.001;transform:translateY(16px)}to{opacity:1;transform:none}}
+}
+.hero h1{font-size:clamp(46px,8.2vw,112px);line-height:.98;max-width:12ch}
+.hero p{margin-top:28px;font-size:clamp(18px,2vw,22px);color:var(--muted);max-width:40ch;line-height:1.45}
+.cue{margin-top:56px;display:flex;align-items:center;gap:14px;font-size:14px;color:var(--faint)}
+.cue i{display:block;width:1px;height:44px;background:linear-gradient(var(--line),var(--accent))}
+
+/* ---------- Scrollytelling ---------- */
+.story{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(32px,6vw,96px);position:relative}
+.steps{padding-bottom:30vh}
+.step{min-height:92vh;display:flex;align-items:center}
+.facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:22px}
+.facts span{font-family:var(--ff-mono);font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 10px;background:var(--surface)}
+.step > div{max-width:440px}
+.step .no{font-family:var(--ff-mono);font-size:13px;color:var(--faint);letter-spacing:.04em}
+.step h2{font-size:clamp(30px,3.6vw,46px);line-height:1.05;margin-top:14px}
+.step p{margin-top:16px;color:var(--muted);font-size:18px;line-height:1.55}
+.step p b{color:var(--ink);font-weight:600}
+.stagecol{position:relative}
+.stage{position:sticky;top:max(24px,calc(50vh - 340px));height:min(680px,calc(100vh - 48px));display:flex;align-items:center;justify-content:center}
+.screen{position:relative;width:min(100%,420px);height:100%;border-radius:34px;background:var(--surface);border:1px solid var(--line);box-shadow:0 40px 90px -50px rgba(12,20,40,.45),0 2px 6px rgba(12,20,40,.05);overflow:hidden}
+.bar{position:absolute;inset:0 0 auto 0;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;color:var(--muted);z-index:6;background:linear-gradient(var(--surface) 60%,transparent)}
+.bar b{color:var(--ink);font-weight:700;display:flex;align-items:center;gap:7px}
+.bar b i{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.scene{position:absolute;inset:0;padding:66px 20px 22px;opacity:0;visibility:hidden;will-change:opacity}
+.scene.first{opacity:1;visibility:visible}
+
+/* Chat */
+.chat{display:flex;flex-direction:column;gap:12px;height:100%;justify-content:flex-end;padding-bottom:70px}
+.b{max-width:84%;padding:12px 15px;border-radius:20px;font-size:15.5px;line-height:1.4}
+.b.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:6px;min-height:46px}
+.b.lo{align-self:flex-start;background:var(--surface-2);border-bottom-left-radius:6px}
+.b.lo b{font-weight:700}
+.caret{display:inline-block;width:2px;height:1.05em;background:currentColor;vertical-align:-2px;margin-left:1px;opacity:.8}
+.dots{display:flex;gap:4px;padding:15px 16px}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--faint);opacity:.5}
+.composer{position:absolute;left:16px;right:16px;bottom:18px;height:48px;border-radius:24px;border:1px solid var(--line);background:var(--surface);display:flex;align-items:center;padding:0 8px 0 18px;color:var(--faint);font-size:15px;justify-content:space-between}
+.composer i{width:34px;height:34px;border-radius:50%;background:var(--accent);display:block}
+.chathead{margin-bottom:auto;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);padding-bottom:12px;border-bottom:1px solid var(--line)}
+.chathead b{color:var(--ink);font-weight:600;font-size:15px}
+.lock{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--good)}
+.lock::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.sep{align-self:center;font-size:12px;color:var(--faint);font-family:var(--ff-mono)}
+
+/* Zuordnung */
+.res{display:flex;flex-direction:column;gap:18px;padding-top:6px}
+.res .lab{font-size:13px;color:var(--muted)}
+.res .fach{font-size:44px;font-weight:800;letter-spacing:-.035em;line-height:1}
+.res .why{font-size:15.5px;color:var(--muted);line-height:1.5}
+.res .rule{height:1px;background:var(--line)}
+.res .chips{display:flex;flex-wrap:wrap;gap:7px}
+.res .chips span{font-size:13px;padding:6px 11px;border-radius:999px;background:var(--surface-2);color:var(--muted)}
+.res .notice{font-size:13px;color:var(--faint);display:flex;gap:9px;align-items:flex-start;line-height:1.45}
+.res .notice i{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--faint);flex:none;margin-top:1px}
+
+/* Liste */
+.lhead{display:flex;justify-content:space-between;align-items:baseline}
+.lhead b{font-size:19px;font-weight:700}
+.sortby{font-size:13px;color:var(--muted);position:relative;height:18px;width:150px;text-align:right}
+.sortby span{position:absolute;right:0;top:0;white-space:nowrap;transition:opacity .2s}
+.rows{position:relative;margin-top:16px;height:330px}
+.row{position:absolute;left:0;right:0;height:72px;border-radius:16px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);will-change:transform}
+.row .n{font-weight:600;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .m{font-size:12.5px;color:var(--muted);margin-top:2px}
+.row .v{text-align:right}
+.row .v .t{font-family:var(--ff-mono);font-weight:600;font-size:17px}
+.row .v .k{font-family:var(--ff-mono);font-size:12px;color:var(--faint)}
+.row.win{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.lnote{position:absolute;left:20px;right:20px;bottom:22px;font-size:13px;color:var(--muted);line-height:1.45}
+
+/* Karte */
+#sc-map{padding:0}
+#map{position:absolute;inset:0;width:100%;height:100%;display:block}
+.clock{position:absolute;left:18px;right:18px;top:62px;display:flex;justify-content:space-between;align-items:flex-end;z-index:3}
+.clock .t{font-family:var(--ff-mono);font-size:44px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.clock .s{font-size:13px;color:var(--muted);text-align:right;max-width:58%}
+.clock .s b{display:block;color:var(--ink);font-weight:600;font-size:14px}
+.banner{position:absolute;left:16px;right:16px;top:132px;z-index:3;background:var(--crit);color:#fff;border-radius:14px;padding:11px 14px;font-size:14px;display:flex;gap:10px;align-items:center;opacity:0}
+.banner b{font-family:var(--ff-mono);font-weight:600}
+.legs{position:absolute;left:16px;right:16px;bottom:16px;z-index:3;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 14px;display:grid;gap:8px}
+.leg{display:grid;grid-template-columns:52px 14px minmax(0,1fr);gap:10px;align-items:center;font-size:14px;transition:opacity .2s}
+.leg .tt{font-family:var(--ff-mono);font-weight:600;font-size:14px}
+.leg .ic{width:10px;height:10px;border-radius:50%;border:2px solid var(--accent)}
+.leg.on .ic{background:var(--accent)}
+.leg .tx{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leg.on .tx{color:var(--ink)}
+.arrive{position:absolute;left:16px;right:16px;bottom:16px;z-index:4;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;opacity:0}
+.arrive .a1{font-size:13px;color:var(--good);font-weight:600}
+.arrive .a2{font-size:30px;font-weight:800;letter-spacing:-.03em;margin-top:4px}
+.arrive .a3{font-size:14px;color:var(--muted);margin-top:4px}
+
+/* Notfall */
+.alarm{position:absolute;inset:0;background:var(--crit);color:#fff;padding:78px 24px 24px;display:flex;flex-direction:column;opacity:0}
+.alarm .h{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1.05}
+.alarm .p{margin-top:14px;font-size:15.5px;line-height:1.45;opacity:.92}
+.alarm .nums{margin-top:auto;display:grid;gap:10px}
+.alarm .nums div{background:rgba(255,255,255,.14);border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:baseline}
+.alarm .nums b{font-family:var(--ff-mono);font-size:26px;font-weight:600}
+.alarm .nums span{font-size:13px;opacity:.9}
+
+/* Kalender */
+.cal-h{display:flex;justify-content:space-between;align-items:baseline}
+.cal-h b{font-size:19px;font-weight:700}
+.cal-h span{font-size:13px;color:var(--muted)}
+.grid7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;margin-top:12px;text-align:center}
+.grid7 .wd{font-size:11px;color:var(--faint);padding-bottom:4px}
+.grid7 .c{height:32px;display:flex;align-items:center;justify-content:center;font-family:var(--ff-mono);font-size:13px;border-radius:10px;position:relative;color:var(--ink)}
+.grid7 .c.past{color:var(--faint)}
+.grid7 .c.today{box-shadow:inset 0 0 0 1.5px var(--ink);font-weight:600}
+.grid7 .c i{position:absolute;bottom:3px;left:50%;margin-left:-2px;width:4px;height:4px;border-radius:50%;background:var(--accent)}
+.grid7 .c.past i{background:var(--faint)}
+.agenda{position:relative;margin-top:14px;height:200px}
+.ag{position:absolute;left:0;right:0;height:58px;border-radius:14px;border:1px solid var(--line);background:var(--surface);padding:8px 12px;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;align-items:center;will-change:transform}
+.ag .dt{font-family:var(--ff-mono);font-size:11px;color:var(--muted);line-height:1.2;text-align:center}
+.ag .dt b{display:block;font-size:17px;color:var(--ink);font-weight:600}
+.ag .w{min-width:0}
+.ag .w b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag .w span{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag .go{font-family:var(--ff-mono);font-size:12px;font-weight:600;background:var(--accent-soft);color:var(--accent);padding:5px 8px;border-radius:8px;white-space:nowrap;text-align:center;line-height:1.25}
+.ag .go small{display:block;font-weight:400;font-size:10px;opacity:.85}
+.ag.new{border-color:var(--accent);z-index:2}
+.notif{position:absolute;left:12px;right:12px;top:58px;z-index:7;background:var(--ink);color:var(--bg);border-radius:16px;padding:12px 14px;display:flex;gap:12px;align-items:center;opacity:0;box-shadow:0 20px 40px -20px rgba(0,0,0,.5)}
+.notif i{width:32px;height:32px;border-radius:9px;background:var(--accent);flex:none;display:block}
+.notif b{display:block;font-size:14px}
+.notif span{font-size:12.5px;opacity:.8}
+
+/* Begleitung */
+.sh-card{border:1px solid var(--line);border-radius:18px;padding:14px 16px;background:var(--surface)}
+.sh-card small{display:block;font-size:12px;color:var(--faint)}
+.sh-card b{display:block;font-size:17px;margin-top:4px;letter-spacing:-.01em}
+.sh-card .sub{display:block;font-size:13px;color:var(--muted)}
+.sh-link{margin-top:10px;font-family:var(--ff-mono);font-size:11.5px;color:var(--accent);background:var(--accent-soft);border-radius:10px;padding:8px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:31px}
+.sh-to{margin-top:10px;display:flex;align-items:center;gap:9px;font-size:13.5px}
+.sh-to i{width:26px;height:26px;border-radius:50%;background:var(--car);color:#fff;font-style:normal;font-weight:700;font-size:12px;display:grid;place-items:center}
+.sh-to em{font-style:normal;color:var(--good);font-weight:700;margin-left:auto}
+#minimap{display:block;width:100%;height:auto;margin-top:12px;border-radius:16px;overflow:hidden}
+.sh-legend{margin-top:12px;display:grid;gap:8px;font-size:13.5px}
+.sh-legend div{display:flex;align-items:center;gap:8px;color:var(--muted)}
+.sh-legend b{color:var(--ink);font-weight:600}
+.sh-legend i{width:18px;height:4px;border-radius:2px;display:block;flex:none}
+.sh-legend .l1{background:var(--accent)}
+.sh-legend .l2{background:var(--car)}
+
+/* Ausblick */
+.vision{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 clamp(24px,4vw,56px);margin-top:clamp(40px,6vw,70px)}
+@media(max-width:860px){.vision{grid-template-columns:1fr}}
+.vision div{padding-block:22px;border-top:1px solid var(--line)}
+.vision h3{font-size:21px;letter-spacing:-.015em}
+.vision p{margin-top:8px;color:var(--muted)}
+.tag{display:inline-block;margin-top:clamp(28px,4vw,40px);font-family:var(--ff-mono);font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 11px}
+
+/* Datenfluss */
+.flowd{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr) 44px minmax(0,1fr);align-items:stretch;margin-top:clamp(40px,6vw,64px)}
+.flowd .nd{border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:18px 20px}
+.flowd .nd small{display:block;font-size:12px;color:var(--faint);font-family:var(--ff-mono)}
+.flowd .nd b{display:block;font-size:19px;margin-top:6px;letter-spacing:-.015em}
+.flowd .nd p{font-size:14.5px;color:var(--muted);margin-top:6px;line-height:1.45}
+.flowd .nd.hl{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.flowd .ar{display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:20px}
+@media(max-width:760px){.flowd{grid-template-columns:1fr}.flowd .ar{height:34px;transform:rotate(90deg)}}
+
+/* Fortschritt rechts unten */
+.prog{position:absolute;right:-22px;top:50%;transform:translateY(-50%);display:grid;gap:8px}
+.prog i{width:4px;height:18px;border-radius:2px;background:var(--line);display:block;transition:background .2s}
+.prog i.on{background:var(--accent)}
+@media(max-width:1100px){.prog{display:none}}
+
+/* Telefon: Bühne oben fest, Text darunter */
+@media(max-width:860px){
+  .story{grid-template-columns:1fr;gap:0}
+  .stagecol{order:-1;position:sticky;top:0;z-index:6;height:58vh;padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+  .stage{position:relative;top:0;height:100%;padding-block:10px}
+  .screen{width:min(100%,380px);border-radius:26px}
+  .steps{position:relative;z-index:1}
+  .step{min-height:84vh;align-items:flex-end;padding-bottom:4vh}
+  .step > div{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:0 20px 40px -30px rgba(10,20,40,.4)}
+  .step h2{font-size:26px;margin-top:8px}
+  .step p{font-size:16px;margin-top:10px}
+  .facts{margin-top:14px}
+  .grid7 .c{height:24px;font-size:12px}
+  .grid7 .wd{padding-bottom:2px}
+  .agenda{margin-top:10px}
+}
+
+/* ---------- Ruhige Abschnitte ---------- */
+.block{padding-block:clamp(80px,12vw,150px);border-top:1px solid var(--line)}
+.block .kick{font-size:14px;color:var(--muted)}
+.block h2{font-size:clamp(34px,5vw,64px);line-height:1.02;margin-top:14px;max-width:16ch}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 clamp(32px,6vw,80px);margin-top:clamp(40px,6vw,70px)}
+@media(max-width:760px){.two{grid-template-columns:1fr}}
+.item{padding-block:22px;border-top:1px solid var(--line)}
+.item h3{font-size:21px;letter-spacing:-.015em}
+.item p{margin-top:8px;color:var(--muted);max-width:44ch}
+.item.x h3{text-decoration:line-through;text-decoration-color:var(--crit);text-decoration-thickness:2px}
+.matrix{margin-top:clamp(40px,6vw,64px);overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:700px;font-size:15px}
+th,td{padding:16px 10px;text-align:center;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:13.5px;vertical-align:bottom;line-height:1.3}
+th:first-child,td:first-child{text-align:left;padding-left:0}
+td:first-child{font-weight:600}
+tr.us td{color:var(--accent);font-weight:700}
+.d{display:inline-block;width:12px;height:12px;border-radius:50%;border:1.5px solid var(--faint)}
+.d.f{background:var(--ink);border-color:var(--ink)}
+tr.us .d.f{background:var(--accent);border-color:var(--accent)}
+.d.h{background:linear-gradient(90deg,var(--faint) 50%,transparent 50%)}
+.legend{margin-top:16px;font-size:13px;color:var(--faint)}
+.plan{margin-top:clamp(40px,6vw,64px);display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:0;position:relative}
+.plan::before{content:"";position:absolute;left:0;right:0;top:6px;height:1px;background:var(--line)}
+.ms{position:relative;padding-top:26px;padding-right:12px}
+.ms::before{content:"";position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;background:var(--bg);border:1.5px solid var(--faint)}
+.ms.done::before{background:var(--accent);border-color:var(--accent)}
+.ms .dd{font-family:var(--ff-mono);font-size:13px;font-weight:600}
+.ms .tx{font-size:13.5px;color:var(--muted);margin-top:6px;line-height:1.4}
+@media(max-width:980px){
+  .plan{grid-template-columns:1fr;padding-left:28px}
+  .plan::before{left:6px;right:auto;top:0;bottom:0;width:1px;height:auto}
+  .ms{padding-top:0;padding-bottom:22px;display:grid;grid-template-columns:90px minmax(0,1fr);gap:12px}
+  .ms::before{left:-28px;top:4px}
+  .ms .tx{margin-top:0}
+}
+.crew{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-top:clamp(40px,6vw,64px)}
+@media(max-width:760px){.crew{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.crew div{padding:20px 16px 20px 0;border-top:1px solid var(--line)}
+.crew b{display:block;font-size:24px;letter-spacing:-.02em}
+.crew span{display:block;font-size:14.5px;color:var(--muted);margin-top:6px}
+
+/* Feedback */
+.fb{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(32px,6vw,80px);margin-top:clamp(40px,6vw,64px)}
+@media(max-width:860px){.fb{grid-template-columns:1fr}}
+.lbl{display:block;font-size:14px;font-weight:600;margin-bottom:10px}
+.scale{display:flex;gap:8px;flex-wrap:wrap}
+.scale button{width:52px;height:52px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:var(--ff-mono);font-size:18px;font-weight:600;cursor:pointer;transition:.15s}
+.scale button:hover{border-color:var(--accent)}
+.scale button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.cap{display:flex;justify-content:space-between;max-width:292px;font-size:12.5px;color:var(--faint);margin-top:6px}
+textarea{width:100%;min-height:120px;margin-top:24px;resize:vertical;border-radius:16px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:var(--ff);font-size:16px;padding:14px 16px}
+.send{display:flex;gap:16px;align-items:center;margin-top:14px;flex-wrap:wrap}
+.btn{border:0;border-radius:999px;background:var(--ink);color:var(--bg);font-family:var(--ff);font-size:15.5px;font-weight:600;padding:13px 24px;cursor:pointer}
+.btn:disabled{opacity:.35;cursor:default}
+.status{font-size:14px;color:var(--muted)}
+.priv{margin-top:20px;font-size:13px;color:var(--faint);max-width:52ch;line-height:1.5}
+.agg .num{font-family:var(--ff-mono);font-size:clamp(64px,8vw,96px);font-weight:600;letter-spacing:-.04em;line-height:1}
+.agg .of{font-size:14px;color:var(--muted);margin-top:8px}
+.agg .empty{font-size:17px;color:var(--muted);line-height:1.45;max-width:30ch}
+.cmts{margin-top:28px}
+.cmt{padding-block:14px;border-top:1px solid var(--line)}
+.cmt .meta{font-size:12.5px;color:var(--faint);display:flex;gap:12px;flex-wrap:wrap}
+.cmt .meta b{font-family:var(--ff-mono);color:var(--ink);font-weight:600}
+.cmt .meta .dup{color:var(--crit);font-weight:600}
+.cmt p{margin-top:6px;font-size:15.5px}
+footer{border-top:1px solid var(--line);padding-block:36px;font-size:13.5px;color:var(--faint)}
+footer p+p{margin-top:6px}
+.applink{font-size:14px;font-weight:600;color:#fff;background:var(--accent);padding:8px 14px;border-radius:999px;text-decoration:none}
+.ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+.cta{background:var(--accent);color:#fff;text-decoration:none;font-weight:600;padding:13px 22px;border-radius:999px}
+.cta2{background:var(--surface);color:var(--ink);border:1px solid var(--line);text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px}
+</style>
+
+<div class="in">
+  <nav class="top"><div class="word"><i></i>Lotse</div><a class="applink" href="app/">App öffnen</a></nav>
+  <header class="hero">
+    <div>
+      <h1>Vom Anliegen bis zur Tür.</h1>
+      <p>Du sagst, was los ist. Lotse findet die zuständige Fachrichtung, die Praxis, die du wirklich erreichst, und den Moment, in dem du losgehen musst.</p>
+      <div class="ctas"><a class="cta" href="app/">App ausprobieren</a><a class="cta2" href="#feedback">Bewerten</a></div>
+      <div class="cue"><i></i>Scrollen, um eine Fahrt zu begleiten</div>
+    </div>
+    <div class="glance" aria-label="Vorschau: Anliegen, Fachrichtung und Abfahrtszeit">
+      <svg viewBox="0 0 460 440" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M118 112 C 118 170 190 190 238 214 S 170 300 184 334" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity=".7"/>
+      </svg>
+      <div class="gl gl1"><small>Du · 07:31</small><p>Seit einer Woche tut mir der Rücken weh.</p></div>
+      <div class="gl gl2"><small>Zuständig</small><b>Orthopädie</b><span>Praxis am Kornmarkt · 14 Min mit Bus 12</span></div>
+      <div class="gl gl3"><div><small>Losgehen</small><div class="big">07:50</div></div><div class="r"><b>Termin 09:00</b><br>Bus 12 ab Bahnhof 07:57<br>17 Min Puffer</div></div>
+    </div>
+  </header>
+</div>
+
+<div class="in">
+<div class="story" id="story">
+  <div class="steps">
+    <div class="step"><div><div class="no">01 · Anliegen</div><h2>Sag es so, wie du es sagen würdest.</h2><p>Keine Fachbegriffe, kein Formular. <b>„Seit einer Woche tut mir der Rücken weh“</b> reicht.</p><div class="facts"><span>Freitext</span><span>keine Pflichtfelder</span><span>wird nicht gespeichert</span></div></div></div>
+    <div class="step"><div><div class="no">02 · Zuordnung</div><h2>Lotse sagt, wer zuständig ist. Und warum.</h2><p>Aus Alltagssprache wird eine Fachrichtung, mit einer Begründung, die man nachvollziehen kann. <b>Eine Diagnose stellt Lotse nie.</b></p><div class="facts"><span>gepflegte Begriffstabelle</span><span>mit Begründung</span><span>keine Diagnose</span></div></div></div>
+    <div class="step"><div><div class="no">03 · Auswahl</div><h2>Nicht die nächste Praxis. Die erreichbarste.</h2><p>Die Praxis 900 Meter entfernt ist zu Fuß 24 Minuten weg. Die 2,4 Kilometer entfernte erreichst du mit einem Bus in 14. <b>Lotse sortiert nach Fahrzeit.</b> Gebucht wird direkt bei der Praxis.</p><div class="facts"><span>4 Praxen verglichen</span><span>sortiert nach Fahrzeit</span><span>Buchung bei der Praxis</span></div></div></div>
+    <div class="step"><div><div class="no">04 · Kalender</div><h2>Jeder Termin weiß, wann du losmusst.</h2><p>Nach der Buchung trägst du den Termin ein, oder Lotse übernimmt ihn aus deinem Kalender. Neben jedem Termin steht die Abfahrtszeit, <b>und am Vorabend kommt die Erinnerung.</b></p><div class="facts"><span>Abfahrt je Termin</span><span>Import aus dem Kalender</span><span>Erinnerung am Vorabend</span></div></div></div>
+    <div class="step"><div><div class="no">05 · Begleitung</div><h2>Wer mitkommt, bekommt einen Link.</h2><p>Mama fährt mit? Ein Link genügt. Sie bekommt denselben Termin und ihren eigenen Weg, mit dem Auto und mit Parkhaus. <b>Ohne Konto und ohne Server: die Verabredung steckt im Link selbst.</b></p><div class="facts"><span>kein Konto nötig</span><span>eigener Weg je Person</span><span>Auto, Bus, Rad, zu Fuß</span></div></div></div>
+    <div class="step"><div><div class="no">06 · Weg</div><h2>Der Termin ist um neun. Los geht es um 07:50.</h2><p>Lotse rechnet rückwärts: Fußweg, Bus, Umstieg, ein Puffer für den Fall, dass etwas klemmt.</p><div class="facts"><span>7 Min zu Fuß</span><span>Bus 12, direkt</span><span>17 Min Puffer</span></div></div></div>
+    <div class="step"><div><div class="no">07 · Störung</div><h2>Der Bus fällt aus. Der Plan B steht schon.</h2><p>Die Ausweichverbindung wird von Anfang an mitgerechnet. Fällt Bus 12 aus, schaltet Lotse auf Bus 31 um, <b>bevor du an der Haltestelle stehst.</b></p><div class="facts"><span>Hinweis um 07:41</span><span>Ausweichroute vorab berechnet</span><span>4 Min später an</span></div></div></div>
+    <div class="step"><div><div class="no">08 · Fahrt</div><h2>Unterwegs zeigt Lotse nur den nächsten Schritt.</h2><p>Zu Fuß zur Haltestelle, einsteigen, aussteigen, die letzten Meter. Ein Blick genügt.</p><div class="facts"><span>ein Schritt pro Blick</span><span>Live-Status</span></div></div></div>
+    <div class="step"><div><div class="no">09 · Ankunft</div><h2>08:47 an der Tür. Dreizehn Minuten Luft.</h2><p>Trotz Ausfall pünktlich. Genau das ist der Zweck.</p><div class="facts"><span>08:47 an</span><span>13 Min vor dem Termin</span></div></div></div>
+    <div class="step"><div><div class="no">10 · Grenze</div><h2>Manchmal ist eine Terminsuche die falsche Antwort.</h2><p>Deutet eine Beschreibung auf einen Notfall hin, bricht Lotse ab. Keine Praxisliste, kein Weg. <b>Nur, wo jetzt sofort geholfen wird.</b></p><div class="facts"><span>112</span><span>116117</span><span>116 123</span></div></div></div>
+  </div>
+
+  <div class="stagecol">
+    <div class="stage">
+      <div class="screen" id="screen">
+        <div class="bar"><b><i></i>Lotse</b><span class="mono" id="bar-time">07:31</span></div>
+
+        <div class="scene first" id="sc-chat">
+          <div class="chat">
+            <div class="chathead"><b>Neues Anliegen</b><span class="lock">wird nicht gespeichert</span></div>
+            <div class="sep">Heute, 07:31</div>
+            <div class="b lo">Hallo. Was ist los? Beschreib es in deinen eigenen Worten.</div>
+            <div class="b me" id="me1"><span id="me1t"></span><span class="caret" id="me1c"></span></div>
+            <div class="b lo dots" id="dots1"><i></i><i></i><i></i></div>
+            <div class="b lo" id="lo1">Das klingt nach einem Fall für die <b>Orthopädie</b>. Ich suche Praxen, die du gut erreichst.</div>
+          </div>
+          <div class="composer">Nachricht<i></i></div>
+        </div>
+
+        <div class="scene" id="sc-res">
+          <div class="res">
+            <div class="lab">Zuständige Fachrichtung</div>
+            <div class="fach">Orthopädie</div>
+            <div class="why">Beschwerden an Rücken, Gelenken und Muskeln behandelt die Orthopädie. Bist du unsicher, ist die Hausarztpraxis immer ein guter erster Schritt.</div>
+            <div class="rule"></div>
+            <div class="chips"><span>Rücken</span><span>Gelenke</span><span>Muskeln</span><span>Bewegungsapparat</span></div>
+            <div class="notice"><i></i><span>Lotse ordnet zu und stellt keine Diagnose. Es ersetzt keine ärztliche Beratung.</span></div>
+          </div>
+        </div>
+
+        <div class="scene" id="sc-list">
+          <div class="lhead"><b>Orthopädie in deiner Nähe</b><div class="sortby"><span id="sb1">nach Entfernung</span><span id="sb2" style="opacity:0">nach Fahrzeit</span></div></div>
+          <div class="rows" id="rows"></div>
+          <div class="lnote" id="lnote">Beispieldaten. Praxen, Linien und Zeiten sind erfunden.</div>
+        </div>
+
+        <div class="scene" id="sc-cal">
+          <div class="notif" id="notif"><i></i><div><b>Morgen um 07:50 losgehen</b><span>Orthopädie 09:00 · Bus 12 ab Bahnhof</span></div></div>
+          <div class="cal-h"><b>November 2026</b><span id="cal-count">2 Termine</span></div>
+          <div class="grid7" id="cal-grid"></div>
+          <div class="agenda" id="agenda"></div>
+        </div>
+
+        <div class="scene" id="sc-share">
+          <div class="sh-card" id="shcard">
+            <small>Termin teilen</small>
+            <b>Orthopädie · Di 17.11. · 09:00</b>
+            <span class="sub">Praxis am Kornmarkt, Wetzlar</span>
+            <div class="sh-link" id="shlink"></div>
+            <div class="sh-to" id="shto"><i>M</i>An Mama gesendet<em>✓</em></div>
+          </div>
+          <svg id="minimap" viewBox="0 -40 400 300" aria-hidden="true">
+            <rect x="0" y="-40" width="400" height="300" fill="var(--map-bg)"/>
+            <g stroke="var(--map-minor)" stroke-width="6" stroke-linecap="round" fill="none">
+              <path d="M-10 60 L410 40"/><path d="M-10 130 L410 120"/><path d="M-10 195 L410 205"/>
+              <path d="M-10 0 L410 -15"/><path d="M70 -50 L90 270"/><path d="M170 -50 L160 270"/><path d="M260 -50 L280 270"/><path d="M350 -50 L340 270"/>
+            </g>
+            <path d="M-20 165 C 80 140 160 190 240 170 S 360 130 420 150" stroke="var(--river)" stroke-width="20" fill="none" stroke-linecap="round"/>
+            <path id="mm-you" d="M34 205 L80 186 C 120 160 160 120 200 100 S 250 70 268 62" stroke="var(--accent)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path id="mm-car" d="M380 212 C 352 180 344 140 336 110 S 300 76 276 64" stroke="var(--car)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect id="mm-park" x="320" y="88" width="20" height="20" rx="5" fill="var(--car)" opacity="0"/>
+            <text id="mm-p" x="330" y="102" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" opacity="0" font-family="Schibsted Grotesk, sans-serif">P</text>
+            <circle cx="272" cy="62" r="9" fill="var(--ink)" stroke="var(--surface)" stroke-width="3"/>
+            <text x="286" y="50" font-size="12" font-weight="700" fill="var(--ink)" font-family="Schibsted Grotesk, sans-serif">Praxis</text>
+            <circle cx="34" cy="205" r="6" fill="var(--surface)" stroke="var(--accent)" stroke-width="3"/>
+            <circle cx="380" cy="212" r="6" fill="var(--surface)" stroke="var(--car)" stroke-width="3"/>
+          </svg>
+          <div class="sh-legend" id="shleg">
+            <div><i class="l1"></i><b>Du</b> Bus 12 · los 07:50</div>
+            <div><i class="l2"></i><b>Mama</b> Auto · los 08:31 · Parkhaus Altstadt</div>
+          </div>
+        </div>
+
+        <div class="scene" id="sc-map">
+          <svg id="map" viewBox="0 56 400 680" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+          <div class="clock"><div class="t" id="clk">07:50</div><div class="s" id="clks"><b>Losgehen</b>Termin 09:00 · Praxis am Kornmarkt</div></div>
+          <div class="banner" id="banner"><b>07:41</b><span>Bus 12 fällt aus. Neue Verbindung mit Bus 31.</span></div>
+          <div class="legs" id="legs">
+            <div class="leg" id="lg1"><span class="tt" id="lg1t">07:50</span><i class="ic"></i><span class="tx">Zu Fuß zur Haltestelle Bahnhof</span></div>
+            <div class="leg" id="lg2"><span class="tt" id="lg2t">07:57</span><i class="ic"></i><span class="tx" id="lg2x">Bus 12 Richtung Kornmarkt</span></div>
+            <div class="leg" id="lg3"><span class="tt" id="lg3t">08:31</span><i class="ic"></i><span class="tx">Zu Fuß zur Praxis</span></div>
+          </div>
+          <div class="arrive" id="arrive"><div class="a1">Angekommen</div><div class="a2">08:47 · Praxis am Kornmarkt</div><div class="a3">13 Minuten vor dem Termin, trotz Ausfall von Bus 12.</div></div>
+        </div>
+
+        <div class="scene" id="sc-alarm">
+          <div class="chat">
+            <div class="chathead"><b>Neues Anliegen</b><span class="lock">wird nicht gespeichert</span></div>
+            <div class="sep">Heute, 21:14</div>
+            <div class="b lo">Hallo. Was ist los? Beschreib es in deinen eigenen Worten.</div>
+            <div class="b me"><span id="me2t"></span><span class="caret"></span></div>
+          </div>
+          <div class="composer">Nachricht<i></i></div>
+          <div class="alarm" id="alarm">
+            <div class="h">Hier hilft keine Terminsuche.</div>
+            <div class="p">Das klingt nach einer akuten Notlage. Lotse sucht keine Praxis und plant keinen Weg.</div>
+            <div class="nums">
+              <div><b>112</b><span>Notruf</span></div>
+              <div><b>116117</b><span>Ärztlicher Bereitschaftsdienst</span></div>
+              <div><b>116 123</b><span>Telefonseelsorge</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="prog" id="prog" aria-hidden="true"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<section class="block"><div class="in">
+  <div class="kick">Bewusst weggelassen</div>
+  <h2>Ein Wegweiser. Kein Arzt.</h2>
+  <div class="two">
+    <div class="item x"><h3>Diagnose</h3><p>Lotse nennt keine Krankheit und keinen Verdacht. Software, die Beschwerden bewertet, gilt in der EU als Medizinprodukt.</p></div>
+    <div class="item x"><h3>Dringlichkeit</h3><p>Wie ernst etwas ist, schätzt Lotse nicht ein. Bei Hinweisen auf einen Notfall bricht es ab.</p></div>
+    <div class="item x"><h3>Freie Termine</h3><p>Dafür gibt es keine offene Datenquelle. Lotse führt zur Terminvergabe der Praxis.</p></div>
+    <div class="item x"><h3>Buchung</h3><p>Lotse bucht nichts in deinem Namen. Du entscheidest, wo du dich meldest.</p></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="in">
+  <div class="kick">Datenschutz</div>
+  <h2>Was nicht gespeichert wird, kann nicht verloren gehen.</h2>
+  <div class="flowd" aria-label="Datenfluss: Anliegen, Zuordnung, Routendienst">
+    <div class="nd"><small>Dein Gerät</small><b>Anliegen</b><p>„Mein Rücken tut weh“, in deinen eigenen Worten.</p></div>
+    <div class="ar" aria-hidden="true">→</div>
+    <div class="nd hl"><small>Lotse</small><b>Zuordnung</b><p>Ergibt „Orthopädie“. Der Text wird danach verworfen.</p></div>
+    <div class="ar" aria-hidden="true">→</div>
+    <div class="nd"><small>Routendienst</small><b>Nur Koordinaten</b><p>Start und Ziel. Kein Anliegen, keine Fachrichtung.</p></div>
+  </div>
+  <div class="two">
+    <div class="item"><h3>Kein Konto</h3><p>Keine Registrierung, kein Name, kein Verlauf.</p></div>
+    <div class="item"><h3>Kein Protokoll</h3><p>Die Beschreibung ist ein Gesundheitsdatum nach Art. 9 DSGVO. Sie wird für die Suche gebraucht und danach verworfen.</p></div>
+    <div class="item"><h3>Nur Koordinaten nach außen</h3><p>Routendienste erfahren, wohin die Fahrt geht. Nie, warum.</p></div>
+    <div class="item"><h3>Standort freiwillig</h3><p>Eine Postleitzahl oder Haltestelle genügt als Startpunkt.</p></div>
+    <div class="item"><h3>Kein eigener Server</h3><p>Lotse läuft im Browser. Begriffstabelle und Praxisliste sind Dateien, Termine bleiben auf deinem Gerät.</p></div>
+    <div class="item"><h3>Teilen ohne Konto</h3><p>Eine Verabredung steckt vollständig im Link. Wer ihn öffnet, rechnet seinen Weg selbst aus.</p></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="in">
+  <div class="kick">Abgrenzung</div>
+  <h2>Jeder löst ein Stück. Lotse verbindet sie.</h2>
+  <div class="matrix"><table>
+    <thead><tr><th></th><th>Alltagssprache statt Fachbegriff</th><th>Sortiert nach Fahrzeit</th><th>Plant die Anreise</th><th>Plan B bei Ausfall</th><th>Bucht Termine</th></tr></thead>
+    <tbody>
+      <tr><td>Doctolib</td><td><i class="d"></i></td><td><i class="d"></i></td><td><i class="d"></i></td><td><i class="d"></i></td><td><i class="d f"></i></td></tr>
+      <tr><td>jameda</td><td><i class="d"></i></td><td><i class="d"></i></td><td><i class="d"></i></td><td><i class="d"></i></td><td><i class="d h"></i></td></tr>
+      <tr><td>116117</td><td><i class="d h"></i></td><td><i class="d"></i></td><td><i class="d"></i></td><td><i class="d"></i></td><td><i class="d f"></i></td></tr>
+      <tr><td>Google Maps</td><td><i class="d"></i></td><td><i class="d h"></i></td><td><i class="d h"></i></td><td><i class="d h"></i></td><td><i class="d"></i></td></tr>
+      <tr><td>RMV</td><td><i class="d"></i></td><td><i class="d"></i></td><td><i class="d h"></i></td><td><i class="d f"></i></td><td><i class="d"></i></td></tr>
+      <tr class="us"><td>Lotse</td><td><i class="d f"></i></td><td><i class="d f"></i></td><td><i class="d f"></i></td><td><i class="d f"></i></td><td><i class="d"></i></td></tr>
+    </tbody>
+  </table></div>
+  <p class="legend">● ja &nbsp; ◐ teilweise &nbsp; ○ nein &nbsp;·&nbsp; eigene Einschätzung, Stand Oktober 2026</p>
+</div></section>
+
+<section class="block"><div class="in">
+  <div class="kick">Ausblick</div>
+  <h2>Der Motor kann mehr als Arzttermine.</h2>
+  <p style="margin-top:20px;color:var(--muted);max-width:56ch;font-size:18px">Anliegen, Ziel, Uhrzeit, Verkehrsmittel: dieselbe Rechnung funktioniert für jede Verabredung. Im Prototyp bleibt Lotse bewusst beim Weg zur Praxis.</p>
+  <div class="vision">
+    <div><h3>Jeder Termin</h3><p>Vorstellungsgespräch, Behörde, Prüfung. Überall, wo Zuspätkommen etwas kostet.</p></div>
+    <div><h3>Treffen zu mehreren</h3><p>Drei Leute, drei Startpunkte, drei Verkehrsmittel. Lotse schlägt einen Ort vor, der für alle fair liegt, und zeigt, wer wen mit dem Auto mitnehmen kann.</p></div>
+    <div><h3>Mehrsprachig</h3><p>Das Anliegen auf Ukrainisch, Arabisch oder Türkisch beschreiben, die Fachrichtung auf Deutsch zurückbekommen.</p></div>
+  </div>
+  <span class="tag">nicht Teil des Prototyps</span>
+</div></section>
+
+<section class="block"><div class="in">
+  <div class="kick">Zeitplan</div>
+  <h2>Bis Ende Februar 2027.</h2>
+  <div class="plan">
+    <div class="ms done"><div class="dd">30.10.</div><div class="tx">Konzept freigegeben</div></div>
+    <div class="ms"><div class="dd">21.11.</div><div class="tx">Umfrage und Datenquellen</div></div>
+    <div class="ms"><div class="dd">05.12.</div><div class="tx">Datengrundlage steht</div></div>
+    <div class="ms"><div class="dd">19.12.</div><div class="tx">Kern läuft</div></div>
+    <div class="ms"><div class="dd">23.01.</div><div class="tx">Anreiseplanung</div></div>
+    <div class="ms"><div class="dd">30.01.</div><div class="tx">Tests</div></div>
+    <div class="ms"><div class="dd">13.02.</div><div class="tx">Dokumentation</div></div>
+    <div class="ms"><div class="dd">20.02.</div><div class="tx">Generalprobe</div></div>
+    <div class="ms"><div class="dd">Ende Feb.</div><div class="tx">Präsentation</div></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="in">
+  <div class="kick">Team</div>
+  <h2>Vier Leute, vier Rollen.</h2>
+  <div class="crew">
+    <div><b>Dima</b><span>Projektleitung, Architektur, Umsetzung</span></div>
+    <div><b>Mischal</b><span>Datenquellen und Machbarkeit</span></div>
+    <div><b>Abdi</b><span>Nutzersicht und Anforderungen</span></div>
+    <div><b>Fateme</b><span>Dokumentation</span></div>
+  </div>
+</div></section>
+
+<section class="block" id="feedback"><div class="in">
+  <div class="kick">Deine Meinung</div>
+  <h2>Würdest du Lotse benutzen?</h2>
+  <div class="fb">
+    <div>
+      <span class="lbl" id="sl">Bewertung</span>
+      <div class="scale" id="scale" role="group" aria-labelledby="sl"></div>
+      <div class="cap"><span>eher nicht</span><span>auf jeden Fall</span></div>
+      <label class="lbl" for="cmt" style="margin-top:28px;margin-bottom:0">Kommentar, freiwillig</label>
+      <textarea id="cmt" maxlength="600" placeholder="Was fehlt dir? Was würdest du anders machen?"></textarea>
+      <div class="send"><button class="btn" id="send" disabled>Absenden</button><span class="status" id="status"></span></div>
+      <p class="priv">Anonym: kein Name, keine E-Mail. Damit Mehrfachabgaben auffallen, speichert die Seite eine zufällige Kennung in deinem Browser. Beiträge vom selben Gerät werden markiert.</p>
+    </div>
+    <div><div class="agg" id="agg"></div><div class="cmts" id="cmts"></div></div>
+  </div>
+</div></section>
+
+<footer><div class="in">
+  <p>Lotse · Projektarbeit, Werner-von-Siemens-Schule, Schuljahr 2026/27 · Prototyp für Mittelhessen</p>
+  <p>Lotse ersetzt keine ärztliche Beratung. Notruf 112 · Ärztlicher Bereitschaftsdienst 116117</p>
+</div></footer>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var NS = "http://www.w3.org/2000/svg";
+  function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
+  function ease(x){ x = clamp(x,0,1); return x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x+2,3)/2; }
+  function seg(t,a,b){ return clamp((t-a)/(b-a),0,1); }
+  function hm(m){ var h = Math.floor(m/60), mm = Math.round(m%60); return (h<10?"0":"")+h+":"+(mm<10?"0":"")+mm; }
+  function el(tag, cls, txt){ var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+  function clear(n){ while (n && n.firstChild) n.removeChild(n.firstChild); }
+
+  /* ---------- Liste ---------- */
+  var P = [
+    { n:"Orthopädie am Dom",       m:"zu Fuß, kein direkter Bus", km:"0,9 km", t:"24 Min", ki:0, ti:1 },
+    { n:"Orthopädie Lahnblick",    m:"Bus 31, zweimal umsteigen", km:"1,6 km", t:"31 Min", ki:1, ti:2 },
+    { n:"Praxis am Kornmarkt",     m:"Bus 12, direkt",            km:"2,4 km", t:"14 Min", ki:2, ti:0, win:true },
+    { n:"Gelenkzentrum Gießen",    m:"RB 40, dann zu Fuß",        km:"14 km",  t:"38 Min", ki:3, ti:3 }
+  ];
+  var rowsEl = $("rows"), rowEls = [];
+  P.forEach(function(p){
+    var r = el("div","row"), a = el("div"), v = el("div","v");
+    a.appendChild(el("div","n",p.n)); a.appendChild(el("div","m",p.m));
+    var tt = el("div","t",p.t), kk = el("div","k",p.km);
+    v.appendChild(tt); v.appendChild(kk);
+    r.appendChild(a); r.appendChild(v); rowsEl.appendChild(r);
+    rowEls.push({ el:r, p:p, t:tt, k:kk });
+  });
+
+  /* ---------- Kalender ---------- */
+  var cg = $("cal-grid"), cells = {};
+  ["Mo","Di","Mi","Do","Fr","Sa","So"].forEach(function(w){ cg.appendChild(el("div","wd",w)); });
+  for (var b0 = 0; b0 < 6; b0++) cg.appendChild(el("div","c"));
+  for (var dd = 1; dd <= 30; dd++) {
+    var cc = el("div", "c" + (dd < 16 ? " past" : "") + (dd === 16 ? " today" : ""), String(dd));
+    if (dd === 5 || dd === 25 || dd === 27 || dd === 17) cc.appendChild(el("i"));
+    cells[dd] = cc; cg.appendChild(cc);
+  }
+  var dot17 = cells[17].querySelector("i"); dot17.style.opacity = "0";
+  var AG = [
+    { w:"Di", d:"17", n:"Orthopädie · 09:00", s:"Praxis am Kornmarkt", go:"07:50", isNew:true },
+    { w:"Mi", d:"25", n:"Zahnmedizin · 15:30", s:"Zahnmedizin am Dom", go:"15:12" },
+    { w:"Fr", d:"27", n:"Hausarztpraxis · 08:15", s:"Praxis Neustadt", go:"07:49" }
+  ];
+  var agEl = $("agenda"), agRows = [];
+  AG.forEach(function(a){
+    var r = el("div", "ag" + (a.isNew ? " new" : ""));
+    var dt = el("div","dt",a.w); dt.appendChild(el("b",null,a.d));
+    var w = el("div","w"); w.appendChild(el("b",null,a.n)); w.appendChild(el("span",null,a.s));
+    var go = el("div","go"); go.appendChild(el("small",null,"los")); go.appendChild(document.createTextNode(a.go));
+    r.appendChild(dt); r.appendChild(w); r.appendChild(go); agEl.appendChild(r);
+    agRows.push({ el:r, go:go, isNew:!!a.isNew });
+  });
+
+  /* ---------- Karte ---------- */
+  var svg = $("map");
+  function mk(tag, attrs, parent){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); (parent||svg).appendChild(e); return e; }
+  var cs = getComputedStyle(document.documentElement);
+  function tok(n){ return "var(" + n + ")"; }
+  mk("rect",{x:0,y:0,width:400,height:680,fill:tok("--map-bg")});
+  var g = mk("g",{});
+  // Nebenstraßen: leicht gedrehtes Raster
+  var minor = mk("g",{stroke:tok("--map-minor"),"stroke-width":"7","stroke-linecap":"round",fill:"none",transform:"rotate(-14 200 340)"}, g);
+  for (var i = -4; i < 14; i++) mk("line",{x1:-200,y1:i*58,x2:600,y2:i*58+((i%3)-1)*10},minor);
+  for (var j = -4; j < 12; j++) mk("line",{x1:j*62+((j%2)*12),y1:-200,x2:j*62-((j%3)*14),y2:900},minor);
+  // Fluss
+  mk("path",{d:"M-30 470 C 60 430 130 520 210 500 S 330 420 430 455",stroke:tok("--river"),"stroke-width":"34",fill:"none","stroke-linecap":"round"},g);
+  var lahn = mk("text",{x:330,y:470,"font-size":"12","font-family":"Schibsted Grotesk, sans-serif",fill:tok("--faint"),"font-style":"italic"},g); lahn.textContent = "Lahn";
+  // Hauptstraßen
+  var major = mk("g",{stroke:tok("--map-major"),"stroke-width":"12","stroke-linecap":"round",fill:"none"}, g);
+  ["M-20 600 C 80 560 120 520 150 470 S 230 330 270 270 S 340 170 420 130",
+   "M40 -20 C 70 140 100 280 140 380 S 170 560 190 700",
+   "M-20 300 C 110 320 240 280 420 330",
+   "M250 -20 C 240 120 255 240 290 330 S 330 520 350 700"].forEach(function(d){ mk("path",{d:d},major); });
+
+  // Routen
+  var MAIN = "M70 590 L118 548 C 150 510 165 470 190 425 S 245 330 270 285 L312 236";
+  var ALT  = "M70 590 L52 520 C 70 450 110 400 150 372 S 250 320 290 312 L312 236";
+  var mainBg = mk("path",{d:MAIN,stroke:tok("--accent"),"stroke-width":"7","stroke-linecap":"round","stroke-linejoin":"round",fill:"none",opacity:"0"});
+  var altBg  = mk("path",{d:ALT, stroke:tok("--accent"),"stroke-width":"7","stroke-linecap":"round","stroke-linejoin":"round",fill:"none",opacity:"0"});
+  var mainLen = mainBg.getTotalLength(), altLen = altBg.getTotalLength();
+  mainBg.setAttribute("stroke-dasharray", mainLen); altBg.setAttribute("stroke-dasharray", altLen);
+
+  // Ausfall-Marke
+  var xp = mainBg.getPointAtLength(mainLen*0.52);
+  var xg = mk("g",{opacity:"0"});
+  mk("circle",{cx:xp.x,cy:xp.y,r:"15",fill:tok("--crit")},xg);
+  mk("path",{d:"M"+(xp.x-5)+" "+(xp.y-5)+" L"+(xp.x+5)+" "+(xp.y+5)+" M"+(xp.x+5)+" "+(xp.y-5)+" L"+(xp.x-5)+" "+(xp.y+5),stroke:"#fff","stroke-width":"2.5","stroke-linecap":"round"},xg);
+
+  // Punkte: Start, Haltestellen, Praxis
+  function pin(x,y,label,dx,anchor){
+    var gg = mk("g",{});
+    mk("circle",{cx:x,cy:y,r:"6",fill:tok("--surface"),stroke:tok("--ink"),"stroke-width":"2.5"},gg);
+    var t = mk("text",{x:x+(dx||12),y:y+4,"font-size":"12","font-weight":"600","font-family":"Schibsted Grotesk, sans-serif",fill:tok("--ink"),"text-anchor":anchor||"start"},gg); t.textContent = label;
+    return gg;
+  }
+  pin(70,590,"Zuhause");
+  var stopA = pin(118,548,"Bahnhof");
+  var stopB = pin(52,520,"Goethestraße",-12,"end"); stopB.setAttribute("opacity","0");
+  var praxis = mk("g",{});
+  var pulse = mk("circle",{cx:312,cy:236,r:"10",fill:tok("--accent"),opacity:"0"},praxis);
+  mk("circle",{cx:312,cy:236,r:"9",fill:tok("--accent"),stroke:tok("--surface"),"stroke-width":"3"},praxis);
+  var pt = mk("text",{x:326,y:232,"font-size":"12","font-weight":"700","font-family":"Schibsted Grotesk, sans-serif",fill:tok("--ink")},praxis); pt.textContent = "Praxis am";
+  var pt2 = mk("text",{x:326,y:247,"font-size":"12","font-weight":"700","font-family":"Schibsted Grotesk, sans-serif",fill:tok("--ink")},praxis); pt2.textContent = "Kornmarkt";
+  // Fahrender Punkt
+  var me = mk("g",{opacity:"0"});
+  mk("circle",{cx:0,cy:0,r:"16",fill:tok("--accent"),opacity:".18"},me);
+  mk("circle",{cx:0,cy:0,r:"8",fill:tok("--accent"),stroke:"#fff","stroke-width":"3"},me);
+
+  // Abschnittslängen auf der Ausweichroute (für Status)
+  var walk1 = 72, walk2End = altLen - 77;
+
+  /* ---------- Szenen ---------- */
+  var scenes = { chat:$("sc-chat"), res:$("sc-res"), list:$("sc-list"), cal:$("sc-cal"), share:$("sc-share"), map:$("sc-map"), alarm:$("sc-alarm") };
+  var mmYou = $("mm-you"), mmCar = $("mm-car");
+  var lenYou = mmYou.getTotalLength(), lenCar = mmCar.getTotalLength();
+  mmYou.setAttribute("stroke-dasharray", lenYou); mmCar.setAttribute("stroke-dasharray", lenCar);
+  var LINK = "lotse/#termin=2026-11-17T09:00&ziel=Kornmarkt-Wetzlar&fach=ortho";
+  function vis(e, o){ e.style.opacity = o; e.style.visibility = o < 0.01 ? "hidden" : "visible"; }
+  function band(t,a,b,f){ f = f || .15; if (t < a - f || t > b + f) return 0; if (t < a) return (t-(a-f))/f; if (t > b) return 1-(t-b)/f; return 1; }
+
+  var MSG1 = "Seit einer Woche tut mir der Rücken weh. Morgens ist es am schlimmsten.";
+  var MSG2 = "Starke Schmerzen in der Brust und ich bekomme schlecht Luft";
+  var steps = Array.prototype.slice.call(document.querySelectorAll(".step"));
+  var prog = $("prog"); steps.forEach(function(){ prog.appendChild(document.createElement("i")); });
+  var progI = prog.querySelectorAll("i");
+
+  function render(t){
+    vis(scenes.chat,  band(t,0,0.85));
+    vis(scenes.res,   band(t,1,1.85));
+    vis(scenes.list,  band(t,2,2.85));
+    vis(scenes.cal,   band(t,3,3.85));
+    vis(scenes.share, band(t,4,4.85));
+    vis(scenes.map,   band(t,5,8.85));
+    vis(scenes.alarm, band(t,9,10));
+    for (var q = 0; q < progI.length; q++) progI[q].classList.toggle("on", q <= Math.floor(t + .001) && q < steps.length);
+
+    // 1 Chat
+    var u = clamp(t,0,1);
+    var n = Math.round(MSG1.length * ease(seg(u,0.02,0.5)));
+    $("me1t").textContent = MSG1.slice(0, n);
+    $("me1c").style.display = n < MSG1.length ? "" : "none";
+    var dotsOn = u > .52 && u < .66;
+    $("dots1").style.display = dotsOn ? "" : "none";
+    $("lo1").style.display = u >= .66 ? "" : "none";
+    $("lo1").style.opacity = ease(seg(u,.66,.74));
+    $("bar-time").textContent = t < 3 ? "07:31" : (t < 4 ? "18:30" : (t < 5 ? "18:34" : (t >= 9 ? "21:14" : $("bar-time").textContent)));
+
+    // 2 Zuordnung
+    var r = scenes.res.querySelectorAll(".res > *");
+    for (var k = 0; k < r.length; k++) {
+      var o = ease(seg(t, 1.02 + k*.07, 1.18 + k*.07));
+      r[k].style.opacity = o; r[k].style.transform = "translateY(" + ((1-o)*10) + "px)";
+    }
+
+    // 3 Liste: von Entfernung nach Fahrzeit umsortieren
+    var s = ease(seg(t,2.25,2.7));
+    rowEls.forEach(function(re){
+      var y = (re.p.ki + (re.p.ti - re.p.ki) * s) * 80;
+      re.el.style.transform = "translateY(" + y + "px)";
+      re.el.style.zIndex = re.p.win ? 2 : 1;
+      re.t.style.opacity = .35 + .65*s; re.k.style.opacity = 1 - .5*s;
+      re.el.classList.toggle("win", re.p.win && s > .98);
+    });
+    $("sb1").style.opacity = 1 - s; $("sb2").style.opacity = s;
+
+    // 4 Kalender: neuer Termin rutscht ein, Abfahrtszeiten erscheinen, Erinnerung kommt
+    var cu = t - 3;
+    var ins = ease(seg(cu,.2,.48));
+    agRows.forEach(function(a, ix){
+      var y = a.isNew ? 0 : ((ix - 1) + ins) * 66;
+      a.el.style.transform = "translateY(" + y + "px)" + (a.isNew ? " scale(" + (.94 + .06*ins) + ")" : "");
+      if (a.isNew) a.el.style.opacity = ins;
+      a.go.style.opacity = ease(seg(cu, .52 + ix*.06, .6 + ix*.06));
+    });
+    var c17 = cells[17], on17 = ins > .5;
+    c17.style.background = on17 ? "var(--accent)" : "transparent";
+    c17.style.color = on17 ? "#fff" : "";
+    dot17.style.opacity = on17 ? "1" : "0"; dot17.style.background = "#fff";
+    $("cal-count").textContent = (on17 ? 3 : 2) + " Termine";
+    var nf = ease(seg(cu,.72,.82));
+    $("notif").style.opacity = nf; $("notif").style.transform = "translateY(" + ((1-nf)*-12) + "px)";
+
+    // 5 Begleitung: Link entsteht, wird gesendet, zwei Wege laufen zur selben Tür
+    var su = t - 4;
+    $("shlink").textContent = LINK.slice(0, Math.round(LINK.length * ease(seg(su,.08,.32))));
+    $("shto").style.opacity = ease(seg(su,.34,.42));
+    mmYou.setAttribute("stroke-dashoffset", lenYou * (1 - ease(seg(su,.42,.78))));
+    mmCar.setAttribute("stroke-dashoffset", lenCar * (1 - ease(seg(su,.48,.84))));
+    var pk = ease(seg(su,.7,.8));
+    $("mm-park").setAttribute("opacity", pk); $("mm-p").setAttribute("opacity", pk);
+    $("shleg").style.opacity = ease(seg(su,.55,.7));
+
+    // 6–9 Karte
+    var mu = t - 5;
+    var dMain = ease(seg(mu,0.05,0.75));
+    mainBg.setAttribute("opacity", mu < 0 ? 0 : (mu < 1.2 ? 1 : 1 - .75*ease(seg(mu,1.2,1.5))));
+    mainBg.setAttribute("stroke-dashoffset", mainLen*(1-dMain));
+    var dis = ease(seg(mu,1.05,1.25));
+    xg.setAttribute("opacity", dis);
+    $("banner").style.opacity = mu > 1 && mu < 2.15 ? ease(seg(mu,1.05,1.2)) * (1 - ease(seg(mu,1.95,2.15))) : 0;
+    var dAlt = ease(seg(mu,1.3,1.9));
+    altBg.setAttribute("opacity", mu > 1.25 ? 1 : 0);
+    altBg.setAttribute("stroke-dashoffset", altLen*(1-dAlt));
+    stopA.setAttribute("opacity", mu > 1.3 ? .35 : 1);
+    stopB.setAttribute("opacity", ease(seg(mu,1.4,1.7)));
+
+    var alt = mu > 1.25;
+    $("lg1t").textContent = alt ? "07:52" : "07:50";
+    $("lg2t").textContent = alt ? "08:05" : "07:57";
+    $("lg3t").textContent = alt ? "08:36" : "08:31";
+    $("lg2x").textContent = alt ? "Bus 31 ab Goethestraße" : "Bus 12 ab Bahnhof";
+
+    var ride = seg(mu,2.0,2.95);
+    var len = altLen * ease(ride);
+    var p = altBg.getPointAtLength(len);
+    me.setAttribute("opacity", mu > 1.95 && mu < 3.6 ? 1 : 0);
+    me.setAttribute("transform", "translate(" + p.x + " " + p.y + ")");
+    var clockMin, status, legOn;
+    if (mu < 1.25)      { clockMin = 470; status = ["Losgehen","Termin 09:00 · Praxis am Kornmarkt"]; legOn = 0; }
+    else if (mu < 2.0)  { clockMin = 461; status = ["Neue Verbindung","Bus 31 statt Bus 12 · Ankunft 08:47"]; legOn = 0; }
+    else if (mu < 3.0)  {
+      clockMin = 472 + Math.round(55*ride);
+      if (len < walk1) { status = ["Zu Fuß","noch " + Math.max(1, Math.round((walk1-len)/10)) + " Min zur Haltestelle"]; legOn = 1; }
+      else if (len < walk2End) { status = ["Im Bus 31","Aussteigen am Kornmarkt"]; legOn = 2; }
+      else { status = ["Zu Fuß","die letzten Meter"]; legOn = 3; }
+    } else { clockMin = 527; status = ["Angekommen","Termin 09:00"]; legOn = 4; }
+    $("clk").textContent = hm(clockMin);
+    if (t >= 5 && t < 9) $("bar-time").textContent = hm(clockMin);
+    var sEl = $("clks"); clear(sEl); sEl.appendChild(el("b",null,status[0])); sEl.appendChild(document.createTextNode(status[1]));
+    ["lg1","lg2","lg3"].forEach(function(id, ix){ var L = $(id); L.classList.toggle("on", legOn > ix); L.style.opacity = (legOn === 0 || legOn > ix || legOn === ix+1) ? 1 : .45; });
+    var arr = ease(seg(mu,3.05,3.3));
+    $("arrive").style.opacity = arr; $("legs").style.opacity = 1 - arr;
+    pulse.setAttribute("opacity", mu > 3 ? .25 : 0);
+    if (mu > 3) pulse.setAttribute("r", 10 + 14*(((mu-3)*2) % 1));
+
+    // 10 Notfall
+    var au = t - 9;
+    var n2 = Math.round(MSG2.length * ease(seg(au,0.02,0.4)));
+    $("me2t").textContent = MSG2.slice(0, n2);
+    $("alarm").style.opacity = ease(seg(au,.45,.6));
+  }
+
+  var ticking = false;
+  function measure(){
+    var vh = window.innerHeight || 800, mob = window.matchMedia("(max-width:860px)").matches;
+    var anchor = mob ? vh*0.55 : vh*0.6, t = 0;
+    for (var i = 0; i < steps.length; i++) {
+      var r = steps[i].getBoundingClientRect();
+      var f = (anchor - r.top) / r.height;
+      if (f > 0) t = i + clamp(f,0,1);
+    }
+    render(clamp(t, 0, steps.length));
+    ticking = false;
+  }
+  function onScroll(){ if (!ticking) { ticking = true; requestAnimationFrame(measure); } }
+  window.addEventListener("scroll", onScroll, { passive:true });
+  window.addEventListener("resize", onScroll);
+  render(0.55);
+  measure();
+
+  /* ---------- Feedback ---------- */
+  var DEV = "lotse_dev_id";
+  function devId(){ try { var v = localStorage.getItem(DEV); if (!v) { v = "g" + Math.random().toString(36).slice(2,10); localStorage.setItem(DEV, v); } return v; } catch (e) { return "unbekannt"; } }
+  var scale = $("scale"), sendB = $("send"), statusEl = $("status"), cmtIn = $("cmt"), agg = $("agg"), cmts = $("cmts");
+  var chosen = 0, db = null, uid = null, mode = null;
+  /* Öffentlicher Supabase-Schlüssel: darf nur einfügen und die Zusammenfassung lesen (Row Level Security). */
+  var SB_URL = "https://wigbijqzdrplwfwgczxl.supabase.co";
+  var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpZ2JpanF6ZHJwbHdmd2djenhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNTgyMzIsImV4cCI6MjEwODkzNDIzMn0.ISzRFJZ5NRbKTy7_elLh3-OcaLmKtBfnhkYbR75t6-A";
+  function sbHeaders(){ return { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json" }; }
+  async function sbSummary(){
+    var r = await fetch(SB_URL + "/rest/v1/rpc/feedback_summary", { method:"POST", headers: sbHeaders(), body:"{}" });
+    if (!r.ok) throw new Error("summary " + r.status);
+    return r.json();
+  }
+  function paintSummary(s){
+    clear(agg);
+    var cnt = s && s.count ? s.count : 0;
+    if (!cnt) { msg("Noch keine Bewertung. Deine wäre die erste."); return; }
+    agg.appendChild(el("div","num", Number(s.avg).toFixed(1).replace(".",",")));
+    agg.appendChild(el("div","of","von 5 · " + cnt + (cnt === 1 ? " Bewertung" : " Bewertungen")));
+  }
+  for (var v = 1; v <= 5; v++) (function(x){
+    var b = el("button", null, String(x)); b.type = "button"; b.setAttribute("aria-label", x + " von 5");
+    b.addEventListener("click", function(){ chosen = x; var all = scale.querySelectorAll("button"); for (var k = 0; k < all.length; k++) all[k].classList.toggle("on", k === x-1); sendB.disabled = !mode; });
+    scale.appendChild(b);
+  })(v);
+  function msg(t){ clear(agg); agg.appendChild(el("div","empty",t)); }
+  msg("Lädt …");
+  function fmt(ts){ try { var d = new Date(ts), p = function(x){ return (x<10?"0":"")+x; }; return p(d.getDate())+"."+p(d.getMonth()+1)+"."+d.getFullYear(); } catch(e){ return ""; } }
+  function paint(rows){
+    rows.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    var sum = 0, cnt = 0, seen = {};
+    rows.forEach(function(r){ if (typeof r.rating === "number") { sum += r.rating; cnt++; } seen[r.dev] = (seen[r.dev]||0)+1; });
+    clear(agg);
+    if (!cnt) msg("Noch keine Bewertung. Deine wäre die erste.");
+    else { agg.appendChild(el("div","num",(sum/cnt).toFixed(1).replace(".",","))); agg.appendChild(el("div","of","von 5 · " + cnt + (cnt===1?" Bewertung":" Bewertungen"))); }
+    clear(cmts);
+    rows.forEach(function(r){
+      if (!r.text) return;
+      var c = el("div","cmt"), m = el("div","meta");
+      m.appendChild(el("b",null,(r.rating||"–")+"/5")); m.appendChild(el("span",null,fmt(r.ts)));
+      if (seen[r.dev] > 1) m.appendChild(el("span","dup",seen[r.dev]+" Beiträge vom selben Gerät"));
+      c.appendChild(m); c.appendChild(el("p",null,r.text)); cmts.appendChild(c);
+    });
+  }
+  (async function(){
+    // 1. Wahl: Supabase (öffentlich gehostete Seite). Kommentare liest dort nur das Team.
+    try {
+      var s = await sbSummary();
+      mode = "sb";
+      paintSummary(s);
+      var pv = document.querySelector(".priv");
+      if (pv) pv.textContent = "Anonym: kein Name, keine E-Mail. Kommentare liest nur das Projektteam. Damit Mehrfachabgaben auffallen, speichert die Seite eine zufällige Kennung in deinem Browser.";
+      cmts.style.display = "none";
+      sendB.disabled = chosen === 0;
+      return;
+    } catch (e) { /* nicht erreichbar, weiter mit Plan B */ }
+    // 2. Wahl: der Speicher der Claude-Seite (nur angemeldet).
+    try { db = await window.claude.use("db"); var user = await window.claude.use("user"); uid = user ? await user.id() : null; } catch (e) { db = null; }
+    if (!db) { msg("Bewerten ist hier gerade nicht möglich. Im Unterricht liegt der Fragebogen auf Papier aus."); sendB.disabled = true; return; }
+    mode = "db";
+    sendB.disabled = chosen === 0;
+    try {
+      db.collection("feedback").onSnapshot(function(snap){
+        var rows = []; (snap && snap.docs ? snap.docs : []).forEach(function(d){ var x = d && d.data ? d.data() : null; if (x) rows.push(x); }); paint(rows);
+      });
+    } catch (e) { msg("Bewertungen konnten nicht geladen werden."); }
+  })();
+  sendB.addEventListener("click", async function(){
+    if (!mode || !chosen) return;
+    sendB.disabled = true; statusEl.textContent = "Wird gesendet …";
+    var text = (cmtIn.value || "").trim().slice(0, 600);
+    if (mode === "sb") {
+      try {
+        var r = await fetch(SB_URL + "/rest/v1/feedback", {
+          method:"POST",
+          headers: Object.assign(sbHeaders(), { "Prefer":"return=minimal" }),
+          body: JSON.stringify({ rating: chosen, comment: text || null, device: devId() })
+        });
+        if (!r.ok) {
+          var body = ""; try { body = await r.text(); } catch (_) {}
+          statusEl.textContent = /Zu viele/.test(body) ? "Zu viele Beiträge von diesem Gerät. Bitte später noch einmal." : "Hat nicht geklappt. Bitte noch einmal versuchen.";
+          sendB.disabled = false; return;
+        }
+        statusEl.textContent = "Angekommen. Danke.";
+        cmtIn.value = "";
+        try { paintSummary(await sbSummary()); } catch (_) {}
+      } catch (e) { statusEl.textContent = "Keine Verbindung. Bitte noch einmal versuchen."; sendB.disabled = false; }
+      return;
+    }
+    var rec = { rating: chosen, text: text, dev: devId(), by: uid || null, ts: Date.now() };
+    try { await db.collection("feedback").doc("f"+rec.ts.toString(36)+Math.random().toString(36).slice(2,7)).set(rec); statusEl.textContent = "Angekommen. Danke."; cmtIn.value = ""; }
+    catch (e) { statusEl.textContent = "Hat nicht geklappt. Bitte noch einmal versuchen."; sendB.disabled = false; }
+  });
+})();
+</script>
+
+</body>
+</html>

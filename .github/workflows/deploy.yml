@@ -28,10 +28,15 @@ jobs:
         run: npx vitest run
       - name: Build
         run: npm run build
+      - name: Projektseite und App zusammenstellen
+        run: |
+          mkdir -p out/app
+          cp -r site/. out/
+          cp -r dist/. out/app/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: out
 
   deploy:
     needs: build
