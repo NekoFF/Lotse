@@ -29,10 +29,18 @@ jobs:
       - name: Build
         run: npm run build
       - name: Projektseite und App zusammenstellen
+        env:
+          # Die App wird erst veröffentlicht, wenn dieser Schalter auf "true" steht.
+          APP_VEROEFFENTLICHEN: "false"
         run: |
-          mkdir -p out/app
+          mkdir -p out
           cp -r site/. out/
-          cp -r dist/. out/app/
+          if [ "$APP_VEROEFFENTLICHEN" = "true" ]; then
+            mkdir -p out/app
+            cp -r dist/. out/app/
+          else
+            echo "App wird noch nicht veröffentlicht."
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

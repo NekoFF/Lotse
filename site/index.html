@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="Lotse – vom Anliegen bis zur Tür. Projektarbeit, Werner-von-Siemens-Schule.">
-<link rel="icon" type="image/png" href="app/favicon.png">
+<link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -332,15 +332,30 @@ footer p+p{margin-top:6px}
 .ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
 .cta{background:var(--accent);color:#fff;text-decoration:none;font-weight:600;padding:13px 22px;border-radius:999px}
 .cta2{background:var(--surface);color:var(--ink);border:1px solid var(--line);text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px}
+
+/* Bald verfügbar */
+.soon{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(32px,6vw,80px);margin-top:clamp(40px,6vw,64px);align-items:start}
+@media(max-width:860px){.soon{grid-template-columns:1fr}}
+.locked{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:16px 18px}
+.locked b{font-size:18px;letter-spacing:-.01em}
+.locked span{display:block;font-size:14px;color:var(--muted);margin-top:2px}
+.locked button{border:0;border-radius:999px;padding:11px 18px;font-family:var(--ff);font-size:15px;font-weight:600;background:var(--line);color:var(--faint);cursor:not-allowed;white-space:nowrap}
+.soon ul{margin:18px 0 0;padding-left:18px;color:var(--muted)}
+.soon li{margin-bottom:6px}
+.wl label{display:block;font-size:14px;font-weight:600;margin-bottom:8px}
+.wl input[type=email]{width:100%;height:52px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:var(--ff);font-size:17px;padding:0 16px}
+.wl .consent{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:var(--muted);line-height:1.45;margin-top:14px;font-weight:400}
+.wl .consent input{margin-top:3px;width:18px;height:18px;flex:none;accent-color:var(--accent)}
+.wl .wl-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:16px}
 </style>
 
 <div class="in">
-  <nav class="top"><div class="word"><i></i>Lotse</div><a class="applink" href="app/">App öffnen</a></nav>
+  <nav class="top"><div class="word"><i></i>Lotse</div><a class="applink" href="#bald">Benachrichtigen</a></nav>
   <header class="hero">
     <div>
       <h1>Vom Anliegen bis zur Tür.</h1>
       <p>Du sagst, was los ist. Lotse findet die zuständige Fachrichtung, die Praxis, die du wirklich erreichst, und den Moment, in dem du losgehen musst.</p>
-      <div class="ctas"><a class="cta" href="app/">App ausprobieren</a><a class="cta2" href="#feedback">Bewerten</a></div>
+      <div class="ctas"><a class="cta" href="#bald">Bei Start benachrichtigen</a><a class="cta2" href="#feedback">Bewerten</a></div>
       <div class="cue"><i></i>Scrollen, um eine Fahrt zu begleiten</div>
     </div>
     <div class="glance" aria-label="Vorschau: Anliegen, Fachrichtung und Abfahrtszeit">
@@ -561,6 +576,27 @@ footer p+p{margin-top:6px}
     <div><b>Mischal</b><span>Datenquellen und Machbarkeit</span></div>
     <div><b>Abdi</b><span>Nutzersicht und Anforderungen</span></div>
     <div><b>Fateme</b><span>Dokumentation</span></div>
+  </div>
+</div></section>
+
+<section class="block" id="bald"><div class="in">
+  <div class="kick">Bald verfügbar</div>
+  <h2>Die App kommt bald.</h2>
+  <div class="soon">
+    <div>
+      <div class="locked"><div><b>Lotse für dein Handy</b><span>Android und iPhone, ohne App Store</span></div><button type="button" disabled aria-disabled="true">bald verfügbar</button></div>
+      <ul>
+        <li>läuft im Browser und lässt sich auf den Startbildschirm legen</li>
+        <li>kein Konto, nichts wird gespeichert</li>
+        <li>geplant für Februar 2027</li>
+      </ul>
+    </div>
+    <form class="wl" id="wl" novalidate>
+      <label for="wl-mail">Sag mir Bescheid, wenn es losgeht</label>
+      <input type="email" id="wl-mail" autocomplete="email" inputmode="email" placeholder="deine@email.de" maxlength="254" required>
+      <label class="consent" for="wl-ok"><input type="checkbox" id="wl-ok"><span>Ich möchte <b>eine einzige</b> E-Mail zum Start der App bekommen. Die Adresse wird nur dafür genutzt, nicht weitergegeben und danach gelöscht, spätestens am 31.03.2027.</span></label>
+      <div class="wl-row"><button class="btn" id="wl-send" type="submit" disabled>Eintragen</button><span class="status" id="wl-status"></span></div>
+    </form>
   </div>
 </div></section>
 
@@ -941,6 +977,30 @@ footer p+p{margin-top:6px}
     try { await db.collection("feedback").doc("f"+rec.ts.toString(36)+Math.random().toString(36).slice(2,7)).set(rec); statusEl.textContent = "Angekommen. Danke."; cmtIn.value = ""; }
     catch (e) { statusEl.textContent = "Hat nicht geklappt. Bitte noch einmal versuchen."; sendB.disabled = false; }
   });
+  /* ---------- Warteliste ---------- */
+  (function(){
+    var f = document.getElementById("wl"); if (!f) return;
+    var mail = document.getElementById("wl-mail"), ok = document.getElementById("wl-ok");
+    var btn = document.getElementById("wl-send"), st = document.getElementById("wl-status");
+    var re = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    function check(){ btn.disabled = !(re.test((mail.value || "").trim()) && ok.checked); }
+    mail.addEventListener("input", check); ok.addEventListener("change", check);
+    f.addEventListener("submit", async function(e){
+      e.preventDefault(); if (btn.disabled) return;
+      btn.disabled = true; st.textContent = "Wird eingetragen …";
+      try {
+        var r = await fetch(SB_URL + "/rest/v1/warteliste", {
+          method: "POST",
+          headers: Object.assign(sbHeaders(), { "Prefer": "return=minimal" }),
+          body: JSON.stringify({ email: mail.value.trim(), einwilligung: true, device: devId() })
+        });
+        if (r.ok || r.status === 409) { st.textContent = "Eingetragen. Wir melden uns einmal, wenn die App da ist."; mail.value = ""; ok.checked = false; return; }
+        var t = ""; try { t = await r.text(); } catch (_) {}
+        st.textContent = /Zu viele/.test(t) ? "Zu viele Versuche. Bitte später noch einmal." : "Hat nicht geklappt. Bitte prüf die Adresse.";
+        check();
+      } catch (err) { st.textContent = "Keine Verbindung. Bitte noch einmal versuchen."; check(); }
+    });
+  })();
 })();
 </script>
 
