@@ -246,11 +246,27 @@ p{margin:0}
 /* Telefon: Bühne oben fest, Text darunter */
 @media(max-width:860px){
   .story{grid-template-columns:1fr;gap:0}
-  .stagecol{order:-1;position:sticky;top:0;z-index:6;height:58vh;padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
-  .stage{position:relative;top:0;height:100%;padding-block:10px}
+  .stagecol{order:-1;position:sticky;top:0;z-index:6;height:60vh;height:60svh;padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+  .stage{position:relative;top:0;height:100%;padding-block:10px;box-sizing:border-box}
   .screen{width:min(100%,380px);border-radius:26px}
   .steps{position:relative;z-index:1}
-  .step{min-height:84vh;align-items:flex-end;padding-bottom:4vh}
+  .step{min-height:84vh;min-height:84svh;align-items:flex-end;padding-bottom:4vh;padding-bottom:4svh}
+  .clock{top:58px;left:12px;right:12px;padding:10px 12px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:0 10px 24px -16px rgba(12,20,40,.35);align-items:center}
+  .clock .t{font-size:32px}
+  .clock .s{font-size:12px;max-width:62%}
+  .clock .s b{font-size:13px}
+  .banner{top:126px;left:12px;right:12px;font-size:13px}
+  .legs,.arrive{left:12px;right:12px;bottom:12px;padding:10px 12px;gap:6px}
+  .leg{grid-template-columns:46px 12px minmax(0,1fr);gap:8px;font-size:13px}
+  .leg .tt{font-size:13px}
+  .arrive .a2{font-size:22px}
+  .alarm{padding:62px 18px 18px}
+  .alarm .h{font-size:27px}
+  .alarm .p{font-size:14px;margin-top:10px}
+  .alarm .nums{gap:8px}
+  .alarm .nums div{padding:9px 14px;gap:10px}
+  .alarm .nums b{font-size:21px}
+  .alarm .nums span{font-size:12px;text-align:right}
   .step > div{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:0 20px 40px -30px rgba(10,20,40,.4)}
   .step h2{font-size:26px;margin-top:8px}
   .step p{font-size:16px;margin-top:10px}
@@ -867,8 +883,11 @@ footer p+p{margin-top:6px}
   }
 
   var ticking = false;
+  /* Feste Höhe: Auf dem Handy ändert die ein- und ausfahrende Adressleiste innerHeight beim Scrollen.
+     Neu gemessen wird nur, wenn sich die Breite ändert (Drehen, Fenster). */
+  var stableVh = window.innerHeight || 800, lastW = window.innerWidth;
   function measure(){
-    var vh = window.innerHeight || 800, mob = window.matchMedia("(max-width:860px)").matches;
+    var vh = stableVh, mob = window.matchMedia("(max-width:860px)").matches;
     var anchor = mob ? vh*0.55 : vh*0.6, t = 0;
     for (var i = 0; i < steps.length; i++) {
       var r = steps[i].getBoundingClientRect();
@@ -880,7 +899,9 @@ footer p+p{margin-top:6px}
   }
   function onScroll(){ if (!ticking) { ticking = true; requestAnimationFrame(measure); } }
   window.addEventListener("scroll", onScroll, { passive:true });
-  window.addEventListener("resize", onScroll);
+  window.addEventListener("resize", function(){
+    if (window.innerWidth !== lastW) { lastW = window.innerWidth; stableVh = window.innerHeight || 800; onScroll(); }
+  });
   render(0.55);
   measure();
 
