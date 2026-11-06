@@ -357,6 +357,8 @@ footer p+p{margin-top:6px}
 .ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
 .cta{background:var(--accent);color:#fff;text-decoration:none;font-weight:600;padding:13px 22px;border-radius:999px}
 .cta2{background:var(--surface);color:var(--ink);border:1px solid var(--line);text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px}
+.cta-soon{font:inherit;font-weight:600;padding:12px 22px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted);cursor:not-allowed}
+.cta-soon span{font-size:12px;margin-left:6px}
 
 /* Bald verfügbar */
 .soon{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(32px,6vw,80px);margin-top:clamp(40px,6vw,64px);align-items:start}
@@ -365,6 +367,7 @@ footer p+p{margin-top:6px}
 .locked b{font-size:18px;letter-spacing:-.01em}
 .locked span{display:block;font-size:14px;color:var(--muted);margin-top:2px}
 .locked button{border:0;border-radius:999px;padding:11px 18px;font-family:var(--ff);font-size:15px;font-weight:600;background:var(--line);color:var(--faint);cursor:not-allowed;white-space:nowrap}
+@media(max-width:380px){.locked{align-items:flex-start;flex-direction:column}}
 .soon ul{margin:18px 0 0;padding-left:18px;color:var(--muted)}
 .soon li{margin-bottom:6px}
 .wl label{display:block;font-size:14px;font-weight:600;margin-bottom:8px}
@@ -381,7 +384,7 @@ footer p+p{margin-top:6px}
     <div>
       <h1>Vom Anliegen bis zur Tür.</h1>
       <p>Du sagst, was los ist. Lotse findet die zuständige Fachrichtung, die Praxis, die du wirklich erreichst, und den Moment, in dem du losgehen musst.</p>
-      <div class="ctas"><a class="cta" href="#bald">Bei Start benachrichtigen</a><a class="cta2" href="#feedback">Bewerten</a></div>
+      <div class="ctas"><button class="cta-soon" type="button" disabled>Lotse ausprobieren <span>· Bald verfügbar</span></button><a class="cta" href="#bald">Bei Start benachrichtigen</a><a class="cta2" href="#feedback">Bewerten</a></div>
       <div class="cue"><i></i>Scrollen, um eine Fahrt zu begleiten</div>
     </div>
     <div class="glance" aria-label="Vorschau: Anliegen, Fachrichtung und Abfahrtszeit">
@@ -610,7 +613,7 @@ footer p+p{margin-top:6px}
   <h2>Die App kommt bald.</h2>
   <div class="soon">
     <div>
-      <div class="locked"><div><b>Lotse für dein Handy</b><span>Android und iPhone, ohne App Store</span></div><button type="button" disabled aria-disabled="true">bald verfügbar</button></div>
+      <div class="locked"><div><b>Lotse ausprobieren</b><span>Für Handy und Computer · bald verfügbar</span></div><button type="button" disabled>App öffnen</button></div>
       <ul>
         <li>läuft im Browser und lässt sich auf den Startbildschirm legen</li>
         <li>kein Konto, nichts wird gespeichert</li>
