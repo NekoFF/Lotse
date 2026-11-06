@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Telefon Praxen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.light{--glass:rgba(255,255,255,.76);--card:#ffffff;--ink:#0b0b10;--ink2:#55555f;--ink3:#6c6c76;--line:rgba(0,0,0,.08);--fill:rgba(118,118,128,.12);--seg:#ffffff;--accent:#2447e6;--onaccent:#ffffff;--accentsoft:rgba(36,71,230,.1);--danger:#d70015;--dangerdeep:#c00013;--wash:rgba(206,0,20,.9);--shadow:0 12px 40px rgba(20,24,40,.16),0 1px 2px rgba(20,24,40,.08);--frame:#d9d9de}
+.dark{--glass:rgba(30,30,34,.74);--card:#2c2c31;--ink:#f5f5f7;--ink2:#a7a7b0;--ink3:#8f8f99;--line:rgba(255,255,255,.1);--fill:rgba(118,118,128,.24);--seg:#5f5f66;--accent:#6f8cff;--onaccent:#06102e;--accentsoft:rgba(111,140,255,.16);--danger:#ff453a;--dangerdeep:#b3000f;--wash:rgba(110,6,14,.93);--shadow:0 12px 40px rgba(0,0,0,.55);--frame:#000000}
+.glass{background:var(--glass);backdrop-filter:blur(28px) saturate(1.7);-webkit-backdrop-filter:blur(28px) saturate(1.7);box-shadow:var(--shadow);border:0.5px solid var(--line)}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mono{font-family:ui-monospace,"SF Mono","JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer}
+a{color:var(--accent)}a:hover{opacity:.8}
+</style>
+</helmet>
+<div style="width: 828px; height: 844px; display: flex; gap: 48px">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="position: relative; width: 390px; height: 844px; flex-shrink: 0; border-radius: 48px; overflow: hidden; background: var(--frame); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif">
+<div style="position: absolute; inset: 0">
+<dc-import name="Map" theme="{{t.cls}}" mode="pins" focus="1" vb="540 40 520 1126" w="390" h="844" hint-size="390px,844px"></dc-import>
+</div>
+<button class="glass" aria-label="Zurück zur Eingabe" style="position: absolute; top: 58px; left: 16px; width: 48px; height: 48px; border-radius: 24px; display: flex; align-items: center; justify-content: center">
+<svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</button>
+<div class="glass" style="position: absolute; left: 0; right: 0; bottom: 0; top: 440px; border-radius: 34px 34px 0 0; padding: 8px 16px 0; display: flex; flex-direction: column; gap: 14px; overflow: hidden">
+<div style="width: 36px; height: 5px; border-radius: 3px; background: var(--ink3); opacity: 0.45; margin: 0 auto"></div>
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 0 4px">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<h1 style="margin: 0; font-size: 24px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em">Orthopädie</h1>
+<span style="font-size: 13px; color: var(--ink2)">5 Praxen · nach Fahrzeit von hier</span>
+</div>
+<button aria-label="Suche schließen" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 22px; background: var(--fill); display: flex; align-items: center; justify-content: center; color: var(--ink2)">
+<svg class="ic" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 2px; height: 44px; box-sizing: border-box; border-radius: 12px; background: var(--fill); font-size: 14px; font-weight: 500">
+<button style="border-radius: 10px; background: var(--seg); box-shadow: 0 1px 3px rgba(0,0,0,.12); font-weight: 600">Schnellste</button>
+<button style="border-radius: 10px">Nächste</button>
+<button style="border-radius: 10px">Barrierefrei</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{praxen}}" as="p" hint-placeholder-count="3">
+<button style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 18px; text-align: left; background: {{p.bg}}; box-shadow: {{p.ring}}">
+<span style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+<span style="font-size: 16px; font-weight: 600">{{p.name}}</span>
+<span style="font-size: 13px; color: var(--ink2)">{{p.adr}}</span>
+<span style="display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12px; color: var(--ink2)">
+<sc-for list="{{p.segs}}" as="s" hint-placeholder-count="3">
+<sc-if value="{{s.sep}}" hint-placeholder-val="{{ false }}"><span style="color: var(--ink3)">›</span></sc-if>
+<sc-if value="{{s.walk}}" hint-placeholder-val="{{ true }}"><span style="display: inline-flex; align-items: center; gap: 2px"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4.5" r="1.8"></circle><path d="M9 21l2.5-6.5L14 17v4M8 12l2.5-4 3.5 1 2 3M11.5 14.5L10.5 9"></path></svg><span class="mono">{{s.label}}</span></span></sc-if>
+<sc-if value="{{s.line}}" hint-placeholder-val="{{ false }}"><span style="display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; font-weight: 700; background: {{s.bg}}; color: {{s.fg}}">{{s.label}}</span></sc-if>
+</sc-for>
+</span>
+</span>
+<span style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1">
+<span class="mono" style="font-size: 28px; font-weight: 600; letter-spacing: -0.03em">{{p.min}}</span>
+<span style="font-size: 12px; color: var(--ink2); margin-top: 3px">Min</span>
+</span>
+</button>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":828,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const W = (m) => ({ walk: true, line: false, label: m });
+    const L = (label, kind) => ({
+      walk: false, line: true, label,
+      bg: kind === 'tram' ? 'var(--accent)' : kind === 's' ? '#1f7a4a' : 'var(--ink)',
+      fg: kind === 'tram' ? 'var(--onaccent)' : kind === 's' ? '#ffffff' : 'var(--card)'
+    });
+    const seq = (arr) => arr.map((s, i) => Object.assign({ sep: i > 0 }, s));
+    const praxen = [
+      { name: 'Orthopädie am Markt', adr: 'Lindenstraße 12 · 1,2 km', min: '9', segs: seq([W('3'), L('Tram 12', 'tram'), W('2')]) },
+      { name: 'Gemeinschaftspraxis Lindenhof', adr: 'Am Lindenhof 4 · 1,9 km · barrierefrei', min: '14', segs: seq([W('6'), L('Bus 36', 'bus'), W('2')]) },
+      { name: 'Gelenkzentrum Altstadt', adr: 'Kirchgasse 7 · 1,4 km', min: '17', segs: seq([W('17')]) }
+    ].map((p, i) => Object.assign(p, {
+      bg: i === 0 ? 'var(--accentsoft)' : 'var(--card)',
+      ring: i === 0 ? 'inset 0 0 0 1.5px var(--accent)' : 'none'
+    }));
+    return { themes: [{ cls: 'light' }, { cls: 'dark' }], praxen };
+  }
+}
+</script>
+</body>
+</html>

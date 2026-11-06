@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Computer Notfall</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.light{--frame:#d9d9de;--dangerdeep:#c00013;--wash:rgba(206,0,20,.9)}
+.dark{--frame:#000000;--dangerdeep:#b3000f;--wash:rgba(110,6,14,.93)}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:6px;background:rgba(255,255,255,.18);font-family:ui-monospace,"SF Mono","JetBrains Mono",monospace;font-size:12px;color:#ffffff}
+button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer}
+a{color:#ffffff}a:hover{opacity:.9}
+</style>
+</helmet>
+<div style="width: 1280px; height: 1648px; display: flex; flex-direction: column; gap: 48px">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="position: relative; width: 1280px; height: 800px; flex-shrink: 0; border-radius: 16px; overflow: hidden; background: var(--frame); color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif">
+<div style="position: absolute; inset: 0">
+<dc-import name="Map" theme="{{t.cls}}" mode="plain" focus="0" vb="-33 45 1200 750" w="1280" h="800" hint-size="1280px,800px"></dc-import>
+</div>
+<div style="position: absolute; inset: 0; background: var(--wash)"></div>
+<div style="position: absolute; top: 28px; left: 32px; right: 32px; display: flex; align-items: center; justify-content: space-between">
+<div style="padding: 10px 14px; border-radius: 14px; background: rgba(255,255,255,.16); font-size: 15px">„starke brustschmerzen und atemnot“</div>
+<button style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 14px; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); font-size: 14px; font-weight: 600"><span class="kbd">esc</span> Zurück zur Eingabe</button>
+</div>
+<div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -46%); width: 600px; display: flex; flex-direction: column; gap: 18px">
+<span style="font-size: 14px; font-weight: 700; letter-spacing: 0.1em; color: rgba(255,255,255,.9)">NOTFALL</span>
+<h1 style="margin: 0; font-size: 72px; line-height: 0.98; font-weight: 700; letter-spacing: -0.035em">Ruf jetzt die 112.</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.45; color: rgba(255,255,255,.92); max-width: 520px">Brustschmerzen mit Atemnot können lebensbedrohlich sein. Warte nicht auf einen Praxistermin.</p>
+<div style="display: flex; align-items: center; gap: 16px; margin-top: 10px">
+<a href="tel:112" style="height: 64px; padding: 0 28px; border-radius: 20px; background: #ffffff; color: var(--dangerdeep); text-decoration: none; font-size: 21px; font-weight: 700; display: flex; align-items: center; gap: 10px">
+<svg class="ic" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.2"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"></path></svg>
+112 anrufen
+</a>
+<span style="font-size: 15px; line-height: 1.4; color: rgba(255,255,255,.9)">Am Computer ohne Telefon?<br>Ruf vom Handy oder Festnetz an.</span>
+</div>
+<p style="margin: 8px 0 0; font-size: 15px; color: rgba(255,255,255,.9)">Lotse sucht in diesem Fall keine Praxis.</p>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1648}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { themes: [{ cls: 'light' }, { cls: 'dark' }] };
+  }
+}
+</script>
+</body>
+</html>

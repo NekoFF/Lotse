@@ -143,7 +143,7 @@ p{margin:0}
 .row .v{text-align:right}
 .row .v .t{font-family:var(--ff-mono);font-weight:600;font-size:17px}
 .row .v .k{font-family:var(--ff-mono);font-size:12px;color:var(--faint)}
-.row.win{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.row::after{content:"";position:absolute;inset:-1px;border-radius:inherit;border:1px solid var(--accent);box-shadow:0 0 0 3px var(--accent-soft);opacity:var(--w,0);pointer-events:none}
 .lnote{position:absolute;left:20px;right:20px;bottom:22px;font-size:13px;color:var(--muted);line-height:1.45}
 
 /* Karte */
@@ -243,14 +243,27 @@ p{margin:0}
 .prog i.on{background:var(--accent)}
 @media(max-width:1100px){.prog{display:none}}
 
-/* Telefon: Bühne oben fest, Text darunter */
+/* Telefon: ganzer Bildschirm steht still, oben die App, unten der passende Text.
+   Die .step-Blöcke sind unsichtbar und liefern nur die Scrolllänge. */
+.cap{display:none}
 @media(max-width:860px){
-  .story{grid-template-columns:1fr;gap:0}
-  .stagecol{order:-1;position:sticky;top:0;z-index:6;height:60vh;height:60svh;padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
-  .stage{position:relative;top:0;height:100%;padding-block:10px;box-sizing:border-box}
+  .story{display:flex;flex-direction:column;gap:0}
+  .stagecol{order:-1;position:sticky;top:0;z-index:6;height:100vh;height:100svh;display:flex;flex-direction:column;background:var(--bg);padding-top:env(safe-area-inset-top,0px);box-sizing:border-box}
+  .stage{position:relative;top:0;flex:1 1 auto;min-height:0;height:auto;padding:12px 16px 0;box-sizing:border-box}
   .screen{width:min(100%,380px);border-radius:26px}
-  .steps{position:relative;z-index:1}
-  .step{min-height:84vh;min-height:84svh;align-items:flex-end;padding-bottom:4vh;padding-bottom:4svh}
+  .steps{padding:0;visibility:hidden}
+  .step{min-height:0;height:72vh;height:72svh}
+  .cap{display:block;flex:0 0 auto;padding:14px 22px calc(18px + env(safe-area-inset-bottom,0px));min-height:208px;box-sizing:border-box}
+  .cap .capbar{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;margin-bottom:14px}
+  .cap .capbar i{display:block;height:3px;border-radius:2px;background:var(--line);transition:background .25s}
+  .cap .capbar i.on{background:var(--accent)}
+  .cap .capin{transition:opacity .28s ease,transform .28s ease}
+  .cap .capin.out{opacity:0;transform:translateY(6px)}
+  .cap .no{font-family:var(--ff-mono);font-size:12px;color:var(--faint);letter-spacing:.04em}
+  .cap h2{font-size:23px;line-height:1.12;margin-top:6px;letter-spacing:-.02em}
+  .cap p{margin-top:8px;color:var(--muted);font-size:15px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
+  .cap p b{color:var(--ink);font-weight:600}
+  .cap .facts{display:none}
   .clock{top:58px;left:12px;right:12px;padding:10px 12px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:0 10px 24px -16px rgba(12,20,40,.35);align-items:center}
   .clock .t{font-size:32px}
   .clock .s{font-size:12px;max-width:62%}
@@ -267,10 +280,6 @@ p{margin:0}
   .alarm .nums div{padding:9px 14px;gap:10px}
   .alarm .nums b{font-size:21px}
   .alarm .nums span{font-size:12px;text-align:right}
-  .step > div{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:0 20px 40px -30px rgba(10,20,40,.4)}
-  .step h2{font-size:26px;margin-top:8px}
-  .step p{font-size:16px;margin-top:10px}
-  .facts{margin-top:14px}
   .grid7 .c{height:24px;font-size:12px}
   .grid7 .wd{padding-bottom:2px}
   .agenda{margin-top:10px}
@@ -801,7 +810,7 @@ footer p+p{margin-top:6px}
       re.el.style.transform = "translateY(" + y + "px)";
       re.el.style.zIndex = re.p.win ? 2 : 1;
       re.t.style.opacity = .35 + .65*s; re.k.style.opacity = 1 - .5*s;
-      re.el.classList.toggle("win", re.p.win && s > .98);
+      re.el.style.setProperty("--w", re.p.win ? ease(seg(t,2.62,2.8)) : 0);
     });
     $("sb1").style.opacity = 1 - s; $("sb2").style.opacity = s;
 
@@ -886,15 +895,34 @@ footer p+p{margin-top:6px}
   /* Feste Höhe: Auf dem Handy ändert die ein- und ausfahrende Adressleiste innerHeight beim Scrollen.
      Neu gemessen wird nur, wenn sich die Breite ändert (Drehen, Fenster). */
   var stableVh = window.innerHeight || 800, lastW = window.innerWidth;
+  /* Untertitel unter der App (nur Handy): Text des aktuellen Schritts, weich überblendet. */
+  var cap = document.createElement("div"); cap.className = "cap"; cap.setAttribute("aria-live", "polite");
+  var capbar = document.createElement("div"); capbar.className = "capbar";
+  steps.forEach(function(){ capbar.appendChild(document.createElement("i")); });
+  var capin = document.createElement("div"); capin.className = "capin";
+  cap.appendChild(capbar); cap.appendChild(capin);
+  document.querySelector(".stagecol").appendChild(cap);
+  var capIdx = -1, capTimer = null;
+  function caption(i){
+    if (i === capIdx) return;
+    var first = capIdx < 0; capIdx = i;
+    Array.prototype.forEach.call(capbar.children, function(b, k){ b.classList.toggle("on", k <= i); });
+    clearTimeout(capTimer);
+    function swap(){ clear(capin); capin.appendChild(steps[i].firstElementChild.cloneNode(true)); capin.classList.remove("out"); }
+    if (first) { swap(); return; }
+    capin.classList.add("out");
+    capTimer = setTimeout(swap, 180);
+  }
   function measure(){
     var vh = stableVh, mob = window.matchMedia("(max-width:860px)").matches;
-    var anchor = mob ? vh*0.55 : vh*0.6, t = 0;
+    var anchor = mob ? vh : vh*0.6, t = 0;
     for (var i = 0; i < steps.length; i++) {
       var r = steps[i].getBoundingClientRect();
       var f = (anchor - r.top) / r.height;
       if (f > 0) t = i + clamp(f,0,1);
     }
     render(clamp(t, 0, steps.length));
+    if (mob) caption(Math.min(steps.length - 1, Math.floor(t)));
     ticking = false;
   }
   function onScroll(){ if (!ticking) { ticking = true; requestAnimationFrame(measure); } }

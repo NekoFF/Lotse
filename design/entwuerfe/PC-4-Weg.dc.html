@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Computer Weg</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.light{--glass:rgba(255,255,255,.76);--card:#ffffff;--ink:#0b0b10;--ink2:#55555f;--ink3:#6c6c76;--line:rgba(0,0,0,.08);--fill:rgba(118,118,128,.12);--seg:#ffffff;--accent:#2447e6;--onaccent:#ffffff;--accentsoft:rgba(36,71,230,.1);--danger:#d70015;--shadow:0 12px 40px rgba(20,24,40,.16),0 1px 2px rgba(20,24,40,.08);--frame:#d9d9de}
+.dark{--glass:rgba(30,30,34,.74);--card:#2c2c31;--ink:#f5f5f7;--ink2:#a7a7b0;--ink3:#8f8f99;--line:rgba(255,255,255,.1);--fill:rgba(118,118,128,.24);--seg:#5f5f66;--accent:#6f8cff;--onaccent:#06102e;--accentsoft:rgba(111,140,255,.16);--danger:#ff453a;--shadow:0 12px 40px rgba(0,0,0,.55);--frame:#000000}
+.glass{background:var(--glass);backdrop-filter:blur(28px) saturate(1.7);-webkit-backdrop-filter:blur(28px) saturate(1.7);box-shadow:var(--shadow);border:0.5px solid var(--line)}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mono{font-family:ui-monospace,"SF Mono","JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer}
+a{color:var(--accent)}a:hover{opacity:.8}
+</style>
+</helmet>
+<div style="width: 1280px; height: 1648px; display: flex; flex-direction: column; gap: 48px">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="position: relative; width: 1280px; height: 800px; flex-shrink: 0; border-radius: 16px; overflow: hidden; background: var(--frame); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif">
+<div style="position: absolute; inset: 0">
+<dc-import name="Map" theme="{{t.cls}}" mode="route" focus="1" vb="155 134 900 562.5" w="1280" h="800" hint-size="1280px,800px"></dc-import>
+</div>
+<aside class="glass" style="position: absolute; top: 16px; left: 16px; bottom: 16px; width: 380px; box-sizing: border-box; border-radius: 26px; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px; margin-left: -4px">
+<button aria-label="Zurück zur Liste" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 22px; background: var(--fill); display: flex; align-items: center; justify-content: center"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<h1 style="margin: 0; font-size: 20px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em">Orthopädie am Markt</h1>
+<span style="font-size: 13px; color: var(--ink2)">Lindenstraße 12, 2. OG · barrierefrei</span>
+</div>
+</div>
+<div style="border-radius: 20px; background: var(--accentsoft); padding: 16px 18px; display: flex; align-items: flex-end; justify-content: space-between">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 13px; color: var(--ink2)">Termin Mo, 2. Nov · <span class="mono">08:45</span></span>
+<span style="font-size: 13px; color: var(--ink2)">Losgehen um</span>
+<span class="mono" style="font-size: 54px; line-height: 1; font-weight: 600; letter-spacing: -0.04em; color: var(--accent)">08:23</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; padding-bottom: 4px">
+<span style="font-size: 15px; font-weight: 600">an <span class="mono">08:35</span></span>
+<span style="font-size: 13px; color: var(--ink2)">10 Min Puffer</span>
+</div>
+</div>
+<ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px">
+<li style="display: grid; grid-template-columns: 44px 30px minmax(0, 1fr); gap: 8px; align-items: center">
+<span class="mono" style="font-size: 13px; color: var(--ink2)">08:23</span>
+<span style="width: 30px; height: 30px; border-radius: 15px; background: var(--fill); display: flex; align-items: center; justify-content: center"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4.5" r="1.8"></circle><path d="M9 21l2.5-6.5L14 17v4M8 12l2.5-4 3.5 1 2 3M11.5 14.5L10.5 9"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px">3 Min zu Fuß</span><span style="font-size: 13px; color: var(--ink2)">bis Haltestelle Am Markt</span></span>
+</li>
+<li style="display: grid; grid-template-columns: 44px 30px minmax(0, 1fr); gap: 8px; align-items: center">
+<span class="mono" style="font-size: 13px; color: var(--ink2)">08:27</span>
+<span style="width: 30px; height: 30px; border-radius: 15px; background: var(--accent); color: var(--onaccent); display: flex; align-items: center; justify-content: center"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="12" height="13" rx="3"></rect><path d="M6 11h12M9 20l-1.5 1.5M15 20l1.5 1.5"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 600">Tram 12 Richtung Nordring</span><span style="font-size: 13px; color: var(--ink2)">4 Stationen bis Lindenhof</span></span>
+</li>
+<li style="display: grid; grid-template-columns: 44px 30px minmax(0, 1fr); gap: 8px; align-items: center">
+<span class="mono" style="font-size: 13px; color: var(--ink2)">08:33</span>
+<span style="width: 30px; height: 30px; border-radius: 15px; background: var(--fill); display: flex; align-items: center; justify-content: center"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4.5" r="1.8"></circle><path d="M9 21l2.5-6.5L14 17v4M8 12l2.5-4 3.5 1 2 3M11.5 14.5L10.5 9"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px">2 Min zu Fuß</span><span style="font-size: 13px; color: var(--ink2)">Eingang Lindenstraße 12</span></span>
+</li>
+</ol>
+<div style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; border: 1.5px dashed var(--ink3)">
+<span style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--accent); padding-top: 2px">PLAN B</span>
+<span style="font-size: 14px; line-height: 1.4; color: var(--ink2)">Fällt Tram 12 aus: <b style="color: var(--ink); font-weight: 600">Bus 36</b> um <span class="mono">08:29</span>, an <span class="mono">08:41</span>. Gestrichelt auf der Karte.</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto">
+<a href="#buchung" style="height: 50px; border-radius: 14px; background: var(--accent); color: var(--onaccent); text-decoration: none; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px">
+Bei der Praxis buchen
+<svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>
+</a>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<button style="height: 46px; border-radius: 14px; background: var(--fill); font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px">
+<svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"></rect><path d="M4 10h16M9 3v4M15 3v4"></path></svg>
+In Kalender
+</button>
+<button style="height: 46px; border-radius: 14px; background: var(--fill); font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px">
+<svg class="ic" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"></path></svg>
+Begleitung teilen
+</button>
+</div>
+</div>
+</aside>
+<div class="glass" style="position: absolute; top: 20px; right: 20px; border-radius: 24px; display: flex; padding: 2px">
+<button aria-label="Termine" style="width: 44px; height: 44px; border-radius: 22px; display: flex; align-items: center; justify-content: center"><svg class="ic" width="19" height="19" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"></rect><path d="M4 10h16M9 3v4M15 3v4"></path></svg></button>
+<button aria-label="Über Lotse" style="width: 44px; height: 44px; border-radius: 22px; display: flex; align-items: center; justify-content: center"><svg class="ic" width="19" height="19" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 11v5M12 8h.01"></path></svg></button>
+</div>
+<div style="position: absolute; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end">
+<button class="glass" aria-label="Mein Standort" style="width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: var(--accent)"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4L4 11l7 2 2 7z"></path></svg></button>
+<div class="glass" style="border-radius: 14px; display: flex; flex-direction: column; overflow: hidden">
+<button aria-label="Vergrößern" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+<span style="height: 1px; background: var(--line)"></span>
+<button aria-label="Verkleinern" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1648}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { themes: [{ cls: 'light' }, { cls: 'dark' }] };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Lotse Karte</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; overflow: hidden; width: {{w}}px; height: {{h}}px; background: {{c.land}}; font-family: -apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif">
+<svg width="100%" height="100%" viewBox="{{vb}}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Stadtkarte mit Standort und Praxen" style="display: block">
+<rect x="-400" y="-400" width="2400" height="2000" style="fill: {{c.land}}"></rect>
+<path d="M648 300h70v60h-70z M648 392h68v66h-68z M648 470h66v58h-66z M760 300h60v58h-60z M760 390h62v60h-62z M760 466h60v58h-60z M940 296h60v56h-60z M944 384h58v130h-58z M1036 290h70v60h-70z M1036 372h66v150h-66z M648 566h70v40h-70z M760 562h62v44h-62z M856 556h60v46h-60z M944 552h60v48h-60z M540 300h56v60h-56z M540 392h56v130h-56z M540 566h56v40h-56z M648 200h70v74h-70z M760 196h60v76h-60z M856 192h58v80h-58z M944 186h60v84h-60z M1036 180h66v86h-66z M648 80h70v90h-70z M760 76h60v92h-60z M856 80h60v80h-60z M944 70h60v90h-60z M1036 60h66v94h-66z M1130 180h70v80h-70z M1130 290h70v220h-70z M440 300h80v60h-80z M440 392h80v130h-80z M440 200h80v80h-80z M1130 560h70v40h-70z" style="fill: {{c.block}}"></path>
+<path d="M852 372 L924 368 L930 528 L857 532 Z" style="fill: {{c.park}}"></path>
+<path d="M370 600 L600 590 L610 760 L360 780 Z" style="fill: {{c.park}}"></path>
+<path d="M1120 600 L1300 590 L1310 700 L1130 710 Z" style="fill: {{c.park}}"></path>
+<path d="M-200 760 C 200 700, 500 830, 800 770 S 1300 690, 1800 760" style="fill: none; stroke: {{c.water}}; stroke-width: 84px"></path>
+<path d="M-200 690 L1800 652" style="fill: none; stroke: {{c.rail}}; stroke-width: 4px; stroke-dasharray: 14 8"></path>
+<g style="fill: none; stroke: {{c.minor}}; stroke-width: 9px; stroke-linecap: round">
+<path d="M612 -200 L640 1400"></path>
+<path d="M832 -200 L850 1400"></path>
+<path d="M918 -200 L940 1400"></path>
+<path d="M1010 -200 L1028 1400"></path>
+<path d="M520 -200 L540 1400"></path>
+<path d="M1110 -200 L1124 1400"></path>
+<path d="M-200 300 L1800 272"></path>
+<path d="M-200 380 L1800 356"></path>
+<path d="M-200 560 L1800 530"></path>
+<path d="M-200 650 L1800 618"></path>
+<path d="M-200 900 L1800 870"></path>
+<path d="M-200 1000 L1800 975"></path>
+</g>
+<g style="fill: none; stroke: {{c.casing}}; stroke-width: 24px; stroke-linecap: round">
+<path d="M-200 482 L1800 446"></path>
+<path d="M716 -200 L770 1400"></path>
+<path d="M380 -200 C 520 260, 980 420, 1300 1400"></path>
+<path d="M-200 190 L1800 150"></path>
+</g>
+<g style="fill: none; stroke: {{c.road}}; stroke-width: 18px; stroke-linecap: round">
+<path d="M-200 482 L1800 446"></path>
+<path d="M716 -200 L770 1400"></path>
+<path d="M380 -200 C 520 260, 980 420, 1300 1400"></path>
+<path d="M-200 190 L1800 150"></path>
+</g>
+<g style="fill: {{c.label}}; stroke: {{c.land}}; stroke-width: 4px; paint-order: stroke; font-size: 13px; font-weight: 600; letter-spacing: 0.04em">
+<text x="891" y="455" style="text-anchor: middle">Stadtpark</text>
+<text x="560" y="440">Altstadt</text>
+<text x="1060" y="128">Nordring</text>
+<text x="1180" y="660">Hafen</text>
+<text x="870" y="808" style="fill: {{c.waterLabel}}; stroke: {{c.water}}">Uferweg</text>
+<text x="760" y="612">Am Markt</text>
+</g>
+<g display="{{showRoute}}">
+<path d="M700 546 L625 549 L621 288 L880 285" style="fill: none; stroke: {{c.planb}}; stroke-width: 6px; stroke-dasharray: 10 9; stroke-linecap: round; stroke-linejoin: round"></path>
+<path d="M741 545 L732 287 L860 285" style="fill: none; stroke: {{c.routeCase}}; stroke-width: 15px; stroke-linecap: round; stroke-linejoin: round"></path>
+<path d="M741 545 L732 287 L860 285" style="fill: none; stroke: {{c.accent}}; stroke-width: 9px; stroke-linecap: round; stroke-linejoin: round"></path>
+<path d="M700 546 L741 545" style="fill: none; stroke: {{c.accent}}; stroke-width: 6px; stroke-dasharray: 0.1 11; stroke-linecap: round"></path>
+<path d="M860 285 L880 285" style="fill: none; stroke: {{c.accent}}; stroke-width: 6px; stroke-dasharray: 0.1 11; stroke-linecap: round"></path>
+<circle cx="741" cy="545" r="7" style="fill: {{c.card}}; stroke: {{c.accent}}; stroke-width: 3.5px"></circle>
+<circle cx="860" cy="285" r="7" style="fill: {{c.card}}; stroke: {{c.accent}}; stroke-width: 3.5px"></circle>
+</g>
+<g display="{{p5.show}}" transform="{{p5.tf}}">
+<path d="M-7 -16 L7 -16 L0 -6 Z" style="fill: {{p5.bg}}"></path>
+<rect x="-32" y="-46" width="64" height="31" rx="15.5" style="fill: {{p5.bg}}; stroke: {{p5.ring}}; stroke-width: 1px"></rect>
+<text x="0" y="-25" style="fill: {{p5.fg}}; font-size: 14px; font-weight: 600; text-anchor: middle">{{p5.label}}</text>
+<circle cx="0" cy="0" r="5" style="fill: {{p5.dot}}; stroke: {{c.card}}; stroke-width: 2.5px"></circle>
+</g>
+<g display="{{p4.show}}" transform="{{p4.tf}}">
+<path d="M-7 -16 L7 -16 L0 -6 Z" style="fill: {{p4.bg}}"></path>
+<rect x="-32" y="-46" width="64" height="31" rx="15.5" style="fill: {{p4.bg}}; stroke: {{p4.ring}}; stroke-width: 1px"></rect>
+<text x="0" y="-25" style="fill: {{p4.fg}}; font-size: 14px; font-weight: 600; text-anchor: middle">{{p4.label}}</text>
+<circle cx="0" cy="0" r="5" style="fill: {{p4.dot}}; stroke: {{c.card}}; stroke-width: 2.5px"></circle>
+</g>
+<g display="{{p3.show}}" transform="{{p3.tf}}">
+<path d="M-7 -16 L7 -16 L0 -6 Z" style="fill: {{p3.bg}}"></path>
+<rect x="-32" y="-46" width="64" height="31" rx="15.5" style="fill: {{p3.bg}}; stroke: {{p3.ring}}; stroke-width: 1px"></rect>
+<text x="0" y="-25" style="fill: {{p3.fg}}; font-size: 14px; font-weight: 600; text-anchor: middle">{{p3.label}}</text>
+<circle cx="0" cy="0" r="5" style="fill: {{p3.dot}}; stroke: {{c.card}}; stroke-width: 2.5px"></circle>
+</g>
+<g display="{{p2.show}}" transform="{{p2.tf}}">
+<path d="M-7 -16 L7 -16 L0 -6 Z" style="fill: {{p2.bg}}"></path>
+<rect x="-32" y="-46" width="64" height="31" rx="15.5" style="fill: {{p2.bg}}; stroke: {{p2.ring}}; stroke-width: 1px"></rect>
+<text x="0" y="-25" style="fill: {{p2.fg}}; font-size: 14px; font-weight: 600; text-anchor: middle">{{p2.label}}</text>
+<circle cx="0" cy="0" r="5" style="fill: {{p2.dot}}; stroke: {{c.card}}; stroke-width: 2.5px"></circle>
+</g>
+<g display="{{p1.show}}" transform="{{p1.tf}}">
+<path d="M-7 -16 L7 -16 L0 -6 Z" style="fill: {{p1.bg}}"></path>
+<rect x="-32" y="-46" width="64" height="31" rx="15.5" style="fill: {{p1.bg}}; stroke: {{p1.ring}}; stroke-width: 1px"></rect>
+<text x="0" y="-25" style="fill: {{p1.fg}}; font-size: 14px; font-weight: 600; text-anchor: middle">{{p1.label}}</text>
+<circle cx="0" cy="0" r="5" style="fill: {{p1.dot}}; stroke: {{c.card}}; stroke-width: 2.5px"></circle>
+</g>
+<circle cx="700" cy="546" r="24" style="fill: {{c.accent}}; opacity: 0.18"></circle>
+<circle cx="700" cy="546" r="10" style="fill: #ffffff"></circle>
+<circle cx="700" cy="546" r="7" style="fill: {{c.accent}}"></circle>
+</svg>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"mode":{"editor":"enum","options":["plain","pins","route"],"default":"pins"},"focus":{"editor":"int","min":0,"max":5,"default":1},"vb":{"editor":null,"default":"0 0 1600 1000"},"w":{"editor":null,"default":1280},"h":{"editor":null,"default":800},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme ?? 'light';
+    const mode = this.props.mode ?? 'pins';
+    const focus = Number(this.props.focus ?? 1);
+    const dark = theme === 'dark';
+    const c = dark ? {
+      land: '#1b1c1f', block: '#232428', park: '#1d2c22', water: '#112640', waterLabel: '#7d9cc4',
+      road: '#3a3c43', casing: '#26272b', minor: '#2c2d32', rail: '#4c4e55', label: '#a2a4ab',
+      accent: '#6f8cff', onAccent: '#06102e', card: '#2c2c31', ink: '#f5f5f7', routeCase: '#1b1c1f', planb: '#5a6db5'
+    } : {
+      land: '#f2f1ec', block: '#e7e5de', park: '#cfe6c3', water: '#a8cbec', waterLabel: '#3f6d9c',
+      road: '#ffffff', casing: '#dcd9d0', minor: '#fbfaf6', rail: '#b6b3aa', label: '#64635e',
+      accent: '#2447e6', onAccent: '#ffffff', card: '#ffffff', ink: '#0b0b10', routeCase: '#ffffff', planb: '#8597e6'
+    };
+    const P = [[880, 285, '9 Min'], [960, 366, '14 Min'], [621, 288, '17 Min'], [1018, 542, '21 Min'], [790, 170, '24 Min']];
+    const pins = P.map(([x, y, label], i) => {
+      const n = i + 1;
+      const on = mode === 'pins' || (mode === 'route' && n === 1);
+      const f = n === focus || (mode === 'route' && n === 1);
+      return {
+        show: on ? 'inline' : 'none', label,
+        tf: 'translate(' + x + ' ' + y + ') scale(' + (f ? 1.18 : 1) + ')',
+        bg: f ? c.accent : c.card, fg: f ? c.onAccent : c.ink, ring: f ? c.accent : c.casing, dot: c.accent
+      };
+    });
+    return {
+      c, vb: this.props.vb ?? '0 0 1600 1000', w: this.props.w ?? 1280, h: this.props.h ?? 800,
+      showRoute: mode === 'route' ? 'inline' : 'none',
+      p1: pins[0], p2: pins[1], p3: pins[2], p4: pins[3], p5: pins[4]
+    };
+  }
+}
+</script>
+</body>
+</html>

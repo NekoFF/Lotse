@@ -1,0 +1,38 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-30T18:00:00Z"},
+  "title": "Lotse App Design",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 828, "h": 844, "title": "Telefon 1 · Start"},
+    "Telefon-2-Eingabe.dc.html": {"x": 908, "y": 0, "w": 828, "h": 844, "title": "Telefon 2 · Eingabe mit Live-Zuordnung"},
+    "Telefon-3-Praxen.dc.html": {"x": 1816, "y": 0, "w": 828, "h": 844, "title": "Telefon 3 · Praxen nach Fahrzeit"},
+    "Telefon-4-Weg.dc.html": {"x": 2724, "y": 0, "w": 828, "h": 844, "title": "Telefon 4 · Weg und Losgehzeit"},
+    "Telefon-5-Notfall.dc.html": {"x": 3632, "y": 0, "w": 828, "h": 844, "title": "Telefon 5 · Notfall"},
+    "PC-1-Start.dc.html": {"x": 0, "y": 1244, "w": 1280, "h": 1648, "title": "Computer 1 · Start"},
+    "PC-2-Eingabe.dc.html": {"x": 1360, "y": 1244, "w": 1280, "h": 1648, "title": "Computer 2 · Eingabe mit Live-Zuordnung"},
+    "PC-3-Praxen.dc.html": {"x": 2720, "y": 1244, "w": 1280, "h": 1648, "title": "Computer 3 · Praxen, Hover hebt Pin hervor"},
+    "PC-4-Weg.dc.html": {"x": 4080, "y": 1244, "w": 1280, "h": 1648, "title": "Computer 4 · Weg und Losgehzeit"},
+    "PC-5-Notfall.dc.html": {"x": 5440, "y": 1244, "w": 1280, "h": 1648, "title": "Computer 5 · Notfall"},
+    "Map.dc.html": {"x": 0, "y": 3092, "w": 1280, "h": 800, "title": "Baustein · Karte (Platzhalter-Stadt)"}
+  },
+  "order": [
+    "Main.dc.html",
+    "Telefon-2-Eingabe.dc.html",
+    "Telefon-3-Praxen.dc.html",
+    "Telefon-4-Weg.dc.html",
+    "Telefon-5-Notfall.dc.html",
+    "PC-1-Start.dc.html",
+    "PC-2-Eingabe.dc.html",
+    "PC-3-Praxen.dc.html",
+    "PC-4-Weg.dc.html",
+    "PC-5-Notfall.dc.html",
+    "Map.dc.html"
+  ],
+  "notes": {
+    "rowPhone": {"x": 0, "y": -300, "text": "Telefon · hell und dunkel", "kind": "title1", "maxW": 4460},
+    "rowPc": {"x": 0, "y": 944, "text": "Computer · hell und dunkel", "kind": "title1", "maxW": 6720}
+  },
+  "designSystems": []
+}

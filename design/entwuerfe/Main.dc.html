@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Telefon Start</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.light{--glass:rgba(255,255,255,.76);--card:#ffffff;--ink:#0b0b10;--ink2:#55555f;--ink3:#6c6c76;--line:rgba(0,0,0,.08);--fill:rgba(118,118,128,.12);--seg:#ffffff;--accent:#2447e6;--onaccent:#ffffff;--accentsoft:rgba(36,71,230,.1);--danger:#d70015;--dangerdeep:#c00013;--wash:rgba(206,0,20,.9);--shadow:0 12px 40px rgba(20,24,40,.16),0 1px 2px rgba(20,24,40,.08);--frame:#d9d9de}
+.dark{--glass:rgba(30,30,34,.74);--card:#2c2c31;--ink:#f5f5f7;--ink2:#a7a7b0;--ink3:#8f8f99;--line:rgba(255,255,255,.1);--fill:rgba(118,118,128,.24);--seg:#5f5f66;--accent:#6f8cff;--onaccent:#06102e;--accentsoft:rgba(111,140,255,.16);--danger:#ff453a;--dangerdeep:#b3000f;--wash:rgba(110,6,14,.93);--shadow:0 12px 40px rgba(0,0,0,.55);--frame:#000000}
+.glass{background:var(--glass);backdrop-filter:blur(28px) saturate(1.7);-webkit-backdrop-filter:blur(28px) saturate(1.7);box-shadow:var(--shadow);border:0.5px solid var(--line)}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mono{font-family:ui-monospace,"SF Mono","JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+.chip{height:40px;padding:0 12px;border-radius:20px;background:var(--fill);font-size:14px;font-weight:500}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer}
+input{font:inherit;color:inherit;border:0;background:transparent;outline:none}
+input::placeholder{color:var(--ink3)}
+a{color:var(--accent)}a:hover{opacity:.8}
+</style>
+</helmet>
+<div style="width: 828px; height: 844px; display: flex; gap: 48px">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="position: relative; width: 390px; height: 844px; flex-shrink: 0; border-radius: 48px; overflow: hidden; background: var(--frame); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif">
+<div style="position: absolute; inset: 0">
+<dc-import name="Map" theme="{{t.cls}}" mode="plain" focus="0" vb="540 40 520 1126" w="390" h="844" hint-size="390px,844px"></dc-import>
+</div>
+<div style="position: absolute; top: 58px; left: 16px; right: 16px; display: flex; gap: 10px; align-items: center">
+<button class="glass" style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 8px 14px 8px 8px; border-radius: 24px; text-align: left">
+<span style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 16px; background: var(--accentsoft); color: var(--accent); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05">
+<span style="font-size: 9px; font-weight: 700; letter-spacing: 0.08em">MO</span>
+<span class="mono" style="font-size: 16px; font-weight: 600">2</span>
+</span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 15px; font-weight: 600">Orthopädie am Markt</span>
+<span style="font-size: 13px; color: var(--ink2)">Termin <span class="mono">08:45</span> · los <span class="mono" style="color: var(--accent); font-weight: 600">08:23</span></span>
+</span>
+</button>
+<button class="glass" aria-label="Alle Termine" style="width: 56px; height: 56px; flex-shrink: 0; border-radius: 28px; display: flex; align-items: center; justify-content: center">
+<svg class="ic" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"></rect><path d="M4 10h16M9 3v4M15 3v4"></path></svg>
+</button>
+</div>
+<button class="glass" aria-label="Mein Standort" style="position: absolute; right: 16px; bottom: 352px; width: 48px; height: 48px; border-radius: 24px; display: flex; align-items: center; justify-content: center; color: var(--accent)">
+<svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4L4 11l7 2 2 7z"></path></svg>
+</button>
+<div class="glass" style="position: absolute; left: 8px; right: 8px; bottom: 8px; border-radius: 40px; padding: 22px 20px 24px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<span style="display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600">
+<span style="width: 24px; height: 24px; border-radius: 7px; background: var(--accent); display: inline-flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 L16 17 L10 13.5 L4 17 Z" style="fill: var(--onaccent)"></path></svg></span>
+Lotse
+</span>
+<span style="font-size: 12px; color: var(--ink3)">Wegweiser, keine Diagnose</span>
+</div>
+<h1 style="margin: 0; font-size: 30px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em">Was ist los?</h1>
+<label style="display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 16px; border-radius: 16px; background: var(--fill); color: var(--ink3)">
+<svg class="ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+<span class="sr">Anliegen in eigenen Worten</span>
+<input placeholder="In eigenen Worten, z. B. Knie tut weh" style="flex: 1; min-width: 0; font-size: 17px; color: var(--ink)">
+</label>
+<div style="display: flex; gap: 8px">
+<button class="chip">Zahn abgebrochen</button>
+<button class="chip">Ausschlag</button>
+<button class="chip">Ohr tut weh</button>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink2)">
+<svg class="ic" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--danger)"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"></path></svg>
+<span>Akuter Notfall? Sofort <a href="tel:112" style="color: var(--danger); font-weight: 700">112</a></span>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":828,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { themes: [{ cls: 'light' }, { cls: 'dark' }] };
+  }
+}
+</script>
+</body>
+</html>
