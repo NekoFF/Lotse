@@ -10,8 +10,8 @@ const STIL = DIENSTE.kartenStil;
 const UEBERBLICK = { center: [8.5044, 50.5558] as LngLat, zoom: 13.6 };
 
 const FARBE = {
-  light: { accent: "#2447e6", casing: "#ffffff", planb: "#8597e6" },
-  dark: { accent: "#6f8cff", casing: "#15161a", planb: "#5a6db5" },
+  light: { accent: "#2f5bff", rand: "#1a36a8", casing: "#ffffff", rad: "#18a058", planb: "#8597e6" },
+  dark: { accent: "#6f8cff", rand: "#24357d", casing: "#15161a", rad: "#3ccf82", planb: "#5a6db5" },
 };
 
 export interface Pin {
@@ -227,33 +227,35 @@ function zeige3D(m: MlMap, an: boolean) {
   if (m.getLayer("lotse-3d")) m.setLayoutProperty("lotse-3d", "visibility", an ? "visible" : "none");
 }
 
+/** Breite wächst mit dem Zoom (wie bei Apple/Google Maps) */
+const breite = (bei12: number, bei18: number) => ["interpolate", ["exponential", 1.5], ["zoom"], 12, bei12, 18, bei18] as unknown as number;
+
 function zeichneRoute(m: MlMap, r: Route | null, theme: "light" | "dark") {
   const f = FARBE[theme];
   const daten: GeoJSON.FeatureCollection = {
     type: "FeatureCollection",
-    features: r
-      ? [
-          ...(r.planb ? [linie(r.planb, "planb")] : []),
-          linie(r.linie, r.modus === "auto" ? "oepnv" : r.modus),
-        ]
-      : [],
+    features: r ? [...(r.planb ? [linie(r.planb, "planb")] : []), linie(r.linie, r.modus)] : [],
   };
   const quelle = m.getSource("route") as maplibregl.GeoJSONSource | undefined;
   if (quelle) { quelle.setData(daten); return; }
   m.addSource("route", { type: "geojson", data: daten });
+  // unter die Beschriftungen legen, damit Straßennamen lesbar bleiben
+  const vor = m.getStyle().layers?.find((l) => l.type === "symbol")?.id;
   const rund = { "line-cap": "round", "line-join": "round" } as const;
-  m.addLayer({ id: "planb", type: "line", source: "route", filter: ["==", ["get", "art"], "planb"], layout: rund,
-    paint: { "line-color": f.planb, "line-width": 4, "line-dasharray": [1.6, 1.6] } });
-  m.addLayer({ id: "oepnv-rand", type: "line", source: "route", filter: ["==", ["get", "art"], "oepnv"], layout: rund,
-    paint: { "line-color": f.casing, "line-width": 10 } });
-  m.addLayer({ id: "oepnv", type: "line", source: "route", filter: ["==", ["get", "art"], "oepnv"], layout: rund,
-    paint: { "line-color": f.accent, "line-width": 6 } });
-  m.addLayer({ id: "fuss", type: "line", source: "route", filter: ["==", ["get", "art"], "fuss"], layout: rund,
-    paint: { "line-color": f.accent, "line-width": 6, "line-dasharray": [0.01, 2] } });
-  m.addLayer({ id: "rad-rand", type: "line", source: "route", filter: ["==", ["get", "art"], "rad"], layout: rund,
-    paint: { "line-color": f.casing, "line-width": 9 } });
-  m.addLayer({ id: "rad", type: "line", source: "route", filter: ["==", ["get", "art"], "rad"], layout: rund,
-    paint: { "line-color": f.accent, "line-width": 5 } });
+  const ist = (art: string) => ["==", ["get", "art"], art] as maplibregl.FilterSpecification;
+  const ebene = (id: string, art: string, paint: Record<string, unknown>) =>
+    m.addLayer({ id, type: "line", source: "route", filter: ist(art), layout: rund, paint } as maplibregl.LineLayerSpecification, vor);
+
+  ebene("planb", "planb", { "line-color": f.planb, "line-width": breite(3, 7), "line-dasharray": [1.4, 1.4], "line-opacity": 0.9 });
+  // Auto: kräftige Linie mit dunklerem Rand
+  ebene("auto-rand", "auto", { "line-color": f.rand, "line-width": breite(7, 18) });
+  ebene("auto", "auto", { "line-color": f.accent, "line-width": breite(4.5, 13) });
+  // Rad: grün mit hellem Rand
+  ebene("rad-rand", "rad", { "line-color": f.casing, "line-width": breite(6, 15) });
+  ebene("rad", "rad", { "line-color": f.rad, "line-width": breite(3.5, 10) });
+  // Zu Fuß: runde Punkte auf zarter Spur
+  ebene("fuss-spur", "fuss", { "line-color": f.accent, "line-opacity": 0.18, "line-width": breite(4, 10) });
+  ebene("fuss", "fuss", { "line-color": f.accent, "line-width": breite(5, 12), "line-dasharray": [0, 1.7] });
 }
 
 function linie(coords: LngLat[], art: string): GeoJSON.Feature {

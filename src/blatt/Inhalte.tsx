@@ -8,7 +8,7 @@ import type { WegStand } from "../lib/wege";
 import { PUFFER_MIN, type Termin } from "../lib/termine";
 import { telLink } from "../services/dienste";
 import type { Ort } from "../services/orte";
-import { Auto, Extern, Gehen, Kalender, Ki, Rad, Route as RouteIc, Schliessen, Standort, Teilen, Telefon, Uhr, Zurueck } from "../ui/icons";
+import { Auto, Bus, Essen, Extern, Gehen, Kalender, Ki, Pille, Rad, Route as RouteIc, Schliessen, Standort, Stern, Stetho, Suche, Tasse, Teilen, Telefon, Uhr, Wagen, Zurueck } from "../ui/icons";
 
 export const uhr = (d: Date) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 export const tagKurz = (d: Date) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" });
@@ -234,6 +234,110 @@ export function InfoInhalt({ onZurueck }: { onZurueck: () => void }) {
         {" "}<a href={`${import.meta.env.BASE_URL}karte/LIZENZ.txt`} target="_blank" rel="noopener noreferrer">Kartenstil und Lizenzen</a> ·
         {" "}<a href={DIENSTE.osmFehlerMelden} target="_blank" rel="noopener noreferrer">Kartenfehler melden</a> · Schulprojekt der Werner-von-Siemens-Schule Wetzlar.
       </p>
+    </div>
+  );
+}
+
+/* ---------- Schnellzugriff: nur Symbole ---------- */
+
+const SCHNELL: { id: string; ic: ReactNode; farbe: string }[] = [
+  { id: "essen", ic: <Essen size={15} />, farbe: "#f08c00" },
+  { id: "cafe", ic: <Tasse size={15} />, farbe: "#a0612b" },
+  { id: "apotheke", ic: <Pille size={15} />, farbe: "#d6336c" },
+  { id: "arzt", ic: <Stetho size={15} />, farbe: "#c2255c" },
+  { id: "einkaufen", ic: <Wagen size={15} />, farbe: "#1c7ed6" },
+  { id: "freizeit", ic: <Stern size={15} />, farbe: "#7048e8" },
+  { id: "haltestelle", ic: <Bus size={15} />, farbe: "#2f5bff" },
+];
+
+export function SchnellLeiste({ onKategorie }: { onKategorie: (k: Kategorie) => void }) {
+  return (
+    <div className="schnell" role="toolbar" aria-label="Schnellzugriff">
+      {SCHNELL.map((s) => {
+        const k = KATEGORIEN.find((x) => x.id === s.id)!;
+        return (
+          <button key={s.id} type="button" className="schnell-knopf" style={{ ["--f" as string]: s.farbe }} onClick={() => onKategorie(k)} aria-label={k.name} title={k.name}>
+            {s.ic}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------- Vorschläge beim Tippen (nur vom Gerät, keine Anfrage beim Tippen – Nominatim-Regel) ---------- */
+
+export type Vorschlag =
+  | { art: "suchen"; text: string }
+  | { art: "kategorie"; k: Kategorie }
+  | { art: "zuletzt"; text: string }
+  | { art: "termin"; t: Termin };
+
+const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ß/g, "ss");
+
+export function vorschlaegeFuer(text: string, zuletzt: string[], termine: Termin[]): Vorschlag[] {
+  const q = norm(text.trim());
+  if (!q) return [];
+  const aus: Vorschlag[] = [{ art: "suchen", text: text.trim() }];
+  for (const k of KATEGORIEN) if (norm(k.name).includes(q) || norm(k.id).startsWith(q)) aus.push({ art: "kategorie", k });
+  for (const z of zuletzt) if (norm(z).includes(q) && norm(z) !== q) aus.push({ art: "zuletzt", text: z });
+  for (const t of termine) if (norm(t.ort.name).includes(q)) aus.push({ art: "termin", t });
+  return aus.slice(0, 8);
+}
+
+export function VorschlagInhalt({ text, zuletzt, termine, ki, onWahl, onInfo, onVerlaufLoeschen }: {
+  text: string; zuletzt: string[]; termine: Termin[]; ki: KiStatus;
+  onWahl: (v: Vorschlag) => void; onInfo: () => void; onVerlaufLoeschen: () => void;
+}) {
+  const liste = vorschlaegeFuer(text, zuletzt, termine);
+  if (text.trim()) {
+    return (
+      <div className="inhalt vorschlaege">
+        <div className="zeilen">
+          {liste.map((v, i) => (
+            <button key={i} type="button" className="zeile" onClick={() => onWahl(v)}>
+              <span className="zeile-ic">{v.art === "suchen" ? <Suche size={16} /> : v.art === "zuletzt" ? <Uhr size={16} /> : v.art === "termin" ? <Kalender size={16} /> : SCHNELL.find((s) => s.id === v.k.id)?.ic ?? <Suche size={16} />}</span>
+              <span className="zeile-t">
+                <b>{v.art === "suchen" ? `„${v.text}“` : v.art === "kategorie" ? v.k.name : v.art === "zuletzt" ? v.text : v.t.ort.name}</b>
+                <span>{v.art === "suchen" ? (ki.art === "bereit" ? "Suchen oder fragen" : "Suchen") : v.art === "kategorie" ? "in der Nähe" : v.art === "zuletzt" ? "zuletzt gesucht" : `Termin ${tagKurz(new Date(v.t.zeit))}, ${uhr(new Date(v.t.zeit))}`}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="inhalt vorschlaege">
+      {zuletzt.length > 0 && (
+        <section>
+          <div className="abschnitt-kopf"><h3 className="abschnitt">Zuletzt</h3><button type="button" className="link klein-link" onClick={onVerlaufLoeschen}>Löschen</button></div>
+          <div className="zeilen">
+            {zuletzt.slice(0, 5).map((z) => (
+              <button key={z} type="button" className="zeile" onClick={() => onWahl({ art: "zuletzt", text: z })}>
+                <span className="zeile-ic"><Uhr size={16} /></span><span className="zeile-t"><b>{z}</b></span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+      {termine.length > 0 && (
+        <section>
+          <h3 className="abschnitt">Termine</h3>
+          <div className="zeilen">
+            {termine.slice(0, 4).map((t) => (
+              <button key={t.id} type="button" className="zeile" onClick={() => onWahl({ art: "termin", t })}>
+                <span className="zeile-ic akzent-ic"><Kalender size={16} /></span>
+                <span className="zeile-t"><b>{t.ort.name}</b><span>{tagKurz(new Date(t.zeit))}, {uhr(new Date(t.zeit))}{t.los ? ` · los ${uhr(new Date(t.los))}` : ""}</span></span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+      <div className="fuss-zeile">
+        <span>Notfall <a href="tel:112" className="rot-t stark">112</a> · Bereitschaftsdienst <a href="tel:116117">116 117</a></span>
+        <button type="button" className="link" onClick={onInfo}>Daten & Quellen</button>
+      </div>
     </div>
   );
 }

@@ -12,8 +12,8 @@ import { Notfall } from "./screens/Notfall";
 import { fehlerText, gpsStandort } from "./services/dienste";
 import { inDerNaehe, ortAnStelle, ortLaden, suchen as ortSuchen, type Ort } from "./services/orte";
 import { Blatt, type Stufe } from "./blatt/Blatt";
-import { InfoInhalt, ListenInhalt, OrtInhalt, RouteInhalt, StartInhalt, TerminInhalt, type ListenStand } from "./blatt/Inhalte";
-import { Marke, Schliessen, Standort, Suche, Plus, Minus } from "./ui/icons";
+import { InfoInhalt, ListenInhalt, OrtInhalt, RouteInhalt, SchnellLeiste, TerminInhalt, VorschlagInhalt, type ListenStand, type Vorschlag } from "./blatt/Inhalte";
+import { Ki, Marke, Schliessen, Standort, Suche, Plus, Minus } from "./ui/icons";
 import "./blatt/blatt.css";
 
 type Ansicht =
@@ -52,7 +52,7 @@ export default function App() {
   const [start, setStartRoh] = useState<Start | null>(leseStart);
   const [mitte, setMitte] = useState<LngLat>(WETZLAR);
   const [modus, setModus] = useState<Modus>("fuss");
-  const [stufe, setStufe] = useState<Stufe>("mittel");
+  const [stufe, setStufe] = useState<Stufe>("klein");
   const [groesse, setGroesse] = useState({ w: 0, h: 0 });
   const [termine, setTermine] = useState<Termin[]>(leseTermine);
   const [vorgemerkt, setVorgemerkt] = useState<Date | null>(null);
@@ -68,6 +68,15 @@ export default function App() {
   }, [desktop]);
   const zurueck = useCallback(() => setVerlauf((v) => (v.length > 1 ? v.slice(0, -1) : v)), []);
   const zurStart = useCallback(() => { setVerlauf([{ art: "start" }]); setText(""); setVorgemerkt(null); }, []);
+  // Suchfeld aktiv → Schublade mit Vorschlägen; sonst nur Suchleiste (+ Symbole)
+  const [fokus, setFokus] = useState(false);
+  const [zuletzt, setZuletzt] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("lotse.zuletzt") ?? "[]"); } catch { return []; } });
+  /** Nur Orts- und Kategoriesuchen merken – nie Beschwerden oder Termine */
+  const merke = useCallback((t: string) => setZuletzt((l) => {
+    const neu = [t, ...l.filter((x) => x.toLowerCase() !== t.toLowerCase())].slice(0, 8);
+    try { localStorage.setItem("lotse.zuletzt", JSON.stringify(neu)); } catch { /* egal */ }
+    return neu;
+  }), []);
 
   const setStart = useCallback((s: Start) => { setStartRoh(s); try { sessionStorage.setItem("lotse.start", JSON.stringify(s)); } catch { /* egal */ } }, []);
   const nahe = start?.lngLat ?? mitte;
@@ -125,7 +134,7 @@ export default function App() {
       if (a.typ === "notfall") { setNotfall({ stufe: a.stufe, text: t }); return; }
     }
     if (a.typ === "fach") return fachSuche(a.fach);
-    if (a.typ === "kategorie") return kategorieSuche(a.kategorie);
+    if (a.typ === "kategorie") { merke(t); return kategorieSuche(a.kategorie); }
     const beschwerde = a.typ === "anliegen" || klingtNachBeschwerde(t);
     // Beschwerden nie als Text an Dienste schicken: nur Fachrichtung (oder Hausarzt, wenn unklar)
     if (beschwerde && !(ki.art === "bereit" && a.typ === "anliegen" && !klingtNachBeschwerde(t))) {
@@ -139,11 +148,21 @@ export default function App() {
       // Bei möglichen Beschwerden nur nicht-medizinische Kategorien von der KI annehmen, nie eine Textsuche
       if (kat && !(a.typ === "anliegen" && ["arzt", "zahnarzt", "apotheke", "krankenhaus"].includes(kat.id))) return kategorieSuche(kat);
       if (a.typ === "anliegen") return fachSuche(a.zuordnung.fach.id, a.zuordnung);
-      if (k?.aktion === "suche") return liste(k.suchtext, () => ortSuchen(k.suchtext, nahe), { unter: "von der KI verstanden" });
+      if (k?.aktion === "suche") { merke(k.suchtext); return liste(k.suchtext, () => ortSuchen(k.suchtext, nahe), { unter: "von der KI verstanden" }); }
     }
     if (a.typ === "anliegen") return fachSuche(a.zuordnung.fach.id, a.zuordnung);
+    merke(t);
     liste(t, () => ortSuchen(t, nahe));
-  }, [fachSuche, kategorieSuche, liste, ki.art, nahe, zeige]);
+  }, [fachSuche, kategorieSuche, liste, ki.art, nahe, zeige, merke]);
+
+  const fertig = () => { setFokus(false); (document.activeElement as HTMLElement | null)?.blur(); };
+  const waehle = (v: Vorschlag) => {
+    fertig();
+    if (v.art === "suchen") void absenden(v.text);
+    else if (v.art === "zuletzt") { setText(v.text); void absenden(v.text); }
+    else if (v.art === "kategorie") { setText(v.k.name); kategorieSuche(v.k); }
+    else gehe({ art: "ort", ort: v.t.ort, laden: false });
+  };
 
   /* ---------- Orte öffnen, Karte antippen ---------- */
 
@@ -164,6 +183,8 @@ export default function App() {
 
   const karteTipp = useCallback((l: LngLat, poi: { name: string; art: string } | null) => {
     if (ansicht.art === "route") return;
+    setFokus(false);
+    setText("");
     oeffneOrt(leererOrt(l, poi?.name ?? "Punkt auf der Karte", poi?.art ?? "Ort"), true);
   }, [ansicht.art, oeffneOrt]);
 
@@ -238,14 +259,21 @@ export default function App() {
     return () => window.removeEventListener("keydown", f);
   }, [zurueck, notfall]);
 
+  const kiTitel = ki.art === "aus" ? "KI laden – läuft auf deinem Gerät, einmal ca. 0,4 GB" : ki.art === "laedt" ? `KI lädt … ${Math.round(ki.anteil * 100)} %` : ki.art === "bereit" ? "KI an – dein Text bleibt auf dem Gerät" : `KI nicht verfügbar: ${ki.text}`;
   const kopf = (
-    <form className="suche" onSubmit={(e) => { e.preventDefault(); void absenden(text); (document.activeElement as HTMLElement | null)?.blur(); }}>
+    <form className="suche" onSubmit={(e) => { e.preventDefault(); fertig(); void absenden(text); }}>
       {desktop && <span className="brand-mini" title="Lotse"><Marke size={30} /></span>}
-      <label className={`suchfeld${text ? " aktiv" : ""}`}>
+      <label className={`suchfeld${text || fokus ? " aktiv" : ""}`}>
         <Suche size={18} />
         <span className="sr">Suche oder Frage</span>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={ki.art === "bereit" ? "Frag Lotse oder such einen Ort" : "Ort, Adresse oder Anliegen"} autoComplete="off" enterKeyHint="search" />
-        {text && <button type="button" className="feld-x" aria-label="Löschen" onClick={zurStart}><Schliessen size={14} /></button>}
+        <input value={text} onChange={(e) => setText(e.target.value)} onFocus={() => { setFokus(true); if (!desktop) setStufe("gross"); }}
+          onKeyDown={(e) => { if (e.key === "Escape") fertig(); }}
+          placeholder={ki.art === "bereit" ? "Frag Lotse oder such einen Ort" : "Suchen"} autoComplete="off" enterKeyHint="search" />
+        {(text || fokus) && <button type="button" className="feld-x" aria-label="Schließen" onMouseDown={(e) => e.preventDefault()} onClick={() => { fertig(); zurStart(); if (!desktop) setStufe("klein"); }}><Schliessen size={14} /></button>}
+        <button type="button" className={`ki-knopf ${ki.art}`} data-tip={kiTitel} aria-label={kiTitel} onMouseDown={(e) => e.preventDefault()} onClick={kiUmschalten}
+          style={ki.art === "laedt" ? { ["--anteil" as string]: `${Math.round(ki.anteil * 360)}deg` } : undefined}>
+          <Ki size={17} />
+        </button>
       </label>
     </form>
   );
@@ -271,30 +299,32 @@ export default function App() {
           <div className="vorgemerkt">Termin {vorgemerkt.toLocaleString("de-DE", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}: Ort wählen <button type="button" className="link" onClick={() => setVorgemerkt(null)}>verwerfen</button></div>
         )}
         <div className="wechsel" key={`${verlauf.length}-${ansicht.art}`}>
-          {ansicht.art === "start" && (
-            <StartInhalt onKategorie={kategorieSuche} termine={termine} ki={ki} onKi={kiUmschalten} onInfo={() => gehe({ art: "info" })}
-              onTermin={(t) => gehe({ art: "ort", ort: t.ort, laden: false })} />
+          {fokus && (
+            <VorschlagInhalt text={text} zuletzt={zuletzt} termine={termine} ki={ki} onWahl={waehle}
+              onInfo={() => { fertig(); gehe({ art: "info" }); }}
+              onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} />
           )}
-          {ansicht.art === "liste" && (
+          {!fokus && ansicht.art === "start" && <SchnellLeiste onKategorie={(k) => { setText(k.name); kategorieSuche(k); }} />}
+          {!fokus && ansicht.art === "liste" && (
             <ListenInhalt l={ansicht.l} aktiv={null} onOrt={(o) => oeffneOrt(o, false)} onZu={zurStart} onNeu={ansicht.neu} />
           )}
-          {ansicht.art === "ort" && (
+          {!fokus && ansicht.art === "ort" && (
             <OrtInhalt o={ansicht.ort} laden={ansicht.laden} weg={weg} modus={modus} onZu={zurueck}
               onRoute={() => gehe({ art: "route", ort: ansicht.ort })}
               onTermin={() => gehe({ art: "termin", ort: ansicht.ort, zeit: vorgemerkt })}
               onTeilen={() => void teilen(ansicht.ort)} />
           )}
-          {ansicht.art === "route" && (
+          {!fokus && ansicht.art === "route" && (
             <RouteInhalt o={ansicht.ort} start={start} modus={modus} setModus={setModus} weg={weg} termin={terminFuer(ansicht.ort)}
               onStartGps={gps} onStartAdresse={startAdresse} onZurueck={zurueck} onNeu={() => setVersuch((n) => n + 1)} />
           )}
-          {ansicht.art === "termin" && (
+          {!fokus && ansicht.art === "termin" && (
             <TerminInhalt o={ansicht.ort} vorschlag={ansicht.zeit ?? morgenNeun()} vorhanden={terminFuer(ansicht.ort)} onZurueck={zurueck}
               onSpeichern={(d) => terminSpeichern(ansicht.ort, d)}
               onLoeschen={() => { const t = terminFuer(ansicht.ort); if (t) setTermine(loescheTermin(t.id)); zurueck(); }}
               onKalender={() => { const t = terminFuer(ansicht.ort); if (t) kalenderLaden(t); }} />
           )}
-          {ansicht.art === "info" && <InfoInhalt onZurueck={zurueck} />}
+          {!fokus && ansicht.art === "info" && <InfoInhalt onZurueck={zurueck} />}
         </div>
       </Blatt>
 

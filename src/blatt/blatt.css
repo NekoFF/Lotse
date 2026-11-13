@@ -101,3 +101,30 @@
 .app.tel .kartenknoepfe { top: calc(14px + env(safe-area-inset-top, 0px)); }
 .app.pc .kartenknoepfe { top: 20px; bottom: auto; }
 .app.tel .maplibregl-ctrl-bottom-right { top: calc(120px + env(safe-area-inset-top, 0px)); bottom: auto; }
+
+/* ---------- Ruhezustand: nur Suche + Symbole ---------- */
+.schnell { display: flex; gap: 6px; justify-content: flex-start; padding: 0; }
+.schnell-knopf { width: 32px; height: 32px; border-radius: 16px; display: grid; place-items: center; color: var(--f); background: color-mix(in srgb, var(--f) 13%, transparent); transition: transform 0.15s, background 0.15s; }
+.schnell-knopf:hover { background: color-mix(in srgb, var(--f) 22%, transparent); }
+.schnell-knopf:active { transform: scale(0.94); }
+.abschnitt-kopf { display: flex; justify-content: space-between; align-items: baseline; }
+.klein-link { font-size: 13px; }
+.vorschlaege section { display: flex; flex-direction: column; }
+
+/* ---------- KI-Knopf im Suchfeld ---------- */
+.ki-knopf { position: relative; width: 32px; height: 32px; border-radius: 16px; display: grid; place-items: center; color: var(--ink3); flex-shrink: 0; transition: background 0.2s, color 0.2s; }
+.ki-knopf:hover { background: var(--fuell); color: var(--akzent); }
+.ki-knopf.laedt { color: var(--akzent); background: conic-gradient(var(--akzent) var(--anteil, 0deg), var(--fuell) 0); }
+.ki-knopf.laedt::before { content: ""; position: absolute; inset: 2.5px; border-radius: 50%; background: var(--flaeche); }
+.ki-knopf.laedt svg { position: relative; }
+.ki-knopf.bereit { background: var(--akzent); color: var(--auf-akzent); box-shadow: 0 0 0 3px var(--akzent-weich); }
+.ki-knopf.fehler { color: var(--rot); }
+[data-tip]:hover::after, [data-tip]:focus-visible::after {
+  content: attr(data-tip); position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; width: max-content; max-width: 230px;
+  padding: 7px 10px; border-radius: 10px; background: var(--ink); color: var(--flaeche); font-size: 12px; line-height: 1.35; font-weight: 500;
+  white-space: normal; text-align: left; pointer-events: none; box-shadow: var(--schatten);
+}
+.blatt { overflow: visible; }
+.blatt-inhalt:empty { display: none; }
+.blatt.pc .schnell { padding-left: 40px; }
+.blatt.pc .schnell-knopf { width: 30px; height: 30px; }

@@ -39,3 +39,9 @@ export const Auto = (p: P) => <Ic {...p}><path d="M5 16V12l2-5h10l2 5v4M5 16h14M
 export const Ki = (p: P) => <Ic {...p}><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z" /></Ic>;
 export const Uhr = (p: P) => <Ic {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></Ic>;
 export const Route = (p: P) => <Ic {...p}><path d="M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" /><path d="M8 17h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7" /></Ic>;
+export const Essen = (p: P) => <Ic {...p}><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2 0-3.5 2.5-3.5 6S15 13 17 13" /></Ic>;
+export const Tasse = (p: P) => <Ic {...p}><path d="M4 9h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 3v3M12 3v3" /></Ic>;
+export const Pille = (p: P) => <Ic {...p}><path d="M9.2 18.8a3.9 3.9 0 0 1-5.5-5.5l9.6-9.6a3.9 3.9 0 0 1 5.5 5.5zM8.5 8.5l7 7" /></Ic>;
+export const Stetho = (p: P) => <Ic {...p}><path d="M6 3v5a4 4 0 0 0 8 0V3M10 12v2.5a4.5 4.5 0 0 0 9 0V12" /><circle cx="19" cy="10" r="2" /></Ic>;
+export const Wagen = (p: P) => <Ic {...p}><path d="M3 4h2.5l2 11h10l2-8H7" /><circle cx="9" cy="19" r="1.5" /><circle cx="17" cy="19" r="1.5" /></Ic>;
+export const Stern = (p: P) => <Ic {...p}><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></Ic>;
