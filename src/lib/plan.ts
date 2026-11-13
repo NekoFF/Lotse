@@ -1,59 +1,44 @@
-import type { Praxis } from "../data/praxen";
+import { minuten, type Modus, type Praxis } from "../data/praxen";
 
 /** Sicherheitsabstand vor dem Termin in Minuten */
 export const PUFFER = 10;
 
-export interface Schritt {
-  zeit: Date;
-  art: "fuss" | "linie";
-  titel: string;
-  detail: string;
-}
+export const MODUS_NAME: Record<Modus, string> = { fuss: "zu Fuß", rad: "mit dem Rad", auto: "mit dem Auto" };
+export const MODUS_KURZ: Record<Modus, string> = { fuss: "Zu Fuß", rad: "Rad", auto: "Auto" };
 
 export interface Plan {
+  modus: Modus;
+  min: number;
+  km: number;
   los: Date;
   an: Date;
-  schritte: Schritt[];
-  linie: string | null;
-}
-
-/** "Bus 12, direkt" → "Bus 12" */
-export function linienName(verbindung: string): string | null {
-  const kopf = verbindung.split(",")[0].trim();
-  return /^zu fu/i.test(kopf) ? null : kopf;
+  /** zweitschnellster echter Weg als Plan B */
+  planb: { modus: Modus; min: number; los: Date } | null;
 }
 
 const plus = (d: Date, min: number) => new Date(d.getTime() + min * 60000);
 
-/** Rechnet vom Termin rückwärts: Ankunft = Termin − Puffer, Losgehen = Ankunft − Fahrzeit. */
-export function planeWeg(p: Praxis, termin: Date): Plan {
+/** Rechnet vom Termin rückwärts. Gibt null zurück, wenn es für diesen Modus keinen berechneten Weg gibt. */
+export function planeWeg(p: Praxis, termin: Date, modus: Modus): Plan | null {
+  const min = minuten(p, modus);
+  const w = p.wege[modus];
+  if (min === null || !w) return null;
   const an = plus(termin, -PUFFER);
-  const los = plus(an, -p.fahrzeit);
-  const linie = p.modus === "oepnv" ? linienName(p.verbindung) : null;
-  if (!linie) {
-    return { los, an, linie: null, schritte: [{ zeit: los, art: "fuss", titel: `${p.fahrzeit} Min zu Fuß`, detail: `bis ${p.strasse}` }] };
-  }
-  const hin = 4, ab = 3, fahrt = Math.max(3, p.fahrzeit - hin - ab);
-  const rest = p.verbindung.split(",").slice(1).join(",").trim();
+  const los = plus(an, -min);
+  const andere = (["fuss", "rad", "auto"] as Modus[])
+    .filter((m) => m !== modus)
+    .map((m) => ({ modus: m, min: minuten(p, m) }))
+    .filter((x): x is { modus: Modus; min: number } => x.min !== null)
+    .sort((a, b) => a.min - b.min)[0];
   return {
-    los, an, linie,
-    schritte: [
-      { zeit: los, art: "fuss", titel: `${hin} Min zu Fuß`, detail: "bis zur Haltestelle" },
-      { zeit: plus(los, hin), art: "linie", titel: linie, detail: rest ? `${fahrt} Min, ${rest}` : `${fahrt} Min Richtung ${p.ort}` },
-      { zeit: plus(los, hin + fahrt), art: "fuss", titel: `${ab} Min zu Fuß`, detail: `bis ${p.strasse}` },
-    ],
+    modus, min, km: Math.round(w.m / 100) / 10, los, an,
+    planb: andere ? { ...andere, los: plus(an, -andere.min) } : null,
   };
-}
-
-/** Teile der Mini-Route für die Liste: Gehminuten und Linie */
-export function miniRoute(p: Praxis): { art: "fuss" | "linie"; text: string }[] {
-  const linie = p.modus === "oepnv" ? linienName(p.verbindung) : null;
-  if (!linie) return [{ art: "fuss", text: String(p.fahrzeit) }];
-  return [{ art: "fuss", text: "4" }, { art: "linie", text: linie }, { art: "fuss", text: "3" }];
 }
 
 export const uhr = (d: Date) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 export const tag = (d: Date) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" });
+export const km = (n: number) => String(n).replace(".", ",");
 
 /** Nächster Werktag, 09:00 */
 export function standardTermin(jetzt = new Date()): Date {
@@ -79,7 +64,8 @@ const esc = (s: string) => s.replace(/[\\;,]/g, (c) => "\\" + c).replace(/\n/g, 
 
 export function kalenderDatei(p: Praxis, termin: Date, plan: Plan): string {
   const ende = plus(termin, 30);
-  const text = `Losgehen um ${uhr(plan.los)} (${p.verbindung}). Ankunft ${uhr(plan.an)}, ${PUFFER} Min Puffer. Geplant mit Lotse.`;
+  const ort = [p.strasse, p.ort].filter(Boolean).join(", ");
+  const text = `Losgehen um ${uhr(plan.los)} (${plan.min} Min ${MODUS_NAME[plan.modus]}). Ankunft ${uhr(plan.an)}, ${PUFFER} Min Puffer. Geplant mit Lotse.`;
   return [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Lotse//Schulprojekt//DE", "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
@@ -88,7 +74,7 @@ export function kalenderDatei(p: Praxis, termin: Date, plan: Plan): string {
     `DTSTART:${icsZeit(termin)}`,
     `DTEND:${icsZeit(ende)}`,
     `SUMMARY:${esc(p.name)}`,
-    `LOCATION:${esc(`${p.strasse}, ${p.ort}`)}`,
+    `LOCATION:${esc(ort)}`,
     `DESCRIPTION:${esc(text)}`,
     "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${esc(`Jetzt losgehen zu ${p.name}`)}`,
     `TRIGGER;VALUE=DATE-TIME:${icsZeit(plan.los)}`, "END:VALARM",
@@ -100,26 +86,27 @@ export function kalenderDatei(p: Praxis, termin: Date, plan: Plan): string {
 
 /* ---------- Begleitung: alles steht im Link, kein Server ---------- */
 
-export interface Geteilt { praxisId: string; termin: Date; von?: string }
+export interface Geteilt { praxisId: string; termin: Date; modus: Modus }
 
-export function begleitLink(praxisId: string, termin: Date): string {
+export function begleitLink(praxisId: string, termin: Date, modus: Modus): string {
   const u = new URL(window.location.href);
-  u.hash = new URLSearchParams({ p: praxisId, t: alsEingabe(termin) }).toString();
+  u.hash = new URLSearchParams({ p: praxisId, t: alsEingabe(termin), m: modus }).toString();
   return u.toString();
 }
 
 export function leseLink(hash: string): Geteilt | null {
   const q = new URLSearchParams(hash.replace(/^#/, ""));
-  const p = q.get("p"), t = q.get("t");
-  if (!p || !t || !/^[a-z]+-\d+$/.test(p)) return null;
+  const p = q.get("p"), t = q.get("t"), m = q.get("m");
+  if (!p || !t || !/^(node|way|relation)-\d+$/.test(p)) return null;
   const d = new Date(t);
-  return isNaN(d.getTime()) ? null : { praxisId: p, termin: d };
+  const modus: Modus = m === "rad" || m === "auto" ? m : "fuss";
+  return isNaN(d.getTime()) ? null : { praxisId: p, termin: d, modus };
 }
 
 /* ---------- gemerkte Termine (nur auf diesem Gerät) ---------- */
 
-export interface Gemerkt { praxisId: string; name: string; termin: string; los: string }
-const KEY = "lotse.termine";
+export interface Gemerkt { praxisId: string; name: string; termin: string; los: string; modus?: Modus }
+const KEY = "lotse.termine.v2";
 
 export function leseTermine(): Gemerkt[] {
   try {

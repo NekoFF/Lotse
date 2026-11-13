@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import maplibregl, { type Map as MlMap, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { LngLat } from "../data/geo";
+import type { LngLat } from "../data/praxen";
 
 /** Kostenlose Karte ohne Schlüssel: OpenFreeMap (Daten: OpenStreetMap). */
 const STIL = {
