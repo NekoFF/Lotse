@@ -128,3 +128,17 @@
 .blatt-inhalt:empty { display: none; }
 .blatt.pc .schnell { padding-left: 40px; }
 .blatt.pc .schnell-knopf { width: 30px; height: 30px; }
+
+/* Ablage unter der Suchleiste (Computer): etwas schmaler, schiebt sich unter die Leiste */
+.schnell-ablage {
+  position: absolute; z-index: 4; left: 40px; width: 344px; padding: 22px 14px 10px; border-radius: 0 0 18px 18px;
+  background: linear-gradient(var(--fuell), var(--fuell)), var(--glas); -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow: 0 8px 24px rgba(20, 24, 40, 0.12); border: 0.5px solid var(--linie); border-top: 0;
+  animation: ablage 0.25s ease;
+}
+@keyframes ablage { from { transform: translateY(-10px); opacity: 0; } }
+.schnell-ablage .schnell { padding: 0; gap: 8px; justify-content: space-between; }
+.schnell-ablage .schnell-knopf { width: 40px; height: 28px; border-radius: 9px; background: var(--flaeche); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+.schnell-ablage .schnell-knopf:hover { background: color-mix(in srgb, var(--f) 14%, var(--flaeche)); }
+.blatt-inhalt:has(> .wechsel:empty) { display: none; }
+.blatt.pc:not(:has(.wechsel:not(:empty))) .blatt-kopf { padding-bottom: 14px; }

@@ -304,7 +304,7 @@ export default function App() {
               onInfo={() => { fertig(); gehe({ art: "info" }); }}
               onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} />
           )}
-          {!fokus && ansicht.art === "start" && <SchnellLeiste onKategorie={(k) => { setText(k.name); kategorieSuche(k); }} />}
+          {!fokus && !desktop && ansicht.art === "start" && <SchnellLeiste onKategorie={(k) => { setText(k.name); kategorieSuche(k); }} />}
           {!fokus && ansicht.art === "liste" && (
             <ListenInhalt l={ansicht.l} aktiv={null} onOrt={(o) => oeffneOrt(o, false)} onZu={zurStart} onNeu={ansicht.neu} />
           )}
@@ -328,6 +328,12 @@ export default function App() {
         </div>
       </Blatt>
 
+      {/* Computer: Schnellzugriff als „Ablage“ unter der Suchleiste */}
+      {desktop && !fokus && ansicht.art === "start" && groesse.h > 0 && (
+        <div className="schnell-ablage" style={{ top: 16 + groesse.h - 14 }}>
+          <SchnellLeiste onKategorie={(k) => { setText(k.name); kategorieSuche(k); }} />
+        </div>
+      )}
       <div className="kartenknoepfe">
         <button type="button" className="glas" aria-label="Mein Standort" title="Mein Standort" onClick={() => (start?.quelle === "gps" ? window.dispatchEvent(new CustomEvent("lotse:start")) : gps())}><Standort size={18} /></button>
         <button type="button" className={`glas drei-d${dreiD ? " an" : ""}`} aria-pressed={dreiD} aria-label="3D-Gebäude" onClick={() => setDreiD((x) => !x)}>{dreiD ? "2D" : "3D"}</button>
