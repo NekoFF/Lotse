@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { Zuordnung } from "../core/match";
 import type { SicherheitsErgebnis } from "../core/safety";
-import { praxenFuer } from "../data/praxen";
+import type { Start } from "../data/praxen";
 import { tag, uhr, type Gemerkt } from "../lib/plan";
 import { Marke, Pfeil, Schliessen, Suche, Telefon, Weiter } from "../ui/icons";
 
@@ -15,10 +15,12 @@ interface Props {
   onSuchen: () => void;
   onHausarzt: () => void;
   onTermin: (t: Gemerkt) => void;
+  start: Start | null;
+  onStartAendern: () => void;
   desktop: boolean;
 }
 
-export function StartPanel({ text, setText, live, termine, onSuchen, onHausarzt, onTermin, desktop }: Props) {
+export function StartPanel({ text, setText, live, termine, start, onSuchen, onHausarzt, onTermin, onStartAendern, desktop }: Props) {
   const feld = useRef<HTMLInputElement>(null);
 
   // "/" springt ins Eingabefeld (Computer)
@@ -33,7 +35,6 @@ export function StartPanel({ text, setText, live, termine, onSuchen, onHausarzt,
 
   const notfall = live?.s.stufe ?? null;
   const z = live?.z;
-  const anzahl = z ? praxenFuer(z.fach.id).length : 0;
   const leer = text.trim().length < 3;
 
   return (
@@ -75,9 +76,9 @@ export function StartPanel({ text, setText, live, termine, onSuchen, onHausarzt,
               {termine.slice(0, 3).map((t) => {
                 const d = new Date(t.termin);
                 return (
-                  <button key={t.praxisId + t.termin} type="button" className="termin" onClick={() => onTermin(t)}>
+                  <button key={t.praxis.id + t.termin} type="button" className="termin" onClick={() => onTermin(t)}>
                     <span className="datum"><span>{d.toLocaleDateString("de-DE", { weekday: "short" }).toUpperCase().replace(".", "")}</span><b className="mono">{d.getDate()}</b></span>
-                    <span className="termin-t"><b>{t.name}</b><span>{tag(d)} · {uhr(d)} · los <span className="mono akzent">{uhr(new Date(t.los))}</span></span></span>
+                    <span className="termin-t"><b>{t.praxis.name}</b><span>{tag(d)} · {uhr(d)} · los <span className="mono akzent">{uhr(new Date(t.los))}</span></span></span>
                     <Weiter size={16} />
                   </button>
                 );
@@ -105,7 +106,7 @@ export function StartPanel({ text, setText, live, termine, onSuchen, onHausarzt,
             <div className="erkannt"><span>Erkannt:</span>{z.erkannt.map((w) => <span key={w} className="mono wort">{w}</span>)}</div>
           </div>
           <button type="button" className="btn primaer" onClick={onSuchen}>
-            {anzahl} Praxen in der Nähe {desktop ? <span className="kbd hell">↵</span> : <Pfeil size={18} />}
+            Praxen in der Nähe suchen {desktop ? <span className="kbd hell">↵</span> : <Pfeil size={18} />}
           </button>
           <p className="fein mitte">Nicht sicher? Eine <button type="button" className="link" onClick={onHausarzt}>Hausarztpraxis</button> passt immer. Lotse ordnet nur zu und stellt keine Diagnose.</p>
         </>
@@ -117,6 +118,12 @@ export function StartPanel({ text, setText, live, termine, onSuchen, onHausarzt,
           <span>Schreib, wo es weh tut oder was dich stört. Oder geh zuerst zur Hausarztpraxis, sie ist für fast alles der erste Anlaufpunkt.</span>
           <button type="button" className="btn zweit" onClick={onHausarzt}>Hausarztpraxis zeigen</button>
         </div>
+      )}
+
+      {start && (
+        <button type="button" className="start-zeile" onClick={onStartAendern}>
+          <span>Startpunkt: <b>{start.name}</b></span><span className="link">ändern</span>
+        </button>
       )}
 
       <div className="fuss">

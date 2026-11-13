@@ -1,29 +1,57 @@
 import { useEffect, useRef } from "react";
+import { DIENSTE } from "../config";
 import type { Zuordnung } from "../core/match";
-import type { Praxis } from "../data/praxen";
-import { miniRoute } from "../lib/plan";
-import { Gehen, Zurueck } from "../ui/icons";
+import { adresse, minuten, type Modus, type PraxisMitZeit, type Start } from "../data/praxen";
+import { km, MODUS_KURZ, MODUS_NAME } from "../lib/plan";
+import { Extern, Zurueck } from "../ui/icons";
 
-export type Sortierung = "zeit" | "naehe" | "barrierefrei";
+export type Sortierung = "zeit" | "naehe" | "rollstuhl";
+export type SuchStatus = "laden" | "fehler" | "leer" | "fertig";
 
 interface Props {
   z: Zuordnung;
   text: string;
-  liste: Praxis[];
+  start: Start;
+  status: SuchStatus;
+  fehler?: string;
+  zeitFehler: string | null;
+  liste: PraxisMitZeit[];
+  gesamt: number;
+  modus: Modus;
+  setModus: (m: Modus) => void;
   sort: Sortierung;
   setSort: (s: Sortierung) => void;
+  radius: number;
+  kannErweitern: boolean;
+  onErweitern: () => void;
+  onNeu: () => void;
   hover: string | null;
   setHover: (id: string | null) => void;
   onWahl: (id: string) => void;
   onZurueck: () => void;
+  onStartAendern: () => void;
+  onHausarzt: () => void;
   onAlternative: () => void;
   desktop: boolean;
 }
 
-export function PraxenPanel({ z, text, liste, sort, setSort, hover, setHover, onWahl, onZurueck, onAlternative, desktop }: Props) {
+export function ModusWahl({ modus, setModus }: { modus: Modus; setModus: (m: Modus) => void }) {
+  return (
+    <div className="segment vier" role="tablist" aria-label="Verkehrsmittel">
+      {(["fuss", "rad", "auto"] as Modus[]).map((m) => (
+        <button key={m} type="button" role="tab" aria-selected={modus === m} className={modus === m ? "an" : ""} onClick={() => setModus(m)}>{MODUS_KURZ[m]}</button>
+      ))}
+      <button type="button" role="tab" aria-selected={false} disabled title="Fahrplandaten werden noch angebunden">Bus <span className="bald">folgt</span></button>
+    </div>
+  );
+}
+
+const rollstuhlText = (r: string | null) => (r === "yes" ? "rollstuhlgerecht" : r === "limited" ? "teilweise rollstuhlgerecht" : null);
+
+export function PraxenPanel(props: Props) {
+  const { z, text, start, status, fehler, zeitFehler, liste, gesamt, modus, setModus, sort, setSort, radius, kannErweitern, onErweitern, onNeu, hover, setHover, onWahl, onZurueck, onStartAendern, onHausarzt, onAlternative, desktop } = props;
   const listeRef = useRef<HTMLDivElement>(null);
 
-  // Pfeiltasten wählen, Enter öffnet, Esc zurück (Computer)
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === "INPUT") return;
@@ -49,56 +77,83 @@ export function PraxenPanel({ z, text, liste, sort, setSort, hover, setHover, on
         </div>
       </div>
 
+      <button type="button" className="start-zeile" onClick={onStartAendern}>
+        <span>ab <b>{start.name}</b></span><span className="link">ändern</span>
+      </button>
+
       {z.alternative && (
-        <button type="button" className="hinweis-zeile" onClick={onAlternative}>
-          Auch möglich: <b>{z.alternative.name}</b>
-        </button>
+        <button type="button" className="hinweis-zeile" onClick={onAlternative}>Auch möglich: <b>{z.alternative.name}</b></button>
       )}
 
-      <div className="segment" role="tablist" aria-label="Sortierung">
-        {([["zeit", "Schnellste"], ["naehe", "Nächste"], ["barrierefrei", "Barrierefrei"]] as const).map(([k, l]) => (
-          <button key={k} type="button" role="tab" aria-selected={sort === k} className={sort === k ? "an" : ""} onClick={() => setSort(k)}>{l}</button>
-        ))}
-      </div>
+      <ModusWahl modus={modus} setModus={setModus} />
 
-      <span className="unterzeile">{liste.length} Praxen · {sort === "naehe" ? "nach Luftlinie" : "nach Fahrzeit"} ab Wetzlar Bahnhof</span>
+      {status === "laden" && (
+        <div className="liste" aria-busy="true" aria-label="Praxen werden gesucht">
+          {[0, 1, 2].map((i) => <div key={i} className="karte-p skelett"><span /><span /></div>)}
+          <p className="fein">Suche {z.fach.name}-Praxen im Umkreis von {radius} km und berechne echte Wege …</p>
+        </div>
+      )}
 
-      <div className="liste" ref={listeRef}>
-        {liste.map((p, i) => (
-          <button
-            key={p.id}
-            type="button"
-            className={`karte-p${hover === p.id || (!hover && i === 0) ? " an" : ""}`}
-            onMouseEnter={() => setHover(p.id)}
-            onFocus={() => setHover(p.id)}
-            onClick={() => onWahl(p.id)}
-          >
-            <span className="kp-l">
-              <b>{p.name}</b>
-              <span className="adr">{p.strasse}, {p.ort} · {String(p.entfernung).replace(".", ",")} km{p.barrierefrei ? " · barrierefrei" : ""}</span>
-              <span className="mini">
-                {miniRoute(p).map((s, k) => (
-                  <span key={k} className="mini-teil">
-                    {k > 0 && <span className="pfeil">›</span>}
-                    {s.art === "fuss" ? <span className="geh"><Gehen size={14} /><span className="mono">{s.text}</span></span> : <span className={`linie ${s.text.startsWith("RB") || s.text.startsWith("S") ? "bahn" : ""}`}>{s.text}</span>}
+      {status === "fehler" && (
+        <div className="leer-box" role="alert">
+          <b>Praxisdaten gerade nicht erreichbar.</b>
+          <span>{fehler}</span>
+          <button type="button" className="btn zweit" onClick={onNeu}>Erneut versuchen</button>
+        </div>
+      )}
+
+      {status === "leer" && (
+        <div className="leer-box">
+          <b>Keine {z.fach.name}-Praxis im Umkreis von {radius} km gefunden.</b>
+          <span>Lotse zeigt nur Praxen, die in OpenStreetMap mit Fachrichtung eingetragen sind. Fehlt eine, steht sie dort noch nicht.</span>
+          {kannErweitern && <button type="button" className="btn zweit" onClick={onErweitern}>Umkreis erweitern</button>}
+          <a className="btn zweit" href={DIENSTE.arztsuche} target="_blank" rel="noopener noreferrer">Offizielle Arztsuche 116117 <Extern size={16} /></a>
+          {z.fach.id !== "allgemein" && <button type="button" className="link" onClick={onHausarzt}>Hausarztpraxen zeigen</button>}
+        </div>
+      )}
+
+      {status === "fertig" && (
+        <>
+          {zeitFehler && <p className="hinweis-fehler" role="status">Fahrzeiten gerade nicht abrufbar ({zeitFehler}) Sortiert nach Luftlinie. <button type="button" className="link" onClick={onNeu}>Erneut versuchen</button></p>}
+          <div className="segment" role="tablist" aria-label="Sortierung">
+            {([["zeit", "Schnellste"], ["naehe", "Nächste"], ["rollstuhl", "Rollstuhl"]] as const).map(([k, l]) => (
+              <button key={k} type="button" role="tab" aria-selected={sort === k} className={sort === k ? "an" : ""} onClick={() => setSort(k)}>{l}</button>
+            ))}
+          </div>
+          <span className="unterzeile">{liste.length} von {gesamt} Praxen · {sort === "naehe" ? "nach Luftlinie" : `nach Fahrzeit ${MODUS_NAME[modus]}`} · Umkreis {radius} km</span>
+
+          <div className="liste" ref={listeRef}>
+            {liste.map((p, i) => {
+              const min = minuten(p, modus);
+              const r = rollstuhlText(p.rollstuhl);
+              return (
+                <button key={p.id} type="button" className={`karte-p${hover === p.id || (!hover && i === 0) ? " an" : ""}`}
+                  onMouseEnter={() => setHover(p.id)} onFocus={() => setHover(p.id)} onClick={() => onWahl(p.id)}>
+                  <span className="kp-l">
+                    <b>{p.name}</b>
+                    <span className="adr">{adresse(p) || "Adresse nicht eingetragen"} · {km(p.entfernung)} km</span>
+                    {r && <span className="marke-r">{r}</span>}
                   </span>
-                ))}
-              </span>
-            </span>
-            <span className="kp-r"><b className="mono">{p.fahrzeit}</b><span>Min</span></span>
-          </button>
-        ))}
-        {liste.length === 0 && <p className="fein">Keine barrierefreie Praxis in den Beispieldaten.</p>}
-      </div>
+                  <span className="kp-r">
+                    {min === null ? <><b className="mono">–</b><span>kein Weg</span></> : <><b className="mono">{min}</b><span>Min</span></>}
+                  </span>
+                </button>
+              );
+            })}
+            {liste.length === 0 && <p className="fein">Keine Praxis in dieser Auswahl ist in OpenStreetMap als rollstuhlgerecht eingetragen.</p>}
+            {kannErweitern && <button type="button" className="link mehr" onClick={onErweitern}>Größeren Umkreis durchsuchen</button>}
+          </div>
+        </>
+      )}
 
-      {desktop && (
+      {desktop && status === "fertig" && (
         <div className="tasten">
           <span><span className="kbd">↑</span><span className="kbd">↓</span> wählen</span>
           <span><span className="kbd">↵</span> öffnen</span>
           <span><span className="kbd">esc</span> zurück</span>
         </div>
       )}
-      <p className="fein">Beispieldaten: Praxen erfunden, Straßen echt. Fahrzeiten mit Bus geschätzt.</p>
+      <p className="fein">Praxen: © OpenStreetMap-Mitwirkende · Wege: OSRM (FOSSGIS) · Bus und Bahn werden noch angebunden.</p>
     </div>
   );
 }

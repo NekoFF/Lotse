@@ -37,7 +37,11 @@ React 19 + TypeScript + Vite 6, PWA (vite-plugin-pwa), MapLibre GL 5, Tests mit 
 - `scripts/daten_laden.py` lädt echte Praxen + Wege für Tests (`scripts/beispieldaten/`).
 - Screenshots in Headless-Chromium nur mit `--use-angle=swiftshader --enable-unsafe-swiftshader`.
 
-## 5. Stand der Umstellung auf Live-Daten (Zweig `arbeit/echte-daten`)
+## 5. Umstellung auf Live-Daten – ERLEDIGT am 13.11. (in `main`)
+Live geprüft mit Start Wetzlar Bahnhof: 5 echte Orthopädie-Praxen, echte Website/Telefon, Weg zu Fuß, Plan B mit dem Auto. Im Headless-Browser der Cloud-Umgebung kommt routing.openstreetmap.de nicht durch (curl mit CORS-Header geht); Test daher mit `page.route`-Weiterleitung. Auf echten Geräten prüfen.
+Nächste Feinschliffe: Pins im selben Haus sind gruppiert; Tests für Dienste ergänzen.
+
+### Ursprünglicher Plan (zur Nachverfolgung)
 Fertig: `config.ts`, `services/dienste.ts`, `core/osmFach.ts`, neue Typen in `data/praxen.ts`, `lib/plan.ts`, Karte mit wechselndem/fehlendem Startpunkt.
 Offen (in dieser Reihenfolge):
 1. `App.tsx` umbauen: Zustand `start` (GPS/Adresse, nur im Speicher/sessionStorage), Suche `laden | fehler | leer | fertig` mit Radius 4 → 10 → 25 km, Verkehrsmittel-Umschalter „Zu Fuß / Rad / Auto / Bus & Bahn (folgt, deaktiviert)“, Weglinie beim Öffnen einer Praxis nachladen.

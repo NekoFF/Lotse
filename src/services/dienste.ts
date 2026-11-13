@@ -110,12 +110,12 @@ const pkt = (l: LngLat) => `${l[0].toFixed(5)},${l[1].toFixed(5)}`;
 const profil: Record<Modus, string> = { fuss: "foot", rad: "bike", auto: "driving" };
 
 /** Echte Fahrzeiten vom Start zu allen Praxen: eine Anfrage je Verkehrsmittel. */
-export async function zeitenBerechnen(start: LngLat, praxen: Praxis[]): Promise<PraxisMitZeit[]> {
+export async function zeitenBerechnen(start: LngLat, praxen: Praxis[]): Promise<{ liste: PraxisMitZeit[]; fehler: string | null }> {
   const mit = praxen
     .map((p) => ({ ...p, entfernung: Math.round(luftlinie(start, p.lngLat) * 10) / 10, zeiten: { fuss: null, rad: null, auto: null } as Record<Modus, Zeit | null> }))
     .sort((a, b) => a.entfernung - b.entfernung)
     .slice(0, MAX_ZIELE);
-  if (mit.length === 0) return [];
+  if (mit.length === 0) return { liste: [], fehler: null };
   const coords = [start, ...mit.map((p) => p.lngLat)].map(pkt).join(";");
   const ergebnisse = await Promise.allSettled(MODI.map(async (m) => {
     const u = `${DIENSTE.routing[m]}/table/v1/${profil[m]}/${coords}?sources=0&annotations=duration,distance`;
@@ -126,8 +126,10 @@ export async function zeitenBerechnen(start: LngLat, praxen: Praxis[]): Promise<
       p.zeiten[m] = s != null && d != null ? { s, m: d } : null;
     });
   }));
-  if (ergebnisse.every((e) => e.status === "rejected")) throw (ergebnisse[0] as PromiseRejectedResult).reason;
-  return mit;
+  // Fallen alle Wegdienste aus, bleiben die Praxen sichtbar, nur ohne Zeiten. Nichts wird geschätzt.
+  const alleWeg = ergebnisse.every((e) => e.status === "rejected");
+  const fehler = alleWeg ? ((ergebnisse[0] as PromiseRejectedResult).reason instanceof DienstFehler ? (ergebnisse[0] as PromiseRejectedResult).reason.message : "Wegberechnung gerade nicht erreichbar.") : null;
+  return { liste: mit, fehler };
 }
 
 /** Genaue Linie eines Weges für die Karte. */
