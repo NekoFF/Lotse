@@ -269,8 +269,8 @@ export default function App() {
         <span className="sr">Suche oder Frage</span>
         <input value={text} onChange={(e) => setText(e.target.value)} onFocus={() => { setFokus(true); if (!desktop) setStufe("gross"); }}
           onKeyDown={(e) => { if (e.key === "Escape") fertig(); }}
-          placeholder={ki.art === "bereit" ? "Frag Lotse oder such einen Ort" : "Suchen"} autoComplete="off" enterKeyHint="search" />
-        {(text || fokus) && <button type="button" className="feld-x" aria-label="Schließen" onMouseDown={(e) => e.preventDefault()} onClick={() => { fertig(); zurStart(); if (!desktop) setStufe("klein"); }}><Schliessen size={14} /></button>}
+          placeholder={ki.art === "bereit" ? "Frag Lotse" : "Suchen"} autoComplete="off" enterKeyHint="search" />
+        {text && <button type="button" className="feld-x" aria-label="Schließen" onMouseDown={(e) => e.preventDefault()} onClick={() => { fertig(); zurStart(); if (!desktop) setStufe("klein"); }}><Schliessen size={14} /></button>}
         <button type="button" className={`ki-knopf ${ki.art}`} data-tip={kiTitel} aria-label={kiTitel} onMouseDown={(e) => e.preventDefault()} onClick={kiUmschalten}
           style={ki.art === "laedt" ? { ["--anteil" as string]: `${Math.round(ki.anteil * 360)}deg` } : undefined}>
           <Ki size={17} />
