@@ -142,7 +142,10 @@
   animation: ablage-rein 0.25s ease;
 }
 @keyframes ablage-rein { from { transform: translateY(-10px); opacity: 0; } }
-.ablage.offen { left: 16px; width: 392px; border-radius: 0 0 22px 22px; background: var(--glas); display: flex; flex-direction: column; }
+.ablage.offen { display: flex; flex-direction: column; }
+/* Zeilen in der Ablage: gleicher Ton wie die Symbol-Knöpfe */
+.ablage .zeilen { background: var(--flaeche); }
+.ablage .vorschlaege { gap: 10px; }
 .ablage-rahmen { position: relative; transition: height 0.34s cubic-bezier(0.2, 0.9, 0.25, 1); overflow: hidden; }
 .ablage.offen .ablage-rahmen { overflow-y: auto; max-height: inherit; }
 .ablage-platz { height: 46px; }
@@ -163,6 +166,6 @@
 .ablage-symbole .schnell-knopf:nth-child(7) { transition-delay: 0.12s; }
 
 /* Vorschläge blenden nach den Symbolen ein */
-.ablage-vorschlaege { padding: 4px 14px 14px; animation: vorschlag-rein 0.3s ease 0.08s both; }
+.ablage-vorschlaege { padding: 2px 10px 10px; animation: vorschlag-rein 0.3s ease 0.08s both; }
 @keyframes vorschlag-rein { from { opacity: 0; transform: translateY(-6px); } }
 @media (prefers-reduced-motion: reduce) { .ablage, .ablage-rahmen, .ablage-symbole .schnell-knopf { transition: none; } }
