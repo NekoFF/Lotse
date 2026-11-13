@@ -49,7 +49,7 @@ async function laden<T>(url: string, was: string): Promise<T> {
 const zwischenspeicher = new Map<string, Promise<unknown>>();
 const SPEICHER_MAX = 200;
 
-function holeJson<T>(url: string, was: string): Promise<T> {
+export function holeJson<T>(url: string, was: string): Promise<T> {
   const da = zwischenspeicher.get(url);
   if (da) return da as Promise<T>;
   const p = laden<T>(url, was);
@@ -182,8 +182,8 @@ export async function praxisLaden(id: string): Promise<Praxis | null> {
 
 /* ---------- Wege ---------- */
 
-const pkt = (l: LngLat) => `${l[0].toFixed(5)},${l[1].toFixed(5)}`;
-const profil: Record<Modus, string> = { fuss: "foot", rad: "bike", auto: "driving" };
+export const pkt = (l: LngLat) => `${l[0].toFixed(5)},${l[1].toFixed(5)}`;
+export const profil: Record<Modus, string> = { fuss: "foot", rad: "bike", auto: "driving" };
 
 /**
  * Echte Fahrzeiten vom Start zu den nächsten Praxen: eine Anfrage je Verkehrsmittel, nacheinander
@@ -238,3 +238,5 @@ export async function wegLaden(start: LngLat, ziel: LngLat, m: Modus): Promise<W
   if (r.code !== "Ok" || !x) throw new DienstFehler("Für diesen Weg gibt es gerade keine Route.");
   return { s: x.duration, m: x.distance, line: x.geometry.coordinates };
 }
+
+export const fehlerText = (e: unknown) => (e instanceof Error && e.message ? e.message : "Unbekannter Fehler.");

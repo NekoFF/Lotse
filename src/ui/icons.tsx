@@ -34,3 +34,8 @@ export function Marke({ size = 26 }: { size?: number }) {
     </span>
   );
 }
+export const Rad = (p: P) => <Ic {...p}><circle cx="6" cy="16" r="3.5" /><circle cx="18" cy="16" r="3.5" /><path d="M6 16l4-8h5l3 8M10 8l2 8h-6M14 5h2" /></Ic>;
+export const Auto = (p: P) => <Ic {...p}><path d="M5 16V12l2-5h10l2 5v4M5 16h14M5 16v2M19 16v2M4 12h16" /><path d="M8 14h.01M16 14h.01" /></Ic>;
+export const Ki = (p: P) => <Ic {...p}><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z" /></Ic>;
+export const Uhr = (p: P) => <Ic {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></Ic>;
+export const Route = (p: P) => <Ic {...p}><path d="M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" /><path d="M8 17h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7" /></Ic>;

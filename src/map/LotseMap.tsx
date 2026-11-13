@@ -6,8 +6,8 @@ import type { LngLat } from "../data/praxen";
 import { ortArt, symboleEinsetzen } from "./kartenSymbole";
 
 const STIL = DIENSTE.kartenStil;
-/** Ohne Startpunkt: Überblick Deutschland */
-const UEBERBLICK = { center: [10.4, 51.1] as LngLat, zoom: 5.2 };
+/** Ohne Startpunkt: Wetzlar (Schulort) */
+const UEBERBLICK = { center: [8.5044, 50.5558] as LngLat, zoom: 13.6 };
 
 const FARBE = {
   light: { accent: "#2447e6", casing: "#ffffff", planb: "#8597e6" },
@@ -43,14 +43,17 @@ interface Props {
   /** 3D-Gebäude und geneigte Ansicht */
   dreiD?: boolean;
   /** Tipp auf einen Kartenpunkt (Haltestelle, Praxis, Laden …) aus OpenStreetMap */
-  onOrt?: (name: string, art: string) => void;
+  /** Tipp irgendwo auf die Karte; poi = getroffenes Kartensymbol (Name/Art aus OpenStreetMap) */
+  onKarteTipp?: (lngLat: LngLat, poi: { name: string; art: string } | null) => void;
+  /** Kartenmitte nach jeder Bewegung (für „in der Nähe“) */
+  onMitte?: (lngLat: LngLat) => void;
 }
 
 /** Ebenen mit antippbaren Kartenpunkten (aus public/karte/stil-*.json) */
 const ORT_EBENEN = ["lotse-poi-oepnv", "lotse-poi-medizin", "lotse-poi-orte"];
 const LIZENZ_URL = `${import.meta.env.BASE_URL}karte/LIZENZ.txt`;
 
-export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, abstand, onPin, onPinHover, dreiD = false, onOrt }: Props) {
+export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, abstand, onPin, onPinHover, dreiD = false, onKarteTipp, onMitte }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
   const markers = useRef(new Map<string, { m: Marker; el: HTMLButtonElement }>());
@@ -59,8 +62,8 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
   const meRef = useRef<Marker | null>(null);
   const startRef = useRef(start);
   startRef.current = start;
-  const cb = useRef({ onPin, onPinHover, onOrt });
-  cb.current = { onPin, onPinHover, onOrt };
+  const cb = useRef({ onPin, onPinHover, onKarteTipp, onMitte });
+  cb.current = { onPin, onPinHover, onKarteTipp, onMitte };
   const dreiDRef = useRef(dreiD);
   dreiDRef.current = dreiD;
   routeRef.current = route;
@@ -96,13 +99,15 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     // falls ein Symbol vor dem Einsetzen gebraucht wird
     m.on("styleimagemissing", (e) => { if (e.id.startsWith("lotse-")) symboleEinsetzen(m, themeRef.current); });
     // Kartenpunkte antippen: Name und Art aus OpenStreetMap
+    m.on("moveend", () => { const c = m.getCenter(); cb.current.onMitte?.([c.lng, c.lat]); });
     m.on("click", (e) => {
       const ebenen = ORT_EBENEN.filter((id) => m.getLayer(id));
-      if (!ebenen.length) return;
-      const f = m.queryRenderedFeatures([[e.point.x - 10, e.point.y - 10], [e.point.x + 10, e.point.y + 10]], { layers: ebenen })[0];
+      const f = ebenen.length ? m.queryRenderedFeatures([[e.point.x - 10, e.point.y - 10], [e.point.x + 10, e.point.y + 10]], { layers: ebenen })[0] : undefined;
       const p = f?.properties;
       const name = p ? String(p["name:de"] ?? p.name_de ?? p.name ?? "") : "";
-      if (name) cb.current.onOrt?.(name, ortArt(String(p!.class ?? ""), String(p!.subclass ?? "")));
+      const poi = name ? { name, art: ortArt(String(p!.class ?? ""), String(p!.subclass ?? "")) } : null;
+      const g = f?.geometry.type === "Point" ? (f.geometry.coordinates as LngLat) : null;
+      cb.current.onKarteTipp?.(poi && g ? [g[0], g[1]] : [e.lngLat.lng, e.lngLat.lat], poi);
     });
     for (const id of ORT_EBENEN) {
       m.on("mouseenter", id, () => { m.getCanvas().style.cursor = "pointer"; });
@@ -197,7 +202,7 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     const pad = { top: abstand.top + 70, right: abstand.right + 50, bottom: abstand.bottom + 40, left: abstand.left + 50 };
     // Gespeicherten Rand zurücksetzen, sonst addiert MapLibre alten und neuen Rand
     m.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
-    if (rahmen.length === 1) m.easeTo({ center: rahmen[0], zoom: 14.6, padding: pad, duration: 700 });
+    if (rahmen.length === 1) m.easeTo({ center: rahmen[0], zoom: Math.max(m.getZoom(), 16), padding: pad, duration: 700 });
     else m.fitBounds(b, { padding: pad, maxZoom: 16, duration: 800 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rahmenSchluessel, abstand.bottom, abstand.left]);

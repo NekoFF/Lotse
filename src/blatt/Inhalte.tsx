@@ -1,0 +1,239 @@
+import { useState, type ReactNode } from "react";
+import { DIENSTE } from "../config";
+import type { Kategorie } from "../core/absicht";
+import { KATEGORIEN } from "../core/absicht";
+import { luftlinie, MODI, zeitenLesbar, type LngLat, type Modus, type Start } from "../data/praxen";
+import type { KiStatus } from "../ki/assistent";
+import type { WegStand } from "../lib/wege";
+import { PUFFER_MIN, type Termin } from "../lib/termine";
+import { telLink } from "../services/dienste";
+import type { Ort } from "../services/orte";
+import { Auto, Extern, Gehen, Kalender, Ki, Rad, Route as RouteIc, Schliessen, Standort, Teilen, Telefon, Uhr, Zurueck } from "../ui/icons";
+
+export const uhr = (d: Date) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+export const tagKurz = (d: Date) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" });
+const km = (m: number) => (m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(1).replace(".", ",")} km`);
+const min = (s: number) => Math.max(1, Math.round(s / 60));
+export const MODUS_ICON: Record<Modus, ReactNode> = { fuss: <Gehen size={17} />, rad: <Rad size={17} />, auto: <Auto size={17} /> };
+export const MODUS_NAME: Record<Modus, string> = { fuss: "zu Fuß", rad: "mit dem Rad", auto: "mit dem Auto" };
+const MODUS_KURZ: Record<Modus, string> = { fuss: "Zu Fuß", rad: "Rad", auto: "Auto" };
+const ROLLSTUHL: Record<string, string> = { yes: "rollstuhlgerecht", limited: "teilweise rollstuhlgerecht", no: "nicht rollstuhlgerecht" };
+
+/** Kopfzeile einer Ansicht: Titel, Untertitel, Schließen */
+export function Kopf({ titel, unter, onZu, onZurueck }: { titel: string; unter?: string; onZu?: () => void; onZurueck?: () => void }) {
+  return (
+    <div className="ansicht-kopf">
+      {onZurueck && <button type="button" className="rund klein" aria-label="Zurück" onClick={onZurueck}><Zurueck size={17} /></button>}
+      <div className="ansicht-titel"><h2>{titel}</h2>{unter && <span>{unter}</span>}</div>
+      {onZu && <button type="button" className="rund klein" aria-label="Schließen" onClick={onZu}><Schliessen size={15} /></button>}
+    </div>
+  );
+}
+
+/* ---------- Start ---------- */
+
+export function StartInhalt({ onKategorie, termine, onTermin, ki, onKi, onInfo }: {
+  onKategorie: (k: Kategorie) => void;
+  termine: Termin[];
+  onTermin: (t: Termin) => void;
+  ki: KiStatus;
+  onKi: () => void;
+  onInfo: () => void;
+}) {
+  const auswahl = ["arzt", "apotheke", "essen", "cafe", "einkaufen", "freizeit", "haltestelle"];
+  return (
+    <div className="inhalt start">
+      <div className="chips">
+        {auswahl.map((id) => { const k = KATEGORIEN.find((x) => x.id === id)!; return <button key={id} type="button" className="chip" onClick={() => onKategorie(k)}>{k.name}</button>; })}
+      </div>
+
+      {termine.length > 0 && (
+        <section>
+          <h3 className="abschnitt">Termine</h3>
+          <div className="zeilen">
+            {termine.slice(0, 4).map((t) => {
+              const d = new Date(t.zeit);
+              return (
+                <button key={t.id} type="button" className="zeile" onClick={() => onTermin(t)}>
+                  <span className="zeile-ic akzent-ic"><Kalender size={17} /></span>
+                  <span className="zeile-t"><b>{t.ort.name}</b><span>{tagKurz(d)}, {uhr(d)}{t.los ? ` · los ${uhr(new Date(t.los))}` : ""}</span></span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <button type="button" className={`ki-zeile${ki.art === "bereit" ? " an" : ""}`} onClick={onKi} disabled={ki.art === "laedt"}>
+        <Ki size={18} />
+        <span className="zeile-t">
+          <b>KI auf diesem Gerät</b>
+          <span>{ki.art === "aus" ? "Versteht ganze Sätze. Einmal ca. 0,4 GB laden." : ki.art === "laedt" ? `Lädt … ${Math.round(ki.anteil * 100)} %` : ki.art === "bereit" ? "An – dein Text bleibt auf dem Gerät" : ki.text}</span>
+        </span>
+      </button>
+
+      <div className="fuss-zeile">
+        <span>Notfall <a href="tel:112" className="rot-t stark">112</a> · Bereitschaftsdienst <a href="tel:116117">116 117</a></span>
+        <button type="button" className="link" onClick={onInfo}>Daten & Quellen</button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Ergebnisliste ---------- */
+
+export interface ListenStand { titel: string; unter?: string; orte: Ort[]; laden: boolean; fehler?: string; hinweis?: string; /** von hier aus wurde gesucht */ bezug?: LngLat }
+
+export function ListenInhalt({ l, aktiv, onOrt, onZu, onNeu }: {
+  l: ListenStand; aktiv: string | null; onOrt: (o: Ort) => void; onZu: () => void; onNeu: () => void;
+}) {
+  const mitte = l.bezug ?? null;
+  return (
+    <div className="inhalt liste">
+      <Kopf titel={l.titel} unter={l.unter} onZu={onZu} />
+      {l.hinweis && <p className="hinweis">{l.hinweis}</p>}
+      {l.laden && <div className="zeilen" aria-busy="true">{[0, 1, 2, 3].map((i) => <div key={i} className="zeile skelett"><span /><span /></div>)}</div>}
+      {l.fehler && <div className="box"><span>{l.fehler}</span><button type="button" className="btn zweit" onClick={onNeu}>Erneut versuchen</button></div>}
+      {!l.laden && !l.fehler && l.orte.length === 0 && (
+        <div className="box"><b>Nichts gefunden.</b><span>Versuch es anders oder schieb die Karte woandershin.</span></div>
+      )}
+      {!l.laden && l.orte.length > 0 && (
+        <div className="zeilen">
+          {l.orte.map((o) => (
+            <button key={o.id} type="button" className={`zeile${aktiv === o.id ? " an" : ""}`} onClick={() => onOrt(o)}>
+              <span className="zeile-t"><b>{o.name}</b><span>{o.art}{o.adresse ? ` · ${o.adresse}` : ""}</span></span>
+              {mitte && <span className="zeile-r">{km(luftlinie(mitte, o.lngLat) * 1000)}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {!l.laden && l.orte.length > 0 && mitte && <p className="fein">Entfernung Luftlinie. Echte Wege beim Antippen.</p>}
+    </div>
+  );
+}
+
+/* ---------- Ortskarte ---------- */
+
+export function OrtInhalt({ o, laden, weg, modus, onRoute, onTermin, onTeilen, onZu }: {
+  o: Ort; laden: boolean; weg: WegStand; modus: Modus;
+  onRoute: () => void; onTermin: () => void; onTeilen: () => void; onZu: () => void;
+}) {
+  const zeiten = o.oeffnungszeiten ? zeitenLesbar(o.oeffnungszeiten) : [];
+  return (
+    <div className="inhalt ort">
+      <Kopf titel={o.name} unter={[o.art, weg.route ? `${min(weg.route.s)} Min ${MODUS_NAME[modus]}` : null].filter(Boolean).join(" · ")} onZu={onZu} />
+      <div className="aktionen-reihe">
+        <button type="button" className="aktion primaer" onClick={onRoute}><RouteIc size={20} /><span>Route</span></button>
+        {o.telefon && <a className="aktion" href={telLink(o.telefon)}><Telefon size={20} /><span>Anrufen</span></a>}
+        {o.website && <a className="aktion" href={o.website} target="_blank" rel="noopener noreferrer"><Extern size={20} /><span>Website</span></a>}
+        <button type="button" className="aktion" onClick={onTermin}><Kalender size={20} /><span>Termin</span></button>
+        <button type="button" className="aktion" onClick={onTeilen}><Teilen size={20} /><span>Teilen</span></button>
+      </div>
+      <div className="infos">
+        {o.adresse && <div className="info"><span>Adresse</span><b>{o.adresse}</b></div>}
+        {zeiten.length > 0 && <div className="info"><span>Geöffnet</span><b>{zeiten.map((z) => <span key={z}>{z}</span>)}</b></div>}
+        {o.telefon && <div className="info"><span>Telefon</span><b><a href={telLink(o.telefon)}>{o.telefon}</a></b></div>}
+        {o.rollstuhl && ROLLSTUHL[o.rollstuhl] && <div className="info"><span>Zugang</span><b>{ROLLSTUHL[o.rollstuhl]}</b></div>}
+        {laden && <div className="info"><span /><b className="leise">Lädt Details …</b></div>}
+      </div>
+      <p className="fein">Daten: <a href={DIENSTE.osmLizenz} target="_blank" rel="noopener noreferrer">OpenStreetMap</a>{o.id.startsWith("punkt") ? "" : <> · <a href={`https://www.openstreetmap.org/${o.id.replace("-", "/")}`} target="_blank" rel="noopener noreferrer">Eintrag</a></>}</p>
+    </div>
+  );
+}
+
+/* ---------- Route ---------- */
+
+export function RouteInhalt({ o, start, modus, setModus, weg, termin, onStartGps, onStartAdresse, onZurueck, onNeu }: {
+  o: Ort; start: Start | null; modus: Modus; setModus: (m: Modus) => void; weg: WegStand; termin: Termin | null;
+  onStartGps: () => void; onStartAdresse: (text: string) => void; onZurueck: () => void; onNeu: () => void;
+}) {
+  const [text, setText] = useState("");
+  const r = weg.route;
+  const ankunft = r ? new Date(Date.now() + r.s * 1000) : null;
+  const los = r && termin ? new Date(new Date(termin.zeit).getTime() - (PUFFER_MIN * 60 + min(r.s) * 60) * 1000) : null;
+  return (
+    <div className="inhalt route">
+      <Kopf titel={`Route nach ${o.name}`} onZurueck={onZurueck} />
+      <div className="start-wahl">
+        <span className="punkt-ic"><Standort size={15} /></span>
+        {start ? <span className="start-name">{start.name}</span> : <span className="start-name leise">Startpunkt wählen</span>}
+        <button type="button" className="link" onClick={onStartGps}>{start?.quelle === "gps" ? "Aktualisieren" : "Mein Standort"}</button>
+      </div>
+      {!start && (
+        <form className="mini-suche" onSubmit={(e) => { e.preventDefault(); if (text.trim().length > 2) onStartAdresse(text.trim()); }}>
+          <input value={text} onChange={(e) => setText(e.target.value)} placeholder="oder Startadresse eingeben" enterKeyHint="go" />
+        </form>
+      )}
+      <div className="segment vier" role="radiogroup" aria-label="Verkehrsmittel">
+        {MODI.map((m) => (
+          <button key={m} type="button" role="radio" aria-checked={modus === m} className={modus === m ? "an" : ""} onClick={() => setModus(m)}>{MODUS_ICON[m]} {MODUS_KURZ[m]}</button>
+        ))}
+        <button type="button" disabled title="Fahrplandaten folgen">Bus <small>folgt</small></button>
+      </div>
+      {start && weg.status === "laden" && <div className="zeile skelett"><span /><span /></div>}
+      {start && weg.status === "fehler" && <div className="box"><span>{weg.fehler}</span><button type="button" className="btn zweit" onClick={onNeu}>Erneut versuchen</button></div>}
+      {r && (
+        <>
+          <div className="route-gross">
+            <div><b className="mono">{min(r.s)}</b><span>Min</span></div>
+            <div className="route-neben"><span>{km(r.m)}</span>{ankunft && <span>an {uhr(ankunft)} bei Start jetzt</span>}</div>
+          </div>
+          {los && termin && (
+            <div className="los-box"><Uhr size={18} /><span>Für deinen Termin um <b>{uhr(new Date(termin.zeit))}</b>: los um <b className="mono">{uhr(los)}</b> ({PUFFER_MIN} Min Puffer)</span></div>
+          )}
+          <ol className="schritte">
+            {r.schritte.map((s, i) => <li key={i}><span>{s.text}</span>{s.m > 0 && <span className="leise">{km(s.m)}</span>}</li>)}
+          </ol>
+          <p className="fein">Wege: <a href={DIENSTE.routingInfo} target="_blank" rel="noopener noreferrer">OSRM (FOSSGIS)</a>, ohne aktuelle Verkehrslage · <a href={DIENSTE.osmFehlerMelden} target="_blank" rel="noopener noreferrer">Fehler melden</a></p>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Termin ---------- */
+
+export function TerminInhalt({ o, vorschlag, vorhanden, onSpeichern, onLoeschen, onKalender, onZurueck }: {
+  o: Ort; vorschlag: Date; vorhanden: Termin | null;
+  onSpeichern: (d: Date) => void; onLoeschen: () => void; onKalender: () => void; onZurueck: () => void;
+}) {
+  const z = (n: number) => String(n).padStart(2, "0");
+  const alsWert = (d: Date) => `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;
+  const [wert, setWert] = useState(alsWert(vorhanden ? new Date(vorhanden.zeit) : vorschlag));
+  const d = new Date(wert);
+  return (
+    <div className="inhalt termin">
+      <Kopf titel="Termin" unter={o.name} onZurueck={onZurueck} />
+      <label className="feld-zeile"><span>Wann?</span><input type="datetime-local" value={wert} onChange={(e) => setWert(e.target.value)} /></label>
+      <button type="button" className="btn primaer" disabled={isNaN(d.getTime())} onClick={() => onSpeichern(d)}>{vorhanden ? "Ändern" : "Merken"}</button>
+      {vorhanden && (
+        <div className="zwei">
+          <button type="button" className="btn zweit" onClick={onKalender}><Kalender size={17} /> In Kalender</button>
+          <button type="button" className="btn zweit" onClick={onLoeschen}>Löschen</button>
+        </div>
+      )}
+      <p className="fein">Den Termin selbst vereinbarst du bei {o.telefon || o.website ? "der Praxis bzw. dem Ort" : "dem Ort"}. Lotse erinnert dich ans Losgehen.</p>
+    </div>
+  );
+}
+
+/* ---------- Daten & Quellen ---------- */
+
+export function InfoInhalt({ onZurueck }: { onZurueck: () => void }) {
+  return (
+    <div className="inhalt info-seite">
+      <Kopf titel="Daten & Quellen" onZurueck={onZurueck} />
+      <ul className="liste-punkte">
+        <li><b>Deine Beschreibung</b> bleibt auf dem Gerät. Lotse ordnet sie nur einer Fachrichtung zu und stellt keine Diagnose.</li>
+        <li><b>Suche und Orte</b>: Nominatim (OpenStreetMap). <b>Wege</b>: FOSSGIS-Routingserver. <b>Karte</b>: OpenFreeMap. Diese Dienste sehen deine IP-Adresse und den gesuchten Ort bzw. Startpunkt.</li>
+        <li><b>KI</b> (wenn eingeschaltet) läuft im Browser. Nur das Modell wird einmal von Hugging Face geladen.</li>
+        <li><b>Termine und Startpunkt</b> bleiben in diesem Browser.</li>
+      </ul>
+      <p className="fein">
+        Kartendaten <a href={DIENSTE.osmLizenz} target="_blank" rel="noopener noreferrer">© OpenStreetMap-Mitwirkende</a> ·
+        {" "}<a href={`${import.meta.env.BASE_URL}karte/LIZENZ.txt`} target="_blank" rel="noopener noreferrer">Kartenstil und Lizenzen</a> ·
+        {" "}<a href={DIENSTE.osmFehlerMelden} target="_blank" rel="noopener noreferrer">Kartenfehler melden</a> · Schulprojekt der Werner-von-Siemens-Schule Wetzlar.
+      </p>
+    </div>
+  );
+}

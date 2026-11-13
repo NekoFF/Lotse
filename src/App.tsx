@@ -1,27 +1,31 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RADIEN } from "./config";
-import { ordneZu, type Zuordnung } from "./core/match";
-import { pruefeSicherheit } from "./core/safety";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { klingtNachBeschwerde, verstehe, KATEGORIEN, type Kategorie } from "./core/absicht";
+import type { Zuordnung } from "./core/match";
 import { FACHRICHTUNGEN, type FachId } from "./data/fachrichtungen";
 import type { Notfallstufe } from "./data/notfall";
-import { luftlinie, minuten, MODI, nurPraxis, type LngLat, type Modus, type Praxis, type PraxisMitZeit, type Start, type Weg } from "./data/praxen";
-import { begleitLink, kalenderDatei, leseLink, leseTermine, merkeTermin, planeWeg, standardTermin, uhr, type Gemerkt } from "./lib/plan";
+import type { LngLat, Modus, Start } from "./data/praxen";
+import { kiStarten, kiVerstehen, type KiStatus } from "./ki/assistent";
+import { erinnerungenPlanen, kalenderLaden, leseTermine, loescheTermin, losgehzeit, speichereTermin, type Termin } from "./lib/termine";
+import { useRoute } from "./lib/wege";
 import { LotseMap, type Abstand, type Pin } from "./map/LotseMap";
-import { DienstFehler, praxenSuchen, praxisLaden, wegLaden, zeitenBerechnen } from "./services/dienste";
 import { Notfall } from "./screens/Notfall";
-import { PraxenPanel, type Sortierung, type SuchStatus } from "./screens/PraxenPanel";
-import { StandortPanel } from "./screens/StandortPanel";
-import { StartPanel } from "./screens/StartPanel";
-import { WegPanel, type WegStatus } from "./screens/WegPanel";
-import { Info, Kalender, Minus, Plus, Standort } from "./ui/icons";
+import { fehlerText, gpsStandort } from "./services/dienste";
+import { inDerNaehe, ortAnStelle, ortLaden, suchen as ortSuchen, type Ort } from "./services/orte";
+import { Blatt, type Stufe } from "./blatt/Blatt";
+import { InfoInhalt, ListenInhalt, OrtInhalt, RouteInhalt, StartInhalt, TerminInhalt, type ListenStand } from "./blatt/Inhalte";
+import { Marke, Schliessen, Standort, Suche, Plus, Minus } from "./ui/icons";
+import "./blatt/blatt.css";
 
 type Ansicht =
   | { art: "start" }
-  | { art: "praxen"; z: Zuordnung }
-  | { art: "weg"; z: Zuordnung; praxisId: string; geteilt?: boolean; ausListe?: boolean };
+  | { art: "liste"; l: ListenStand; neu: () => void }
+  | { art: "ort"; ort: Ort; laden: boolean }
+  | { art: "route"; ort: Ort }
+  | { art: "termin"; ort: Ort; zeit: Date | null }
+  | { art: "info" };
 
-const zuordnungFuer = (fach: FachId): Zuordnung => ({ fach: FACHRICHTUNGEN[fach], erkannt: [], unsicher: fach === "allgemein" });
-const text = (e: unknown) => (e instanceof DienstFehler ? e.message : "Etwas ist schiefgelaufen. Bitte erneut versuchen.");
+/** Ohne Kartenbewegung: Wetzlar als Kartenmitte (nur Anzeige, nie als Startpunkt verwendet) */
+const WETZLAR: LngLat = [8.5044, 50.5558];
 
 function useMedia(q: string) {
   const [an, setAn] = useState(() => window.matchMedia(q).matches);
@@ -34,372 +38,255 @@ function useMedia(q: string) {
   return an;
 }
 
-/** Startpunkt nur für diese Sitzung merken (nicht dauerhaft gespeichert) */
-function leseStart(): Start | null {
-  try { return JSON.parse(sessionStorage.getItem("lotse.start") ?? "null"); } catch { return null; }
-}
+const leseStart = (): Start | null => { try { return JSON.parse(sessionStorage.getItem("lotse.start") ?? "null"); } catch { return null; } };
+const morgenNeun = () => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d; };
+const leererOrt = (l: LngLat, name: string, art: string): Ort => ({ id: `punkt-${l[0].toFixed(5)},${l[1].toFixed(5)}`, name, art, lngLat: l, adresse: null, website: null, telefon: null, oeffnungszeiten: null, rollstuhl: null, fach: null });
 
 export default function App() {
   const desktop = useMedia("(min-width: 900px)");
   const dunkel = useMedia("(prefers-color-scheme: dark)");
-  const theme = dunkel ? "dark" : "light";
-
-  const geteiltStart = useMemo(() => leseLink(window.location.hash), []);
-  const [ansicht, setAnsicht] = useState<Ansicht>(() =>
-    geteiltStart ? { art: "weg", z: zuordnungFuer("allgemein"), praxisId: geteiltStart.praxisId, geteilt: true } : { art: "start" });
-  const [eingabe, setEingabe] = useState("");
-  const [notfall, setNotfall] = useState<Notfallstufe | null>(null);
+  const [verlauf, setVerlauf] = useState<Ansicht[]>([{ art: "start" }]);
+  const ansicht = verlauf[verlauf.length - 1];
+  const [text, setText] = useState("");
+  const [notfall, setNotfall] = useState<{ stufe: Notfallstufe; text: string } | null>(null);
   const [start, setStartRoh] = useState<Start | null>(leseStart);
-  const [standortWahl, setStandortWahl] = useState(false);
-  const [modus, setModus] = useState<Modus>(geteiltStart?.modus ?? "fuss");
-  const [sort, setSort] = useState<Sortierung>("zeit");
-  const [radiusIdx, setRadiusIdx] = useState(0);
-  const [hover, setHover] = useState<string | null>(null);
-  const [termin, setTermin] = useState<Date>(() => geteiltStart?.termin ?? standardTermin());
-  const [termine, setTermine] = useState<Gemerkt[]>(() => leseTermine());
+  const [mitte, setMitte] = useState<LngLat>(WETZLAR);
+  const [modus, setModus] = useState<Modus>("fuss");
+  const [stufe, setStufe] = useState<Stufe>("mittel");
+  const [groesse, setGroesse] = useState({ w: 0, h: 0 });
+  const [termine, setTermine] = useState<Termin[]>(leseTermine);
+  const [vorgemerkt, setVorgemerkt] = useState<Date | null>(null);
+  const [ki, setKi] = useState<KiStatus>({ art: "aus" });
   const [toast, setToast] = useState<string | null>(null);
-  const [panelGroesse, setPanelGroesse] = useState({ w: 0, h: 0 });
-  const panel = useRef<HTMLElement>(null);
-
-  const [suche, setSuche] = useState<{ schluessel: string; startKey: string; status: SuchStatus; liste: PraxisMitZeit[]; fehler?: string; zeitFehler?: string | null; gekappt?: boolean; gefunden?: number }>({ schluessel: "", startKey: "", status: "leer", liste: [] });
-  // geteilte, gemerkte oder nicht (mehr) in der Liste stehende Praxis – mit dem Startpunkt, für den ihre Zeiten gelten
-  const [extra, setExtra] = useState<{ p: PraxisMitZeit; startKey: string } | null>(null);
-  const [einzel, setEinzel] = useState<{ status: WegStatus; fehler?: string }>({ status: "leer" });
-  const [weg, setWeg] = useState<{ schluessel: string; status: WegStatus; haupt?: Weg; planb?: Weg; fehler?: string }>({ schluessel: "", status: "leer" });
-  const [neuVersuch, setNeuVersuch] = useState(0);
   const [dreiD, setDreiD] = useState(false);
-  const sucheKey = useRef("");
-  const wegKey = useRef("");
+  const [versuch, setVersuch] = useState(0);
 
-  const setStart = (s: Start) => {
-    setStartRoh(s);
-    setStandortWahl(false);
-    try { sessionStorage.setItem("lotse.start", JSON.stringify(s)); } catch { /* egal */ }
-  };
-  const startKey = start ? start.lngLat.join(",") : "";
+  const zeige = useCallback((t: string) => { setToast(t); window.setTimeout(() => setToast((x) => (x === t ? null : x)), 3500); }, []);
+  const gehe = useCallback((a: Ansicht, ersetzen = false) => {
+    setVerlauf((v) => (ersetzen ? [...v.slice(0, -1), a] : [...v, a]));
+    if (!desktop) setStufe((s) => (s === "klein" ? "mittel" : s));
+  }, [desktop]);
+  const zurueck = useCallback(() => setVerlauf((v) => (v.length > 1 ? v.slice(0, -1) : v)), []);
+  const zurStart = useCallback(() => { setVerlauf([{ art: "start" }]); setText(""); setVorgemerkt(null); }, []);
 
-  // Live-Zuordnung beim Tippen: Sicherheitsfilter immer zuerst
-  const live = useMemo(() => (eingabe.trim().length < 3 ? null : { s: pruefeSicherheit(eingabe), z: ordneZu(eingabe) }), [eingabe]);
+  const setStart = useCallback((s: Start) => { setStartRoh(s); try { sessionStorage.setItem("lotse.start", JSON.stringify(s)); } catch { /* egal */ } }, []);
+  const nahe = start?.lngLat ?? mitte;
 
+  // Erinnerungen ans Losgehen, solange Lotse offen ist
+  useEffect(() => erinnerungenPlanen(termine, zeige), [termine, zeige]);
+
+  // Geteilter Link: #o=node-123 öffnet den Ort; wer ihn öffnet, plant seinen eigenen Weg
   useEffect(() => {
-    if (!panel.current) return;
-    const ro = new ResizeObserver(([e]) => {
-      const r = e.target.getBoundingClientRect();
-      setPanelGroesse({ w: Math.round(r.width), h: Math.round(r.height) });
-    });
-    ro.observe(panel.current);
-    return () => ro.disconnect();
-  }, []);
+    const id = new URLSearchParams(location.hash.slice(1)).get("o");
+    if (!id || !/^(node|way|relation)-\d+$/.test(id)) return;
+    ortLaden(id).then((o) => o && gehe({ art: "ort", ort: o, laden: false })).catch((e) => zeige(fehlerText(e)));
+  }, [gehe, zeige]);
 
-  const zeigeToast = useCallback((t: string) => {
-    setToast(t);
-    window.setTimeout(() => setToast((x) => (x === t ? null : x)), 3600);
-  }, []);
+  /* ---------- Suchen ---------- */
 
-  /* ---------- Praxissuche (live) ---------- */
-  // Die Suche läuft weiter, wenn man eine Praxis aus der Liste öffnet (sonst blieben Zeiten „ausstehend“)
-  const suchFach = ansicht.art === "praxen" || (ansicht.art === "weg" && ansicht.ausListe) ? ansicht.z.fach.id : null;
-  const radius = RADIEN[radiusIdx];
-  useEffect(() => {
-    if (!suchFach || !start) return;
-    const schluessel = `${suchFach}|${startKey}|${radius}|${neuVersuch}`;
-    if (sucheKey.current === schluessel) return;
-    sucheKey.current = schluessel;
-    let ab = false;
-    // Die alte Liste bleibt (mit IHREM Startpunkt) stehen, bis die neue da ist: so bleibt eine geöffnete Praxis sichtbar,
-    // aber Zeiten gelten nur, wenn der Startpunkt der Liste zum aktuellen passt.
-    setSuche((x) => ({ ...x, schluessel, status: "laden", fehler: undefined }));
-    (async () => {
-      try {
-        const { praxen: roh, gekappt } = await praxenSuchen(start.lngLat, suchFach, radius);
-        // Liste zeigen, sobald das gewählte Verkehrsmittel da ist; die anderen kommen nach (1 Anfrage/s)
-        const { liste, fehler: zeitFehler } = await zeitenBerechnen(start.lngLat, roh, modus, (teil) => {
-          if (!ab) setSuche({ schluessel, startKey, status: "fertig", liste: teil, zeitFehler: null, gekappt, gefunden: roh.length });
-        }, () => ab);
-        if (!ab) setSuche({ schluessel, startKey, status: liste.length ? "fertig" : "leer", liste, zeitFehler, gekappt, gefunden: roh.length });
-      } catch (e) {
-        if (!ab) setSuche({ schluessel, startKey, status: "fehler", liste: [], fehler: text(e) });
-      }
-    })();
-    return () => { ab = true; if (sucheKey.current === schluessel) sucheKey.current = ""; };
-    // modus nur für die Reihenfolge beim Start der Suche; ein Wechsel startet keine neue Suche
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [suchFach, startKey, radius, neuVersuch]);
-
-  // Praxis im Weg-Panel: aus der Liste (nur wenn für DIESEN Startpunkt berechnet) oder einzeln
-  const wegId = ansicht.art === "weg" ? ansicht.praxisId : null;
-  const ausListe = wegId && suche.startKey === startKey ? suche.liste.find((p) => p.id === wegId) ?? null : null;
-  // Praxis aus der Liste: auf die Liste für den aktuellen Startpunkt warten statt doppelt anzufragen
-  const listeLaedt = ansicht.art === "weg" && !!ansicht.ausListe && (suche.status === "laden" || suche.startKey !== startKey);
-  const extraAktuell = !!extra && extra.p.id === wegId && extra.startKey === startKey;
-  useEffect(() => {
-    if (!wegId || ausListe || listeLaedt || !start) return;
-    // schon vollständig für diesen Startpunkt geladen? (bei Teil-Ausfall oder ausstehenden Zeiten neu versuchen dürfen)
-    if (extraAktuell && Object.values(extra!.p.zeiten).some(Boolean) && !extra!.p.nichtAbrufbar?.length && !extra!.p.ausstehend?.length) return;
-    let ab = false;
-    setEinzel({ status: "laden" });
-    (async () => {
-      try {
-        const bekannt = extra?.p.id === wegId ? extra.p : suche.liste.find((p) => p.id === wegId);
-        const basis: Praxis | null = bekannt ? nurPraxis(bekannt) : await praxisLaden(wegId);
-        if (!basis) throw new DienstFehler("Diese Praxis ist in OpenStreetMap nicht mehr zu finden.");
-        const { liste: [mit] } = await zeitenBerechnen(start.lngLat, [basis], modus, (teil) => { if (!ab) setExtra({ p: teil[0], startKey }); }, () => ab);
-        if (!ab) {
-          setExtra({ p: mit, startKey });
-          setEinzel({ status: "fertig" });
-          if (ansicht.art === "weg" && ansicht.geteilt) setAnsicht({ ...ansicht, z: zuordnungFuer(mit.fach) });
-        }
-      } catch (e) {
-        if (!ab) setEinzel({ status: "fehler", fehler: text(e) });
-      }
-    })();
-    return () => { ab = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wegId, !!ausListe, listeLaedt, startKey, neuVersuch]);
-
-  const gewaehlt: PraxisMitZeit | null = useMemo(() => {
-    if (!wegId) return null;
-    if (ausListe) return ausListe;
-    if (extraAktuell) return extra!.p;
-    // Praxis bekannt, Zeiten für den neuen Startpunkt kommen noch: ehrlich als „wird berechnet“ zeigen, nie alte Zeiten
-    const b = extra?.p.id === wegId ? extra.p : suche.liste.find((p) => p.id === wegId);
-    return b && start ? { ...nurPraxis(b), entfernung: Math.round(luftlinie(start.lngLat, b.lngLat) * 10) / 10, zeiten: { fuss: null, rad: null, auto: null }, ausstehend: [...MODI] } : null;
-  }, [wegId, ausListe, extraAktuell, extra, suche.liste, start]);
-  const plan = useMemo(() => (gewaehlt ? planeWeg(gewaehlt, termin, modus) : null), [gewaehlt, termin, modus]);
-
-  // Weglinie (und Plan-B-Linie) für die Karte nachladen
-  useEffect(() => {
-    if (!gewaehlt || !start || !plan) return;
-    const schluessel = `${gewaehlt.id}|${startKey}|${modus}|${plan.planb?.modus ?? "-"}|${neuVersuch}`;
-    if (wegKey.current === schluessel) return;
-    wegKey.current = schluessel;
-    let ab = false;
-    setWeg({ schluessel, status: "laden" });
-    (async () => {
-      try {
-        const [haupt, planb] = await Promise.all([
-          wegLaden(start.lngLat, gewaehlt.lngLat, modus),
-          plan.planb ? wegLaden(start.lngLat, gewaehlt.lngLat, plan.planb.modus).catch(() => undefined) : Promise.resolve(undefined),
-        ]);
-        if (!ab) setWeg({ schluessel, status: "fertig", haupt, planb });
-      } catch (e) {
-        if (!ab) setWeg({ schluessel, status: "fehler", fehler: text(e) });
-      }
-    })();
-    return () => { ab = true; if (wegKey.current === schluessel) wegKey.current = ""; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gewaehlt?.id, startKey, modus, !!plan, plan?.planb?.modus, neuVersuch]);
-
-  /* ---------- Navigation ---------- */
-  const suchen = useCallback(() => {
-    const s = pruefeSicherheit(eingabe);
-    if (s.stufe) { setNotfall(s.stufe); return; }
-    setHover(null); setRadiusIdx(0);
-    setAnsicht({ art: "praxen", z: ordneZu(eingabe) });
-  }, [eingabe]);
-
-  const zurStart = useCallback(() => {
-    setAnsicht({ art: "start" }); setHover(null); setStandortWahl(false);
-    if (window.location.hash) history.replaceState(null, "", window.location.pathname + window.location.search);
-  }, []);
-
-  const zurueckAusWeg = useCallback(() => {
-    if (ansicht.art !== "weg") return;
-    if (ansicht.geteilt || !ansicht.ausListe) zurStart();
-    else setAnsicht({ art: "praxen", z: ansicht.z });
-  }, [ansicht, zurStart]);
-
-  const liste = useMemo(() => {
-    // Rollstuhl-Filter immer zuerst (nur laut OSM „yes“/„limited“), dann sortieren
-    const l = sort === "rollstuhl" ? suche.liste.filter((p) => p.rollstuhl === "yes" || p.rollstuhl === "limited") : [...suche.liste];
-    // Fehlen die Zeiten für dieses Verkehrsmittel, ehrlich nach Luftlinie sortieren
-    if (sort === "naehe" || suche.zeitFehler || l[0]?.nichtAbrufbar?.includes(modus) || l[0]?.ausstehend?.includes(modus)) return l.sort((a, b) => a.entfernung - b.entfernung);
-    return l.sort((a, b) => (minuten(a, modus) ?? 1e9) - (minuten(b, modus) ?? 1e9));
-  }, [suche.liste, suche.zeitFehler, sort, modus]);
-
-  /* ---------- Karte ---------- */
-  const pins: Pin[] = useMemo(() => {
-    if (ansicht.art === "praxen") {
-      if (suche.status === "laden") return [];
-      // Mehrere Praxen im selben Haus teilen sich einen Pin
-      const aktiv = hover ?? liste[0]?.id;
-      const gruppen = new Map<string, PraxisMitZeit[]>();
-      for (const p of liste) {
-        const k = `${p.lngLat[0].toFixed(4)},${p.lngLat[1].toFixed(4)}`;
-        gruppen.set(k, [...(gruppen.get(k) ?? []), p]);
-      }
-      return [...gruppen.values()].map((g) => {
-        const m = minuten(g[0], modus);
-        const zeit = m === null ? "–" : `${m} Min`;
-        const treffer = g.find((p) => p.id === aktiv);
-        return { id: (treffer ?? g[0]).id, lngLat: g[0].lngLat, label: g.length > 1 ? `${zeit} · ${g.length} Praxen` : zeit, aktiv: !!treffer };
+  const liste = useCallback((titel: string, laden: () => Promise<Ort[]>, extra: Partial<ListenStand> = {}) => {
+    const lauf = () => {
+      const basis: ListenStand = { titel, orte: [], laden: true, bezug: nahe, ...extra };
+      setVerlauf((v) => {
+        const neu: Ansicht = { art: "liste", l: basis, neu: lauf };
+        return v[v.length - 1].art === "liste" ? [...v.slice(0, -1), neu] : [...v, neu];
       });
+      laden().then(
+        (orte) => setVerlauf((v) => v.map((a) => (a.art === "liste" && a.l === basis ? { ...a, l: { ...basis, orte, laden: false } } : a))),
+        (e) => setVerlauf((v) => v.map((a) => (a.art === "liste" && a.l === basis ? { ...a, l: { ...basis, laden: false, fehler: fehlerText(e) } } : a))),
+      );
+    };
+    lauf();
+    if (!desktop) setStufe("mittel");
+  }, [desktop, nahe]);
+
+  const fachSuche = useCallback((fach: FachId, z?: Zuordnung) => {
+    const f = FACHRICHTUNGEN[fach];
+    liste(f.name, async () => (await inDerNaehe([fach === "zahn" ? "dentist" : "doctors"], nahe, 5)).filter((o) => o.fach === fach),
+      { unter: z ? "passt zu deiner Beschreibung · keine Diagnose" : "in der Nähe", hinweis: z?.alternative ? `Auch möglich: ${z.alternative.name}` : undefined });
+  }, [liste, nahe]);
+
+  const kategorieSuche = useCallback((k: Kategorie) => liste(k.name, () => inDerNaehe(k.phrasen, nahe, 3), { unter: "in der Nähe" }), [liste, nahe]);
+
+  const absenden = useCallback(async (eingabe: string) => {
+    const t = eingabe.trim();
+    if (t.length < 2) return;
+    let a = verstehe(t);
+    if (a.typ === "notfall") { setNotfall({ stufe: a.stufe, text: t }); return; }
+    if (a.typ === "termin") {
+      setVorgemerkt(a.zeit);
+      a = verstehe(t.replace(/termin/gi, " "));
+      if (a.typ === "notfall") { setNotfall({ stufe: a.stufe, text: t }); return; }
     }
-    if (gewaehlt) return [{ id: gewaehlt.id, lngLat: gewaehlt.lngLat, label: gewaehlt.name.length > 26 ? gewaehlt.name.slice(0, 24) + "…" : gewaehlt.name, aktiv: true }];
-    return [];
-  }, [ansicht.art, liste, hover, gewaehlt, modus, suche.status]);
-
-  // Weglinie nur zeigen, wenn sie zu Praxis, Startpunkt und Verkehrsmittel von JETZT gehört
-  const wegAktuell = !!gewaehlt && !!plan && weg.schluessel.startsWith(`${gewaehlt.id}|${startKey}|${modus}|`);
-  const route = useMemo(() => (gewaehlt && wegAktuell && weg.haupt
-    ? { linie: [...weg.haupt.line, gewaehlt.lngLat] as LngLat[], planb: weg.planb?.line ?? null, modus }
-    : null), [gewaehlt, wegAktuell, weg.haupt, weg.planb, modus]);
-
-  const [rahmen, rahmenSchluessel] = useMemo((): [LngLat[], string] => {
-    const s = start?.lngLat;
-    if (gewaehlt) {
-      const linie = wegAktuell ? weg.haupt?.line ?? [] : [];
-      const pts = [gewaehlt.lngLat, ...(s ? [s] : []), ...linie];
-      return [pts, `weg-${gewaehlt.id}-${modus}-${linie.length ? "linie" : "punkt"}`];
+    if (a.typ === "fach") return fachSuche(a.fach);
+    if (a.typ === "kategorie") return kategorieSuche(a.kategorie);
+    // Kein Hinweis auf Beschwerden und KI an: erst die KI fragen (z. B. „einen Film sehen“ ≠ Augenarzt)
+    if (a.typ === "anliegen" && !(ki.art === "bereit" && !klingtNachBeschwerde(t))) return fachSuche(a.zuordnung.fach.id, a.zuordnung);
+    // Ganze Sätze: die KI auf dem Gerät übersetzt sie in eine Suche (nur wenn eingeschaltet)
+    if (ki.art === "bereit" && t.split(/\s+/).length >= 3) {
+      const k = await kiVerstehen(t).catch(() => null);
+      const kat = k?.aktion === "kategorie" ? KATEGORIEN.find((x) => x.id === k.kategorie) : undefined;
+      if (kat) return kategorieSuche(kat);
+      if (k?.aktion === "suche") return liste(k.suchtext, () => ortSuchen(k.suchtext, nahe), { unter: "von der KI verstanden" });
     }
-    if (ansicht.art === "praxen" && liste.length) {
-      return [[...(s ? [s] : []), ...liste.slice(0, 6).map((p) => p.lngLat)], `praxen-${suche.schluessel}-${sort}`];
-    }
-    return s ? [[s], `start-${s.join(",")}`] : [[], "ueberblick"];
-  }, [gewaehlt, ansicht.art, liste, start, weg.haupt, wegAktuell, modus, suche.schluessel, sort]);
+    if (a.typ === "anliegen") return fachSuche(a.zuordnung.fach.id, a.zuordnung);
+    liste(t, () => ortSuchen(t, nahe));
+  }, [fachSuche, kategorieSuche, liste, ki.art, nahe]);
 
-  const abstand: Abstand = desktop
-    ? { top: 0, right: 70, bottom: 0, left: panelGroesse.w + 16 }
-    : { top: 0, right: 0, bottom: panelGroesse.h, left: 0 };
+  /* ---------- Orte öffnen, Karte antippen ---------- */
 
-  /* ---------- Aktionen ---------- */
-  const kalender = () => {
-    if (!gewaehlt || !plan) return;
-    const blob = new Blob([kalenderDatei(gewaehlt, termin, plan)], { type: "text/calendar;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `Lotse-${gewaehlt.name.replace(/[^\wäöüÄÖÜß-]+/g, "-")}.ics`;
-    a.click();
-    window.setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    setTermine(merkeTermin({ praxis: nurPraxis(gewaehlt), termin: termin.toISOString(), los: plan.los.toISOString(), modus }));
-    zeigeToast(`Termin gemerkt. Erinnerung zum Losgehen um ${uhr(plan.los)}.`);
+  const oeffneOrt = useCallback((o: Ort, mitDetails: boolean) => {
+    gehe({ art: "ort", ort: o, laden: mitDetails }, ansicht.art === "ort");
+    if (!mitDetails) return;
+    const ersetze = (f: (a: Extract<Ansicht, { art: "ort" }>) => Ansicht) =>
+      setVerlauf((v) => v.map((a) => (a.art === "ort" && a.ort.id === o.id ? f(a) : a)));
+    ortAnStelle(o.lngLat).then((d) => {
+      // Details nur übernehmen, wenn sie zu genau diesem Ort passen
+      const punkt = o.name === "Punkt auf der Karte";
+      const neu: Ort = punkt || d.name === o.name ? { ...d, id: d.id.startsWith("punkt") ? o.id : d.id, lngLat: o.lngLat, art: punkt ? d.art : o.art } : { ...o, adresse: d.adresse };
+      ersetze(() => ({ art: "ort", ort: neu, laden: false }));
+    }, () => ersetze((a) => ({ ...a, laden: false })));
+  }, [gehe, ansicht.art]);
+
+  const karteTipp = useCallback((l: LngLat, poi: { name: string; art: string } | null) => {
+    if (ansicht.art === "route") return;
+    oeffneOrt(leererOrt(l, poi?.name ?? "Punkt auf der Karte", poi?.art ?? "Ort"), true);
+  }, [ansicht.art, oeffneOrt]);
+
+  /* ---------- Start, Weg, Termin ---------- */
+
+  const gps = useCallback(() => {
+    zeige("Standort wird bestimmt …");
+    gpsStandort().then((s) => { setStart(s); zeige("Start: dein Standort"); }, (e) => zeige(fehlerText(e)));
+  }, [zeige, setStart]);
+
+  const startAdresse = useCallback((t: string) => {
+    ortSuchen(t, mitte).then((r) => {
+      if (!r[0]) { zeige("Adresse nicht gefunden."); return; }
+      setStart({ lngLat: [Number(r[0].lngLat[0].toFixed(4)), Number(r[0].lngLat[1].toFixed(4))], name: r[0].adresse ?? r[0].name, quelle: "adresse" });
+    }, (e) => zeige(fehlerText(e)));
+  }, [mitte, zeige, setStart]);
+
+  const zielOrt = ansicht.art === "ort" || ansicht.art === "route" || ansicht.art === "termin" ? ansicht.ort : null;
+  const weg = useRoute(start?.lngLat ?? null, zielOrt?.lngLat ?? null, modus, versuch);
+  const terminFuer = (o: Ort) => termine.find((t) => t.ort.id === o.id) ?? null;
+
+  const terminSpeichern = (o: Ort, d: Date) => {
+    const los = weg.route ? losgehzeit(d, weg.route.s) : null;
+    const t: Termin = { id: terminFuer(o)?.id ?? `${o.id}-${d.getTime()}`, ort: o, zeit: d.toISOString(), los: los?.toISOString() ?? null, modus: weg.route ? modus : null };
+    setTermine(speichereTermin(t));
+    setVorgemerkt(null);
+    try { if ("Notification" in window && Notification.permission === "default") void Notification.requestPermission(); } catch { /* egal */ }
+    zeige(los ? `Gemerkt. Erinnerung um ${los.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} zum Losgehen.` : "Gemerkt. Mit Startpunkt rechnet Lotse auch die Losgehzeit.");
+    zurueck();
   };
 
-  const teilen = async () => {
-    if (!gewaehlt) return;
-    const url = begleitLink(gewaehlt.id, termin, modus);
-    const daten = { title: `Termin: ${gewaehlt.name}`, text: `Kommst du mit? ${gewaehlt.name}, ${termin.toLocaleString("de-DE", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. Dein eigener Weg wird für dich geplant.`, url };
+  const teilen = async (o: Ort) => {
+    const url = o.id.startsWith("punkt")
+      ? `https://www.openstreetmap.org/?mlat=${o.lngLat[1]}&mlon=${o.lngLat[0]}#map=18/${o.lngLat[1]}/${o.lngLat[0]}`
+      : `${location.origin}${location.pathname}#o=${o.id}`;
     try {
-      if (navigator.share) { await navigator.share(daten); return; }
-      await navigator.clipboard.writeText(url);
-      zeigeToast("Link kopiert. Wer ihn öffnet, bekommt den Termin und plant seinen eigenen Weg.");
+      if (navigator.share) await navigator.share({ title: o.name, url });
+      else { await navigator.clipboard.writeText(url); zeige("Link kopiert."); }
     } catch { /* abgebrochen */ }
   };
 
-  const oeffneTermin = (t: Gemerkt) => {
-    setTermin(new Date(t.termin));
-    setModus(t.modus);
-    setExtra({ p: { ...t.praxis, entfernung: 0, zeiten: { fuss: null, rad: null, auto: null } }, startKey: "" });
-    setAnsicht({ art: "weg", z: zuordnungFuer(t.praxis.fach), praxisId: t.praxis.id });
+  const kiUmschalten = () => {
+    if (ki.art === "bereit" || ki.art === "laedt") return;
+    setKi({ art: "laedt", anteil: 0, text: "" });
+    kiStarten(setKi).catch((e) => setKi({ art: "fehler", text: e instanceof Error ? e.message : "KI konnte nicht starten." }));
   };
 
-  // „Wo startest du?“ – auch vom Startbildschirm aus, ohne die Praxissuche (und damit den Sicherheitsfilter) zu umgehen
-  const brauchtStart = standortWahl || (ansicht.art !== "start" && !start);
+  /* ---------- Karte ---------- */
+
+  const listenOrte = useMemo(() => (ansicht.art === "liste" ? ansicht.l.orte : []), [ansicht]);
+  const pins: Pin[] = useMemo(() => {
+    if (zielOrt) return [{ id: zielOrt.id, lngLat: zielOrt.lngLat, label: zielOrt.name.length > 24 ? zielOrt.name.slice(0, 22) + "…" : zielOrt.name, aktiv: true }];
+    return listenOrte.slice(0, 40).map((o) => ({ id: o.id, lngLat: o.lngLat, label: o.name.length > 18 ? o.name.slice(0, 16) + "…" : o.name, aktiv: false }));
+  }, [zielOrt, listenOrte]);
+
+  const routeLinie = useMemo(() => (ansicht.art === "route" && weg.route ? { linie: weg.route.line, planb: null, modus } : null), [ansicht.art, weg.route, modus]);
+  const [rahmen, rahmenKey] = useMemo((): [LngLat[], string] => {
+    if (routeLinie) return [routeLinie.linie, `route-${zielOrt?.id}-${modus}-${start?.lngLat.join()}`];
+    if (zielOrt) return [[zielOrt.lngLat], `ort-${zielOrt.id}`];
+    if (listenOrte.length) return [[nahe, ...listenOrte.slice(0, 8).map((o) => o.lngLat)], `liste-${listenOrte.slice(0, 3).map((o) => o.id).join()}`];
+    return start ? [[start.lngLat], `start-${start.lngLat.join()}`] : [[], "leer"];
+    // nahe absichtlich nicht: die Karte soll beim Verschieben nicht zurückspringen
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeLinie, zielOrt, listenOrte, start, modus]);
+
+  const abstand: Abstand = desktop ? { top: 0, right: 70, bottom: 0, left: groesse.w + 16 } : { top: 0, right: 0, bottom: groesse.h, left: 0 };
+
+  // Escape = zurück
+  useEffect(() => {
+    const f = (e: KeyboardEvent) => { if (e.key === "Escape" && !notfall && (e.target as HTMLElement).tagName !== "INPUT") zurueck(); };
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+  }, [zurueck, notfall]);
+
+  const kopf = (
+    <form className="suche" onSubmit={(e) => { e.preventDefault(); void absenden(text); (document.activeElement as HTMLElement | null)?.blur(); }}>
+      {desktop && <span className="brand-mini" title="Lotse"><Marke size={30} /></span>}
+      <label className={`suchfeld${text ? " aktiv" : ""}`}>
+        <Suche size={18} />
+        <span className="sr">Suche oder Frage</span>
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={ki.art === "bereit" ? "Frag Lotse oder such einen Ort" : "Ort, Adresse oder Anliegen"} autoComplete="off" enterKeyHint="search" />
+        {text && <button type="button" className="feld-x" aria-label="Löschen" onClick={zurStart}><Schliessen size={14} /></button>}
+      </label>
+    </form>
+  );
 
   return (
     <div className={`app ${desktop ? "pc" : "tel"}${notfall ? " im-notfall" : ""}`}>
       <LotseMap
-        theme={theme}
+        theme={dunkel ? "dark" : "light"}
         start={start?.lngLat ?? null}
         pins={pins}
-        route={route}
+        route={routeLinie}
         rahmen={rahmen}
-        rahmenSchluessel={rahmenSchluessel}
+        rahmenSchluessel={rahmenKey}
         abstand={abstand}
-        onPin={(id) => ansicht.art === "praxen" && setAnsicht({ art: "weg", z: ansicht.z, praxisId: id, ausListe: true })}
-        onPinHover={(id) => ansicht.art === "praxen" && setHover(id)}
         dreiD={dreiD}
-        onOrt={(name, art) => zeigeToast(`${art}: ${name} · laut OpenStreetMap`)}
+        onPin={(id) => { const o = listenOrte.find((x) => x.id === id); if (o) oeffneOrt(o, false); }}
+        onKarteTipp={karteTipp}
+        onMitte={setMitte}
       />
 
-      <aside ref={panel} className={`panel glas ansicht-${brauchtStart ? "standort" : ansicht.art}`} aria-label="Lotse">
-        {!desktop && ansicht.art !== "start" && <div className="griff" aria-hidden="true" />}
-
-        {!brauchtStart && ansicht.art === "start" && (
-          <StartPanel
-            text={eingabe}
-            setText={setEingabe}
-            live={live}
-            termine={termine}
-            start={start}
-            onSuchen={suchen}
-            onHausarzt={() => { setHover(null); setRadiusIdx(0); setAnsicht({ art: "praxen", z: zuordnungFuer("allgemein") }); }}
-            onTermin={oeffneTermin}
-            onStartAendern={() => setStandortWahl(true)}
-            desktop={desktop}
-          />
+      <Blatt desktop={desktop} stufe={stufe} setStufe={setStufe} kopf={kopf} onGroesse={setGroesse}>
+        {vorgemerkt && ansicht.art !== "termin" && (
+          <div className="vorgemerkt">Termin {vorgemerkt.toLocaleString("de-DE", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}: Ort wählen <button type="button" className="link" onClick={() => setVorgemerkt(null)}>verwerfen</button></div>
         )}
-
-        {brauchtStart && (
-          <StandortPanel
-            fachName={ansicht.art === "praxen" ? ansicht.z.fach.name : ""}
-            geteilt={ansicht.art === "weg" && !!ansicht.geteilt}
-            onStart={setStart}
-            onZurueck={start ? () => setStandortWahl(false) : zurStart}
-          />
-        )}
-
-        {!brauchtStart && ansicht.art === "praxen" && (
-          <PraxenPanel
-            z={ansicht.z}
-            text={eingabe}
-            start={start!}
-            status={suche.status}
-            fehler={suche.fehler}
-            zeitFehler={suche.zeitFehler ?? null}
-            liste={liste}
-            gesamt={suche.liste.length}
-            gefunden={suche.gefunden ?? suche.liste.length}
-            gekappt={!!suche.gekappt}
-            modus={modus}
-            setModus={setModus}
-            sort={sort}
-            setSort={setSort}
-            radius={radius}
-            kannErweitern={radiusIdx < RADIEN.length - 1 && !suche.gekappt}
-            onErweitern={() => setRadiusIdx((i) => Math.min(RADIEN.length - 1, i + 1))}
-            onNeu={() => setNeuVersuch((n) => n + 1)}
-            hover={hover}
-            setHover={setHover}
-            onWahl={(id) => setAnsicht({ art: "weg", z: ansicht.z, praxisId: id, ausListe: true })}
-            onZurueck={zurStart}
-            onStartAendern={() => setStandortWahl(true)}
-            onHausarzt={() => { setRadiusIdx(0); setAnsicht({ art: "praxen", z: zuordnungFuer("allgemein") }); }}
-            onAlternative={() => ansicht.z.alternative && setAnsicht({ art: "praxen", z: { ...ansicht.z, fach: ansicht.z.alternative, alternative: ansicht.z.fach } })}
-            desktop={desktop}
-          />
-        )}
-
-        {!brauchtStart && ansicht.art === "weg" && (
-          <WegPanel
-            p={gewaehlt}
-            start={start!}
-            termin={termin}
-            setTermin={setTermin}
-            modus={modus}
-            setModus={setModus}
-            plan={plan}
-            wegStatus={gewaehlt ? (wegAktuell ? weg.status : "leer") : listeLaedt ? "laden" : einzel.status}
-            fehler={gewaehlt ? weg.fehler : einzel.fehler}
-            geteilt={!!ansicht.geteilt}
-            onNeu={() => setNeuVersuch((n) => n + 1)}
-            onZurueck={zurueckAusWeg}
-            onKalender={kalender}
-            onTeilen={teilen}
-            onStartAendern={() => setStandortWahl(true)}
-          />
-        )}
-      </aside>
-
-      {desktop && (
-        <div className="werkzeug glas">
-          <button type="button" aria-label="Deine Termine" title="Deine Termine" onClick={() => { zurStart(); setEingabe(""); }}><Kalender size={19} /></button>
-          <a href="../" aria-label="Über Lotse" title="Über Lotse"><Info size={19} /></a>
+        <div className="wechsel" key={`${verlauf.length}-${ansicht.art}`}>
+          {ansicht.art === "start" && (
+            <StartInhalt onKategorie={kategorieSuche} termine={termine} ki={ki} onKi={kiUmschalten} onInfo={() => gehe({ art: "info" })}
+              onTermin={(t) => gehe({ art: "ort", ort: t.ort, laden: false })} />
+          )}
+          {ansicht.art === "liste" && (
+            <ListenInhalt l={ansicht.l} aktiv={null} onOrt={(o) => oeffneOrt(o, false)} onZu={zurStart} onNeu={ansicht.neu} />
+          )}
+          {ansicht.art === "ort" && (
+            <OrtInhalt o={ansicht.ort} laden={ansicht.laden} weg={weg} modus={modus} onZu={zurueck}
+              onRoute={() => gehe({ art: "route", ort: ansicht.ort })}
+              onTermin={() => gehe({ art: "termin", ort: ansicht.ort, zeit: vorgemerkt })}
+              onTeilen={() => void teilen(ansicht.ort)} />
+          )}
+          {ansicht.art === "route" && (
+            <RouteInhalt o={ansicht.ort} start={start} modus={modus} setModus={setModus} weg={weg} termin={terminFuer(ansicht.ort)}
+              onStartGps={gps} onStartAdresse={startAdresse} onZurueck={zurueck} onNeu={() => setVersuch((n) => n + 1)} />
+          )}
+          {ansicht.art === "termin" && (
+            <TerminInhalt o={ansicht.ort} vorschlag={ansicht.zeit ?? morgenNeun()} vorhanden={terminFuer(ansicht.ort)} onZurueck={zurueck}
+              onSpeichern={(d) => terminSpeichern(ansicht.ort, d)}
+              onLoeschen={() => { const t = terminFuer(ansicht.ort); if (t) setTermine(loescheTermin(t.id)); zurueck(); }}
+              onKalender={() => { const t = terminFuer(ansicht.ort); if (t) kalenderLaden(t); }} />
+          )}
+          {ansicht.art === "info" && <InfoInhalt onZurueck={zurueck} />}
         </div>
-      )}
+      </Blatt>
+
       <div className="kartenknoepfe">
-        <button type="button" className="glas" aria-label="Zum Startpunkt" title="Zum Startpunkt" onClick={() => window.dispatchEvent(new CustomEvent("lotse:start"))}><Standort size={18} /></button>
-        <button type="button" className={`glas drei-d${dreiD ? " an" : ""}`} aria-pressed={dreiD} aria-label={dreiD ? "Zurück zur flachen Karte" : "3D-Gebäude zeigen"} title={dreiD ? "2D" : "3D-Gebäude"} onClick={() => setDreiD((x) => !x)}>{dreiD ? "2D" : "3D"}</button>
+        <button type="button" className="glas" aria-label="Mein Standort" title="Mein Standort" onClick={() => (start?.quelle === "gps" ? window.dispatchEvent(new CustomEvent("lotse:start")) : gps())}><Standort size={18} /></button>
+        <button type="button" className={`glas drei-d${dreiD ? " an" : ""}`} aria-pressed={dreiD} aria-label="3D-Gebäude" onClick={() => setDreiD((x) => !x)}>{dreiD ? "2D" : "3D"}</button>
         {desktop && (
           <div className="zoom glas">
             <button type="button" aria-label="Vergrößern" onClick={() => window.dispatchEvent(new CustomEvent("lotse:zoom", { detail: 1 }))}><Plus size={18} /></button>
@@ -410,14 +297,9 @@ export default function App() {
       </div>
 
       {notfall && (
-        <Notfall
-          stufe={notfall}
-          text={eingabe}
-          onZurueck={() => setNotfall(null)}
-          onWeiter={() => { setNotfall(null); setHover(null); setAnsicht({ art: "praxen", z: ordneZu(eingabe) }); }}
-        />
+        <Notfall stufe={notfall.stufe} text={notfall.text} onZurueck={() => setNotfall(null)}
+          onWeiter={() => { setNotfall(null); fachSuche("allgemein"); }} />
       )}
-
       <div className={`toast glas${toast ? " zeigen" : ""}`} role="status" aria-live="polite">{toast}</div>
     </div>
   );
