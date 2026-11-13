@@ -4,7 +4,7 @@ import { ORTE, START, type LngLat, type Weg } from "./geo";
 /**
  * BEISPIELDATEN für den Prototyp.
  * Namen, Adressen und Fahrzeiten sind erfunden. Wird durch den geprüften
- * Praxisdatensatz (AP Mischal) und echte Fahrzeiten aus der Routenabfrage ersetzt.
+ * Praxisdatensatz (AP Michal) und echte Fahrzeiten aus der Routenabfrage ersetzt.
  */
 export interface Praxis {
   id: string;

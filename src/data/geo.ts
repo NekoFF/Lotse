@@ -1,7 +1,7 @@
 /**
  * GENERIERT am 13.11.2026 – Beispiel-Geodaten für den Prototyp.
  * Koordinaten: OpenStreetMap/Nominatim. Wege: routing.openstreetmap.de (FOSSGIS), einmalig abgefragt und hier gespeichert.
- * Die Praxen selbst sind erfunden; nur die Straßen sind echt. Wird durch echte Daten (AP Mischal) ersetzt.
+ * Die Praxen selbst sind erfunden; nur die Straßen sind echt. Wird durch echte Daten (AP Michal) ersetzt.
  */
 
 export type LngLat = [number, number];

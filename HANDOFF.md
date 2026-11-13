@@ -40,7 +40,7 @@ Echte Karte geplant: MapLibre GL + kostenlose OSM-Kacheln (z. B. OpenFreeMap) �
 ## Nächste Schritte
 1. Dima nimmt Entwürfe ab / gibt Änderungen.
 2. Danach App-Oberfläche in `src/` nach den Entwürfen neu bauen, Fachlogik `src/core` unverändert weiterverwenden, Telefon UND PC.
-3. Begriffstabelle auf 200+ erweitern; Routing nach Mischals Bericht (21.11.): db.transport.rest / RMV.
+3. Begriffstabelle auf 200+ erweitern; Routing nach Michals Bericht (21.11.): db.transport.rest / RMV.
 4. Leistungsnachweis pflegen (KI-Nutzung offen angeben).
 
 ## Projektseite: letzter Stand

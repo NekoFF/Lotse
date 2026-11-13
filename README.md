@@ -3,7 +3,7 @@
 **Vom Anliegen bis zur Tür.** Lotse ordnet ein gesundheitliches Anliegen in Alltagssprache einer Fachrichtung zu, zeigt Praxen nach tatsächlicher Fahrzeit und plant den Weg zum Termin. Lotse stellt keine Diagnose und bucht keine Termine.
 
 Projektarbeit an der Werner-von-Siemens-Schule, Schuljahr 2026/27.
-Team: Dima (Projektleitung, Umsetzung), Mischal (Datenquellen), Abdi (Nutzersicht, Anforderungen), Fateme (Dokumentation).
+Team: Dima (Projektleitung, Umsetzung), Michal (Datenquellen), Abdi (Nutzersicht, Anforderungen), Fateme (Dokumentation).
 
 ## Aufbau
 
