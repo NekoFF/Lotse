@@ -1,4 +1,4 @@
-import { minuten, type Modus, type Praxis } from "../data/praxen";
+import { adresse, minuten, MODI, type Modus, type Praxis, type PraxisMitZeit } from "../data/praxen";
 
 /** Sicherheitsabstand vor dem Termin in Minuten */
 export const PUFFER = 10;
@@ -19,13 +19,13 @@ export interface Plan {
 const plus = (d: Date, min: number) => new Date(d.getTime() + min * 60000);
 
 /** Rechnet vom Termin rückwärts. Gibt null zurück, wenn es für diesen Modus keinen berechneten Weg gibt. */
-export function planeWeg(p: Praxis, termin: Date, modus: Modus): Plan | null {
+export function planeWeg(p: PraxisMitZeit, termin: Date, modus: Modus): Plan | null {
   const min = minuten(p, modus);
-  const w = p.wege[modus];
+  const w = p.zeiten[modus];
   if (min === null || !w) return null;
   const an = plus(termin, -PUFFER);
   const los = plus(an, -min);
-  const andere = (["fuss", "rad", "auto"] as Modus[])
+  const andere = MODI
     .filter((m) => m !== modus)
     .map((m) => ({ modus: m, min: minuten(p, m) }))
     .filter((x): x is { modus: Modus; min: number } => x.min !== null)
@@ -64,7 +64,7 @@ const esc = (s: string) => s.replace(/[\\;,]/g, (c) => "\\" + c).replace(/\n/g, 
 
 export function kalenderDatei(p: Praxis, termin: Date, plan: Plan): string {
   const ende = plus(termin, 30);
-  const ort = [p.strasse, p.ort].filter(Boolean).join(", ");
+  const ort = adresse(p);
   const text = `Losgehen um ${uhr(plan.los)} (${plan.min} Min ${MODUS_NAME[plan.modus]}). Ankunft ${uhr(plan.an)}, ${PUFFER} Min Puffer. Geplant mit Lotse.`;
   return [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Lotse//Schulprojekt//DE", "CALSCALE:GREGORIAN",
@@ -105,8 +105,8 @@ export function leseLink(hash: string): Geteilt | null {
 
 /* ---------- gemerkte Termine (nur auf diesem Gerät) ---------- */
 
-export interface Gemerkt { praxisId: string; name: string; termin: string; los: string; modus?: Modus }
-const KEY = "lotse.termine.v2";
+export interface Gemerkt { praxis: Praxis; termin: string; los: string; modus: Modus }
+const KEY = "lotse.termine.v3";
 
 export function leseTermine(): Gemerkt[] {
   try {
@@ -117,7 +117,7 @@ export function leseTermine(): Gemerkt[] {
 }
 
 export function merkeTermin(t: Gemerkt): Gemerkt[] {
-  const l = leseTermine().filter((x) => !(x.praxisId === t.praxisId && x.termin === t.termin));
+  const l = leseTermine().filter((x) => !(x.praxis.id === t.praxis.id && x.termin === t.termin));
   l.push(t);
   try { localStorage.setItem(KEY, JSON.stringify(l)); } catch { /* privates Fenster */ }
   return leseTermine();

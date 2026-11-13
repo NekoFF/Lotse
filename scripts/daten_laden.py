@@ -10,7 +10,7 @@ import json, re, time, urllib.parse, urllib.request, datetime, math, sys
 UA = {"User-Agent": "Lotse-Schulprojekt/0.1 (github.com/NekoFF/Lotse)"}
 START = {"name": "Wetzlar, Bahnhof", "lngLat": [8.50437, 50.56508]}
 BOX = (8.42, 50.52, 8.58, 50.62)  # Wetzlar
-OUT = "src/data/praxen-osm.json"
+OUT = "scripts/beispieldaten/wetzlar.json"  # nur für Tests, die App lädt live
 
 def get(url, tries=4):
     for a in range(tries):
