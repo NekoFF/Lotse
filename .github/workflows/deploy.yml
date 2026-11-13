@@ -31,7 +31,7 @@ jobs:
       - name: Projektseite und App zusammenstellen
         env:
           # Die App wird erst veröffentlicht, wenn dieser Schalter auf "true" steht.
-          APP_VEROEFFENTLICHEN: "true"
+          APP_VEROEFFENTLICHEN: "false"
         run: |
           mkdir -p out
           cp -r site/. out/
