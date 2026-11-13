@@ -11,6 +11,7 @@ import { LotseMap, type Abstand, type Pin } from "./map/LotseMap";
 import { Notfall } from "./screens/Notfall";
 import { fehlerText, gpsStandort } from "./services/dienste";
 import { inDerNaehe, ortAnStelle, ortLaden, suchen as ortSuchen, type Ort } from "./services/orte";
+import { Ablage } from "./blatt/Ablage";
 import { Blatt, type Stufe } from "./blatt/Blatt";
 import { InfoInhalt, ListenInhalt, OrtInhalt, RouteInhalt, SchnellLeiste, TerminInhalt, VorschlagInhalt, type ListenStand, type Vorschlag } from "./blatt/Inhalte";
 import { Ki, Marke, Schliessen, Standort, Suche, Plus, Minus } from "./ui/icons";
@@ -299,7 +300,7 @@ export default function App() {
           <div className="vorgemerkt">Termin {vorgemerkt.toLocaleString("de-DE", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}: Ort wählen <button type="button" className="link" onClick={() => setVorgemerkt(null)}>verwerfen</button></div>
         )}
         <div className="wechsel" key={`${verlauf.length}-${ansicht.art}`}>
-          {fokus && (
+          {fokus && !desktop && (
             <VorschlagInhalt text={text} zuletzt={zuletzt} termine={termine} ki={ki} onWahl={waehle}
               onInfo={() => { fertig(); gehe({ art: "info" }); }}
               onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} />
@@ -328,11 +329,13 @@ export default function App() {
         </div>
       </Blatt>
 
-      {/* Computer: Schnellzugriff als „Ablage“ unter der Suchleiste */}
-      {desktop && !fokus && ansicht.art === "start" && groesse.h > 0 && (
-        <div className="schnell-ablage" style={{ top: 16 + groesse.h - 14 }}>
-          <SchnellLeiste onKategorie={(k) => { setText(k.name); kategorieSuche(k); }} />
-        </div>
+      {/* Computer: „Ablage“ unter der Suchleiste – Symbole im Ruhezustand, beim Tippen wächst sie zur Vorschlagsliste */}
+      {desktop && (fokus || ansicht.art === "start") && groesse.h > 0 && (
+        <Ablage offen={fokus} top={16 + groesse.h - 14}
+          symbole={<SchnellLeiste onKategorie={(k) => { setText(k.name); kategorieSuche(k); }} />}
+          vorschlaege={<VorschlagInhalt text={text} zuletzt={zuletzt} termine={termine} ki={ki} onWahl={waehle}
+            onInfo={() => { fertig(); gehe({ art: "info" }); }}
+            onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} />} />
       )}
       <div className="kartenknoepfe">
         <button type="button" className="glas" aria-label="Mein Standort" title="Mein Standort" onClick={() => (start?.quelle === "gps" ? window.dispatchEvent(new CustomEvent("lotse:start")) : gps())}><Standort size={18} /></button>

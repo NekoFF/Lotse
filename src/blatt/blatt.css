@@ -129,16 +129,40 @@
 .blatt.pc .schnell { padding-left: 40px; }
 .blatt.pc .schnell-knopf { width: 30px; height: 30px; }
 
-/* Ablage unter der Suchleiste (Computer): etwas schmaler, schiebt sich unter die Leiste */
-.schnell-ablage {
-  position: absolute; z-index: 4; left: 40px; width: 344px; padding: 22px 14px 10px; border-radius: 0 0 18px 18px;
-  background: linear-gradient(var(--fuell), var(--fuell)), var(--glas); -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6);
-  box-shadow: 0 8px 24px rgba(20, 24, 40, 0.12); border: 0.5px solid var(--linie); border-top: 0;
-  animation: ablage 0.25s ease;
-}
-@keyframes ablage { from { transform: translateY(-10px); opacity: 0; } }
-.schnell-ablage .schnell { padding: 0; gap: 8px; justify-content: space-between; }
-.schnell-ablage .schnell-knopf { width: 40px; height: 28px; border-radius: 9px; background: var(--flaeche); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
-.schnell-ablage .schnell-knopf:hover { background: color-mix(in srgb, var(--f) 14%, var(--flaeche)); }
 .blatt-inhalt:has(> .wechsel:empty) { display: none; }
 .blatt.pc:not(:has(.wechsel:not(:empty))) .blatt-kopf { padding-bottom: 14px; }
+
+/* ---------- Ablage unter der Suchleiste (Computer) ---------- */
+.ablage {
+  position: absolute; z-index: 4; left: 40px; width: 344px; padding-top: 14px; border-radius: 0 0 18px 18px; overflow: hidden;
+  background: linear-gradient(var(--fuell), var(--fuell)), var(--glas);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow: 0 8px 24px rgba(20, 24, 40, 0.12); border: 0.5px solid var(--linie); border-top: 0;
+  transition: left 0.32s cubic-bezier(0.2, 0.9, 0.25, 1), width 0.32s cubic-bezier(0.2, 0.9, 0.25, 1), border-radius 0.32s, background 0.32s;
+  animation: ablage-rein 0.25s ease;
+}
+@keyframes ablage-rein { from { transform: translateY(-10px); opacity: 0; } }
+.ablage.offen { left: 16px; width: 392px; border-radius: 0 0 22px 22px; background: var(--glas); display: flex; flex-direction: column; }
+.ablage-rahmen { position: relative; transition: height 0.34s cubic-bezier(0.2, 0.9, 0.25, 1); overflow: hidden; }
+.ablage.offen .ablage-rahmen { overflow-y: auto; max-height: inherit; }
+.ablage-platz { height: 46px; }
+
+/* Symbole: gleiten gestaffelt nach oben unter die Suchleiste und verschwinden */
+.ablage-symbole { position: absolute; left: 14px; right: 14px; top: 8px; }
+.ablage-symbole .schnell { gap: 8px; justify-content: space-between; }
+.ablage-symbole .schnell-knopf { width: 40px; height: 28px; border-radius: 9px; background: var(--flaeche); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: transform 0.28s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.22s, background 0.15s; }
+.ablage-symbole .schnell-knopf:hover { background: color-mix(in srgb, var(--f) 14%, var(--flaeche)); }
+.ablage.offen .ablage-symbole { pointer-events: none; }
+.ablage.offen .ablage-symbole .schnell-knopf { transform: translateY(-26px) scale(0.85); opacity: 0; }
+.ablage-symbole .schnell-knopf:nth-child(2) { transition-delay: 0.02s; }
+.ablage-symbole .schnell-knopf:nth-child(3) { transition-delay: 0.04s; }
+.ablage-symbole .schnell-knopf:nth-child(4) { transition-delay: 0.06s; }
+.ablage-symbole .schnell-knopf:nth-child(5) { transition-delay: 0.08s; }
+.ablage-symbole .schnell-knopf:nth-child(6) { transition-delay: 0.10s; }
+.ablage-symbole .schnell-knopf:nth-child(7) { transition-delay: 0.12s; }
+
+/* Vorschläge blenden nach den Symbolen ein */
+.ablage-vorschlaege { padding: 4px 14px 14px; animation: vorschlag-rein 0.3s ease 0.08s both; }
+@keyframes vorschlag-rein { from { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .ablage, .ablage-rahmen, .ablage-symbole .schnell-knopf { transition: none; } }
