@@ -82,6 +82,16 @@ export function klingtNachBeschwerde(text: string): boolean {
   return /\b(weh|schmerz|tut|tun|juck|brenn|krank|blut|geschwollen|seit|fieber|husten|uebel|schwindel|probleme?|verletz|gebrochen|abgebrochen|entzuend|ausschlag)/.test(n);
 }
 
+/** Entfernt Datum/Uhrzeit-Wörter („morgen“, „um 10 Uhr“, „20.11.“) für die Ortssuche */
+export function ohneZeit(text: string): string {
+  return text
+    .replace(/\b(heute|morgen|übermorgen|uebermorgen|am|um|uhr|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|beim?|bei|zum|zur)\b/gi, " ")
+    .replace(/\b\d{1,2}\.\d{1,2}\.(\d{2,4})?/g, " ")
+    .replace(/\b\d{1,2}([:.]\d{2})?\b/g, " ")
+    .replace(/(^|\s)[.,:;!?-]+(?=\s|$)/g, " ")
+    .replace(/\s+/g, " ").trim();
+}
+
 export function verstehe(text: string, jetzt = new Date()): Absicht {
   const s = pruefeSicherheit(text);
   if (s.stufe) return { typ: "notfall", stufe: s.stufe };

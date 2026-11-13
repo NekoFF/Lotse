@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { klingtNachBeschwerde, verstehe, zeitAus } from "./absicht";
+import { klingtNachBeschwerde, ohneZeit, verstehe, zeitAus } from "./absicht";
 import { schrittText } from "../services/orte";
 
 const FR = new Date(2026, 10, 13, 12, 0); // Freitag, 13.11.2026, 12:00
@@ -62,5 +62,12 @@ describe("Wegbeschreibung auf Deutsch", () => {
     expect(schrittText({ distance: 10, name: "", maneuver: { type: "turn", modifier: "left" } })).toBe("Links abbiegen");
     expect(schrittText({ distance: 10, name: "Ring", maneuver: { type: "roundabout", exit: 2 } })).toBe("Im Kreisverkehr 2. Ausfahrt auf Ring");
     expect(schrittText({ distance: 0, name: "", maneuver: { type: "arrive" } })).toBe("Ziel erreicht");
+  });
+});
+
+describe("Termintext ohne Zeitangaben für die Ortssuche", () => {
+  it("entfernt Datum und Uhrzeit", () => {
+    expect(ohneZeit(" morgen um 10 Uhr bei Dr. Weber")).toBe("Dr. Weber");
+    expect(ohneZeit(" am 20.11. 14:30")).toBe("");
   });
 });

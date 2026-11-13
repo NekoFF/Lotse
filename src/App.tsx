@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { klingtNachBeschwerde, verstehe, KATEGORIEN, type Kategorie } from "./core/absicht";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { klingtNachBeschwerde, ohneZeit, verstehe, KATEGORIEN, type Kategorie } from "./core/absicht";
 import type { Zuordnung } from "./core/match";
 import { FACHRICHTUNGEN, type FachId } from "./data/fachrichtungen";
 import type { Notfallstufe } from "./data/notfall";
@@ -79,8 +79,9 @@ export default function App() {
   useEffect(() => {
     const id = new URLSearchParams(location.hash.slice(1)).get("o");
     if (!id || !/^(node|way|relation)-\d+$/.test(id)) return;
-    ortLaden(id).then((o) => o && gehe({ art: "ort", ort: o, laden: false })).catch((e) => zeige(fehlerText(e)));
-  }, [gehe, zeige]);
+    history.replaceState(null, "", location.pathname + location.search); // nur einmal öffnen
+    ortLaden(id).then((o) => o && setVerlauf((v) => [...v, { art: "ort", ort: o, laden: false }])).catch((e) => zeige(fehlerText(e)));
+  }, [zeige]);
 
   /* ---------- Suchen ---------- */
 
@@ -108,30 +109,41 @@ export default function App() {
 
   const kategorieSuche = useCallback((k: Kategorie) => liste(k.name, () => inDerNaehe(k.phrasen, nahe, 3), { unter: "in der Nähe" }), [liste, nahe]);
 
+  const anfrage = useRef(0);
   const absenden = useCallback(async (eingabe: string) => {
-    const t = eingabe.trim();
+    let t = eingabe.trim();
     if (t.length < 2) return;
+    const nr = ++anfrage.current;
     let a = verstehe(t);
     if (a.typ === "notfall") { setNotfall({ stufe: a.stufe, text: t }); return; }
     if (a.typ === "termin") {
       setVorgemerkt(a.zeit);
-      a = verstehe(t.replace(/termin/gi, " "));
+      // Zeitangaben gehören nicht in die Ortssuche
+      t = ohneZeit(t.replace(/termin/gi, " "));
+      if (t.length < 2) { zeige("Termin vorgemerkt – such jetzt den Ort oder tippe ihn auf der Karte an."); return; }
+      a = verstehe(t);
       if (a.typ === "notfall") { setNotfall({ stufe: a.stufe, text: t }); return; }
     }
     if (a.typ === "fach") return fachSuche(a.fach);
     if (a.typ === "kategorie") return kategorieSuche(a.kategorie);
-    // Kein Hinweis auf Beschwerden und KI an: erst die KI fragen (z. B. „einen Film sehen“ ≠ Augenarzt)
-    if (a.typ === "anliegen" && !(ki.art === "bereit" && !klingtNachBeschwerde(t))) return fachSuche(a.zuordnung.fach.id, a.zuordnung);
-    // Ganze Sätze: die KI auf dem Gerät übersetzt sie in eine Suche (nur wenn eingeschaltet)
+    const beschwerde = a.typ === "anliegen" || klingtNachBeschwerde(t);
+    // Beschwerden nie als Text an Dienste schicken: nur Fachrichtung (oder Hausarzt, wenn unklar)
+    if (beschwerde && !(ki.art === "bereit" && a.typ === "anliegen" && !klingtNachBeschwerde(t))) {
+      return a.typ === "anliegen" ? fachSuche(a.zuordnung.fach.id, a.zuordnung) : fachSuche("allgemein", { fach: FACHRICHTUNGEN.allgemein, erkannt: [], unsicher: true });
+    }
+    // Ganze Sätze: die KI auf dem Gerät übersetzt sie (nur wenn eingeschaltet)
     if (ki.art === "bereit" && t.split(/\s+/).length >= 3) {
       const k = await kiVerstehen(t).catch(() => null);
+      if (nr !== anfrage.current) return; // inzwischen neue Suche
       const kat = k?.aktion === "kategorie" ? KATEGORIEN.find((x) => x.id === k.kategorie) : undefined;
-      if (kat) return kategorieSuche(kat);
+      // Bei möglichen Beschwerden nur nicht-medizinische Kategorien von der KI annehmen, nie eine Textsuche
+      if (kat && !(a.typ === "anliegen" && ["arzt", "zahnarzt", "apotheke", "krankenhaus"].includes(kat.id))) return kategorieSuche(kat);
+      if (a.typ === "anliegen") return fachSuche(a.zuordnung.fach.id, a.zuordnung);
       if (k?.aktion === "suche") return liste(k.suchtext, () => ortSuchen(k.suchtext, nahe), { unter: "von der KI verstanden" });
     }
     if (a.typ === "anliegen") return fachSuche(a.zuordnung.fach.id, a.zuordnung);
     liste(t, () => ortSuchen(t, nahe));
-  }, [fachSuche, kategorieSuche, liste, ki.art, nahe]);
+  }, [fachSuche, kategorieSuche, liste, ki.art, nahe, zeige]);
 
   /* ---------- Orte öffnen, Karte antippen ---------- */
 
@@ -143,7 +155,9 @@ export default function App() {
     ortAnStelle(o.lngLat).then((d) => {
       // Details nur übernehmen, wenn sie zu genau diesem Ort passen
       const punkt = o.name === "Punkt auf der Karte";
-      const neu: Ort = punkt || d.name === o.name ? { ...d, id: d.id.startsWith("punkt") ? o.id : d.id, lngLat: o.lngLat, art: punkt ? d.art : o.art } : { ...o, adresse: d.adresse };
+      const neu: Ort = punkt
+        ? { ...d, id: o.id, lngLat: o.lngLat, name: d.adresse ? `In der Nähe: ${d.name}` : d.name, website: null, telefon: null, oeffnungszeiten: null, rollstuhl: null, fach: null }
+        : d.name === o.name ? { ...d, lngLat: o.lngLat, art: o.art } : { ...o, adresse: d.adresse };
       ersetze(() => ({ art: "ort", ort: neu, laden: false }));
     }, () => ersetze((a) => ({ ...a, laden: false })));
   }, [gehe, ansicht.art]);
