@@ -1,13 +1,12 @@
 import { useEffect, useRef } from "react";
 import maplibregl, { type Map as MlMap, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { LngLat } from "../data/geo";
+import { DIENSTE } from "../config";
+import type { LngLat } from "../data/praxen";
 
-/** Kostenlose Karte ohne Schlüssel: OpenFreeMap (Daten: OpenStreetMap). */
-const STIL = {
-  light: "https://tiles.openfreemap.org/styles/positron",
-  dark: "https://tiles.openfreemap.org/styles/dark",
-};
+const STIL = DIENSTE.kartenStil;
+/** Ohne Startpunkt: Überblick Deutschland */
+const UEBERBLICK = { center: [10.4, 51.1] as LngLat, zoom: 5.2 };
 
 const FARBE = {
   light: { accent: "#2447e6", casing: "#ffffff", planb: "#8597e6" },
@@ -24,14 +23,14 @@ export interface Pin {
 export interface Route {
   linie: LngLat[];
   planb: LngLat[] | null;
-  modus: "fuss" | "oepnv";
+  modus: "fuss" | "rad" | "auto";
 }
 
 export interface Abstand { top: number; right: number; bottom: number; left: number }
 
 interface Props {
   theme: "light" | "dark";
-  start: LngLat;
+  start: LngLat | null;
   pins: Pin[];
   route: Route | null;
   /** Punkte, die sichtbar sein sollen; neu eingepasst, wenn sich rahmenSchluessel ändert */
@@ -48,6 +47,9 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
   const markers = useRef(new Map<string, { m: Marker; el: HTMLButtonElement }>());
   const routeRef = useRef(route);
   const themeRef = useRef(theme);
+  const meRef = useRef<Marker | null>(null);
+  const startRef = useRef(start);
+  startRef.current = start;
   const cb = useRef({ onPin, onPinHover });
   cb.current = { onPin, onPinHover };
   routeRef.current = route;
@@ -59,8 +61,8 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     const m = new maplibregl.Map({
       container: box.current,
       style: STIL[themeRef.current],
-      center: start,
-      zoom: 14.2,
+      center: start ?? UEBERBLICK.center,
+      zoom: start ? 14.2 : UEBERBLICK.zoom,
       attributionControl: { compact: true },
       dragRotate: false,
       pitchWithRotate: false,
@@ -74,9 +76,10 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     const me = document.createElement("div");
     me.className = "me";
     me.setAttribute("aria-label", "Startpunkt");
-    new maplibregl.Marker({ element: me }).setLngLat(start).addTo(m);
+    meRef.current = new maplibregl.Marker({ element: me }).setLngLat(start ?? UEBERBLICK.center);
+    if (start) meRef.current.addTo(m);
 
-    const zumStart = () => m.easeTo({ center: start, zoom: Math.max(m.getZoom(), 14.5), duration: 600 });
+    const zumStart = () => { const s = startRef.current; if (s) m.easeTo({ center: s, zoom: Math.max(m.getZoom(), 14.5), duration: 600 }); };
     const zoom = (e: Event) => m.easeTo({ zoom: m.getZoom() + (e as CustomEvent<number>).detail, duration: 300 });
     window.addEventListener("lotse:start", zumStart);
     window.addEventListener("lotse:zoom", zoom);
@@ -89,6 +92,13 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Startpunkt setzen oder verschieben
+  useEffect(() => {
+    const m = map.current, me = meRef.current;
+    if (!m || !me) return;
+    if (start) me.setLngLat(start).addTo(m); else me.remove();
+  }, [start]);
 
   // Hell/Dunkel
   useEffect(() => {
@@ -154,7 +164,7 @@ function zeichneRoute(m: MlMap, r: Route | null, theme: "light" | "dark") {
     features: r
       ? [
           ...(r.planb ? [linie(r.planb, "planb")] : []),
-          linie(r.linie, r.modus === "fuss" ? "fuss" : "oepnv"),
+          linie(r.linie, r.modus === "auto" ? "oepnv" : r.modus),
         ]
       : [],
   };
@@ -170,6 +180,10 @@ function zeichneRoute(m: MlMap, r: Route | null, theme: "light" | "dark") {
     paint: { "line-color": f.accent, "line-width": 6 } });
   m.addLayer({ id: "fuss", type: "line", source: "route", filter: ["==", ["get", "art"], "fuss"], layout: rund,
     paint: { "line-color": f.accent, "line-width": 6, "line-dasharray": [0.01, 2] } });
+  m.addLayer({ id: "rad-rand", type: "line", source: "route", filter: ["==", ["get", "art"], "rad"], layout: rund,
+    paint: { "line-color": f.casing, "line-width": 9 } });
+  m.addLayer({ id: "rad", type: "line", source: "route", filter: ["==", ["get", "art"], "rad"], layout: rund,
+    paint: { "line-color": f.accent, "line-width": 5 } });
 }
 
 function linie(coords: LngLat[], art: string): GeoJSON.Feature {
