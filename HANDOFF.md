@@ -37,6 +37,11 @@ React 19 + TypeScript + Vite 6, PWA (vite-plugin-pwa), MapLibre GL 5, Tests mit 
 - `scripts/daten_laden.py` lädt echte Praxen + Wege für Tests (`scripts/beispieldaten/`).
 - Screenshots in Headless-Chromium nur mit `--use-angle=swiftshader --enable-unsafe-swiftshader`.
 
+## 4b. Lotse v2 (14.11.2026, in `main`)
+Konzept nach Dimas Vorgabe neu: **Karten-App wie Apple/Google Maps mit KI**. EIN Blatt (`src/blatt/`), Suche oben fest, Inhalt wechselt (Start, Ergebnisse, Ort, Route, Termin, Daten & Quellen). Eine Eingabe für alles (`src/core/absicht.ts`: Notfall → Termin → Fach → Kategorie → Anliegen → Ortssuche). Jeder Kartenpunkt antippbar (`services/orte.ts`). Route mit deutschen Schritten. Termine + Losgehzeit + Erinnerung (`lib/termine.ts`). KI auf dem Gerät (`ki/assistent.ts`, WebLLM 0.2.86 + Qwen2.5-0.5B, nur Übersetzer, festes Schema). Beschwerden gehen nie als Text an Dienste. 40 Tests. Alte Panels entfernt (in Git-Historie).
+**Abgabeordner für die Lehrkraft:** `~/Documents/Lotse-Abgabe` (Dokumente als docx/html/md, Screenshots, Kooperationsvereinbarung, Quellcode-Zip). Bei Änderungen neu erzeugen.
+Dima: „Push wie nötig, nicht fragen“; App bleibt unveröffentlicht, bis er es sagt. Kein Juristen-Overkill – Schulprojekt.
+
 ## 5. Umstellung auf Live-Daten – lauffähig in `arbeit/echte-daten` (NOCH NICHT in `main`)
 Stand 13.11. abends: Commit 1e798c5 (Live-Daten) + Prüfrunde danach (Claude lokal, im echten Browser mit echten Diensten geprüft, Start Bahnhofstraße 1 Wetzlar: Orthopädie 5, Zahnmedizin 23, HNO 1 Praxis; Weg, Plan B, Öffnungszeiten, Kontakt aus OSM).
 Prüfrunde hat behoben:
