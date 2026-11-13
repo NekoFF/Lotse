@@ -1,34 +1,36 @@
-/* Schlichte Symbole im Stil der SF Symbols, als Inline-SVG (keine externe Bibliothek). */
-type P = { className?: string };
-const s = { fill: "none", stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round" } as const;
+import type { SVGProps } from "react";
 
-export const ChevronLeft = ({ className }: P) => (
-  <svg className={className} viewBox="0 0 13 21" aria-hidden="true"><path d="M11 2 2.5 10.5 11 19" {...s} strokeWidth={2.6} /></svg>
-);
-export const ChevronRight = ({ className = "chev" }: P) => (
-  <svg className={className} viewBox="0 0 8 13" aria-hidden="true"><path d="m1.5 1.5 5 5-5 5" {...s} strokeWidth={2} /></svg>
-);
-export const Bubble = ({ className }: P) => (
-  <svg className={className} viewBox="0 0 28 28" aria-hidden="true"><path d="M5 6.5C5 5.1 6.1 4 7.5 4h13C21.9 4 23 5.1 23 6.5v9c0 1.4-1.1 2.5-2.5 2.5H12l-5 4.5V18h0c-1.1 0-2-.9-2-2V6.5Z" {...s} strokeWidth={2} /><path d="M10 9.5h8M10 13h5" {...s} strokeWidth={2} /></svg>
-);
-export const Calendar = ({ className }: P) => (
-  <svg className={className} viewBox="0 0 28 28" aria-hidden="true"><rect x="4.5" y="6" width="19" height="17" rx="3.5" {...s} strokeWidth={2} /><path d="M4.5 11.5h19M9.5 3.5v4M18.5 3.5v4" {...s} strokeWidth={2} /><circle cx="10" cy="16" r="1.3" fill="currentColor" /><circle cx="14" cy="16" r="1.3" fill="currentColor" /><circle cx="18" cy="16" r="1.3" fill="currentColor" /></svg>
-);
-export const Info = ({ className }: P) => (
-  <svg className={className} viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="10" {...s} strokeWidth={2} /><path d="M14 12.5v6.5" {...s} strokeWidth={2.2} /><circle cx="14" cy="8.8" r="1.4" fill="currentColor" /></svg>
-);
-export const Close = ({ className }: P) => (
-  <svg className={className} viewBox="0 0 12 12" aria-hidden="true"><path d="m2 2 8 8M10 2l-8 8" {...s} strokeWidth={2.2} /></svg>
-);
-export const Shield = ({ className }: P) => (
-  <svg className={className} viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 2.5 3.5v4c0 3.3 2.3 5.8 5.5 7 3.2-1.2 5.5-3.7 5.5-7v-4L8 1.5Z" {...s} strokeWidth={1.4} /></svg>
-);
-export const Route = ({ className }: P) => (
-  <svg className={className} viewBox="0 0 20 20" aria-hidden="true"><circle cx="5" cy="15" r="2.2" {...s} strokeWidth={1.8} /><circle cx="15" cy="5" r="2.2" {...s} strokeWidth={1.8} /><path d="M7 15h4.5a3 3 0 0 0 0-6h-3a3 3 0 0 1 0-6H13" {...s} strokeWidth={1.8} /></svg>
-);
-export const Lock = ({ className }: P) => (
-  <svg className={className} viewBox="0 0 20 20" aria-hidden="true"><rect x="4.5" y="9" width="11" height="8" rx="2" {...s} strokeWidth={1.8} /><path d="M7 9V6.5a3 3 0 0 1 6 0V9" {...s} strokeWidth={1.8} /></svg>
-);
-export const Phone = ({ className }: P) => (
-  <svg className={className} viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 3h3l1.5 4-2 1.2a9 9 0 0 0 4.8 4.8L13 11l4 1.5v3a1.5 1.5 0 0 1-1.6 1.5C8.6 16.6 3.4 11.4 3 4.6A1.5 1.5 0 0 1 4.5 3Z" {...s} strokeWidth={1.7} /></svg>
-);
+type P = SVGProps<SVGSVGElement> & { size?: number };
+
+function Ic({ size = 20, children, ...rest }: P) {
+  return (
+    <svg className="ic" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" {...rest}>
+      {children}
+    </svg>
+  );
+}
+
+export const Suche = (p: P) => <Ic {...p}><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></Ic>;
+export const Kalender = (p: P) => <Ic {...p}><rect x="4" y="5" width="16" height="15" rx="3" /><path d="M4 10h16M9 3v4M15 3v4" /></Ic>;
+export const Info = (p: P) => <Ic {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5M12 8h.01" /></Ic>;
+export const Standort = (p: P) => <Ic {...p}><path d="M20 4L4 11l7 2 2 7z" /></Ic>;
+export const Zurueck = (p: P) => <Ic {...p}><path d="M15 5l-7 7 7 7" /></Ic>;
+export const Weiter = (p: P) => <Ic {...p}><path d="M9 5l7 7-7 7" /></Ic>;
+export const Schliessen = (p: P) => <Ic {...p}><path d="M6 6l12 12M18 6L6 18" /></Ic>;
+export const Pfeil = (p: P) => <Ic {...p}><path d="M5 12h14M13 6l6 6-6 6" /></Ic>;
+export const Telefon = (p: P) => <Ic {...p}><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z" /></Ic>;
+export const Extern = (p: P) => <Ic {...p}><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></Ic>;
+export const Teilen = (p: P) => <Ic {...p}><path d="M12 15V4M8 8l4-4 4 4M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6" /></Ic>;
+export const Gehen = (p: P) => <Ic {...p}><circle cx="13" cy="4.5" r="1.8" /><path d="M9 21l2.5-6.5L14 17v4M8 12l2.5-4 3.5 1 2 3M11.5 14.5L10.5 9" /></Ic>;
+export const Bus = (p: P) => <Ic {...p}><rect x="6" y="4" width="12" height="13" rx="3" /><path d="M6 11h12M9 20l-1.5 1.5M15 20l1.5 1.5" /></Ic>;
+export const Plus = (p: P) => <Ic {...p}><path d="M12 5v14M5 12h14" /></Ic>;
+export const Minus = (p: P) => <Ic {...p}><path d="M5 12h14" /></Ic>;
+
+/** Lotse-Zeichen: Pfeil eines Lotsen im abgerundeten Quadrat */
+export function Marke({ size = 26 }: { size?: number }) {
+  return (
+    <span className="marke" style={{ width: size, height: size, borderRadius: size * 0.3 }} aria-hidden="true">
+      <svg width={size * 0.58} height={size * 0.58} viewBox="0 0 20 20"><path d="M10 2 L16 17 L10 13.5 L4 17 Z" /></svg>
+    </span>
+  );
+}

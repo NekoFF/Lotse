@@ -1,4 +1,5 @@
 import type { FachId } from "./fachrichtungen";
+import { ORTE, START, type LngLat, type Weg } from "./geo";
 
 /**
  * BEISPIELDATEN für den Prototyp.
@@ -18,6 +19,14 @@ export interface Praxis {
   verbindung: string;
   sprechzeiten: string;
   barrierefrei: boolean;
+  /** Lage der Praxis (echte Straße, erfundene Praxis) */
+  lngLat: LngLat;
+  /** "fuss" = zu Fuß, "oepnv" = Bus/Bahn */
+  modus: "fuss" | "oepnv";
+  /** Weg auf der Karte (Beispiel, vorab berechnet) */
+  weg: Weg;
+  /** Ausweichweg für Plan B, falls vorhanden */
+  planb: Weg | null;
 }
 
 type Roh = [name: string, strasse: string, ort: string, fahrzeit: number, entfernung: number, verbindung: string, barrierefrei: boolean];
@@ -74,17 +83,33 @@ const ROH: Record<FachId, Roh[]> = {
 
 const SPRECHZEITEN = "Mo–Fr 8–12 Uhr, Mo, Di, Do 15–18 Uhr";
 
+/** Luftlinie in km zwischen zwei Punkten */
+export function luftlinie(a: LngLat, b: LngLat): number {
+  const r = Math.PI / 180, dLat = (b[1] - a[1]) * r, dLng = (b[0] - a[0]) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * r) * Math.cos(b[1] * r) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
+}
+
 export function praxenFuer(fach: FachId): Praxis[] {
-  return (ROH[fach] ?? []).map(([name, strasse, ort, fahrzeit, entfernung, verbindung, barrierefrei], i) => ({
-    id: `${fach}-${i}`,
-    fach,
-    name,
-    strasse,
-    ort,
-    fahrzeit,
-    entfernung,
-    verbindung,
-    sprechzeiten: SPRECHZEITEN,
-    barrierefrei,
-  }));
+  return (ROH[fach] ?? []).map(([name, strasse, ort, fahrzeit, , verbindung, barrierefrei], i) => {
+    const o = ORTE[`${strasse}|${ort}`];
+    // Zu Fuß: Gehzeit aus dem echten Fußweg. Bus/Bahn: Beispielwert bis zur echten Fahrplanabfrage.
+    const zeit = o.mode === "fuss" ? Math.max(1, Math.round(o.haupt.s / 60)) : fahrzeit;
+    return {
+      id: `${fach}-${i}`,
+      fach,
+      name,
+      strasse,
+      ort,
+      fahrzeit: zeit,
+      entfernung: Math.round(luftlinie(START.lngLat, o.lngLat) * 10) / 10,
+      verbindung,
+      sprechzeiten: SPRECHZEITEN,
+      barrierefrei,
+      lngLat: o.lngLat,
+      modus: o.mode,
+      weg: o.haupt,
+      planb: o.planb,
+    };
+  }).sort((a, b) => a.fahrzeit - b.fahrzeit);
 }

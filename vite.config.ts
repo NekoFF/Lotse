@@ -19,7 +19,6 @@ export default defineConfig({
         start_url: "/Lotse/app/",
         scope: "/Lotse/app/",
         display: "standalone",
-        orientation: "portrait",
         background_color: "#f2f2f7",
         theme_color: "#2447e6",
         icons: [

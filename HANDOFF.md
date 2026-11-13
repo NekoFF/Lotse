@@ -1,4 +1,4 @@
-# Übergabe: Stand 06.11.2026 (für die nächste KI / den nächsten Bearbeiter)
+# Übergabe: Stand 13.11.2026 (für die nächste KI / den nächsten Bearbeiter)
 
 ## Projekt
 Lotse, Schulprojekt (4 Personen, Abgabe Ende Feb 2027). Dima = Projektleitung + gesamte Technik.
@@ -14,7 +14,15 @@ Alles kostenlos, kein eigener Server. App = PWA.
 - `.github/workflows/deploy.yml`: Push auf main → Tests → Build → GitHub Pages.
   `APP_VEROEFFENTLICHEN: "false"` NICHT umstellen, bis Dima es ausdrücklich sagt.
 
-## Neues App-Design (noch nicht von Dima abgenommen, noch NICHT umgesetzt)
+## Stand 13.11.: App nach den Entwürfen neu gebaut (noch nicht veröffentlicht)
+- `src/App.tsx` (Zustand, Ansichten start/praxen/weg, Notfall), `src/map/LotseMap.tsx` (MapLibre GL 5 + OpenFreeMap positron/dark, HTML-Pins, Route + Plan B),
+  `src/screens/StartPanel|PraxenPanel|WegPanel|Notfall.tsx`, `src/lib/plan.ts` (Losgehzeit, Schritte, .ics, Begleitlink im Hash, gemerkte Termine in localStorage).
+- `src/data/geo.ts` GENERIERT: echte Koordinaten (Nominatim) und Wege (routing.openstreetmap.de), Start = Wetzlar Bahnhof. Praxen bleiben erfunden.
+- Telefon: Blatt unten; Computer ab 900 px: Seitenleiste links. Hell/Dunkel nach Systemeinstellung.
+- Wichtig: `.karte.maplibregl-map` braucht position:absolute (MapLibre-CSS setzt relative). Vor fitBounds `setPadding(0)`, sonst addiert sich der Rand.
+- Screenshots in Headless-Chromium nur mit `--use-angle=swiftshader --enable-unsafe-swiftshader`.
+
+## App-Design (Konzept)
 Konzept: Die Karte füllt immer den ganzen Bildschirm, alles andere schwebt als Glas darüber.
 5 Bildschirme, je Telefon (390×844) und Computer (1280×800), je hell und dunkel:
 1. Start: Karte + unten Glasfeld „Was ist los?“ + Beispiel-Chips; oben Chip „nächster Termin + Losgehzeit“.

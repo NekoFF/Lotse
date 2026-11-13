@@ -1,55 +1,65 @@
+import { useEffect, useRef } from "react";
 import type { Notfallstufe } from "../data/notfall";
+import { Telefon } from "../ui/icons";
 
-const TEXT: Record<Notfallstufe, { titel: string; text: string }> = {
+const TEXT: Record<Notfallstufe, { kopf: string; titel: string; text: string }> = {
   notruf: {
-    titel: "Hier hilft keine Terminsuche.",
-    text: "Deine Beschreibung klingt nach einer akuten Notlage. Ruf jetzt den Notruf an. Lotse sucht in diesem Fall keine Praxis und plant keinen Weg.",
+    kopf: "Notfall",
+    titel: "Ruf jetzt die 112.",
+    text: "Deine Beschreibung klingt nach einer akuten Notlage. Warte nicht auf einen Praxistermin.",
   },
   seelsorge: {
+    kopf: "Du bist nicht allein",
     titel: "Du musst das nicht allein tragen.",
     text: "Die Telefonseelsorge ist rund um die Uhr erreichbar, kostenlos und anonym. Wenn du in akuter Gefahr bist, ruf die 112 an.",
   },
   bereitschaft: {
+    kopf: "Dringend",
     titel: "Das klingt dringend.",
     text: "Wenn es plötzlich begonnen hat oder sehr stark ist, hilft der ärztliche Bereitschaftsdienst, auch nachts und am Wochenende.",
   },
 };
 
-export function Notfall({ stufe, onWeiter, onZurueck }: {
+const NUMMERN: Record<Notfallstufe, { tel: string; nr: string; was: string }[]> = {
+  notruf: [{ tel: "112", nr: "112", was: "anrufen" }, { tel: "116117", nr: "116 117", was: "Ärztlicher Bereitschaftsdienst" }],
+  seelsorge: [{ tel: "08001110111", nr: "0800 111 0 111", was: "Telefonseelsorge" }, { tel: "116123", nr: "116 123", was: "Telefonseelsorge" }, { tel: "112", nr: "112", was: "Notruf bei akuter Gefahr" }],
+  bereitschaft: [{ tel: "116117", nr: "116 117", was: "anrufen" }, { tel: "112", nr: "112", was: "Notruf, wenn es lebensbedrohlich ist" }],
+};
+
+export function Notfall({ stufe, text, onWeiter, onZurueck }: {
   stufe: Notfallstufe;
+  text: string;
   onWeiter: () => void;
   onZurueck: () => void;
 }) {
   const t = TEXT[stufe];
-  return (
-    <section className={`alarm ${stufe} fade-in`} role="alertdialog" aria-labelledby="alarm-t">
-      <h1 id="alarm-t">{t.titel}</h1>
-      <p>{t.text}</p>
+  const [erste, ...weitere] = NUMMERN[stufe];
+  const knopf = useRef<HTMLAnchorElement>(null);
 
-      <div className="calls">
-        {stufe === "notruf" && (
-          <>
-            <a className="call primary" href="tel:112"><b>112</b><span>Notruf anrufen</span></a>
-            <a className="call" href="tel:116117"><b>116117</b><span>Ärztlicher Bereitschaftsdienst</span></a>
-          </>
-        )}
-        {stufe === "seelsorge" && (
-          <>
-            <a className="call primary" href="tel:116123"><b>116 123</b><span>Telefonseelsorge</span></a>
-            <a className="call" href="tel:08001110111"><b>0800 111 0 111</b><span>Telefonseelsorge</span></a>
-            <a className="call" href="tel:112"><b>112</b><span>Notruf bei akuter Gefahr</span></a>
-          </>
-        )}
-        {stufe === "bereitschaft" && (
-          <>
-            <a className="call primary" href="tel:116117"><b>116117</b><span>Ärztlicher Bereitschaftsdienst</span></a>
-            <a className="call" href="tel:112"><b>112</b><span>Notruf, wenn es lebensbedrohlich ist</span></a>
-          </>
-        )}
-        {stufe === "bereitschaft" && (
-          <button className="btn-ghost" onClick={onWeiter}>Nicht akut — trotzdem Praxis suchen</button>
-        )}
-        <button className="btn-ghost" onClick={onZurueck}>Zurück zur Eingabe</button>
+  useEffect(() => {
+    knopf.current?.focus();
+    const f = (e: KeyboardEvent) => { if (e.key === "Escape") onZurueck(); };
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+  }, [onZurueck]);
+
+  return (
+    <section className={`alarm ${stufe}`} role="alertdialog" aria-labelledby="alarm-t" aria-describedby="alarm-p">
+      <div className="alarm-oben">
+        <span className="zitat">„{text}“</span>
+        <button type="button" className="alarm-zurueck" onClick={onZurueck}><span className="kbd hell nur-pc">esc</span> Zurück zur Eingabe</button>
+      </div>
+      <div className="alarm-mitte">
+        <span className="alarm-kopf">{t.kopf.toUpperCase()}</span>
+        <h1 id="alarm-t">{t.titel}</h1>
+        <p id="alarm-p">{t.text}</p>
+        <a ref={knopf} className="alarm-knopf" href={`tel:${erste.tel}`}><Telefon size={22} /> {erste.nr} {erste.was}</a>
+        <div className="alarm-weitere">
+          {weitere.map((n) => <a key={n.tel} href={`tel:${n.tel}`}><b>{n.nr}</b><span>{n.was}</span></a>)}
+        </div>
+        {stufe === "bereitschaft"
+          ? <button type="button" className="alarm-leise" onClick={onWeiter}>Nicht akut? Trotzdem Praxis suchen</button>
+          : <p className="alarm-fein">Lotse sucht in diesem Fall keine Praxis.</p>}
       </div>
     </section>
   );
