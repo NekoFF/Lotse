@@ -159,10 +159,14 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     if (m) m.setStyle(STIL[theme]);
   }, [theme]);
 
-  // Route
+  // Route: immer zeichnen – isStyleLoaded() ist auch beim bloßen Nachladen von Kacheln false,
+  // dann ging die Linie beim Wechsel des Verkehrsmittels verloren
   useEffect(() => {
     const m = map.current;
-    if (m && m.isStyleLoaded()) zeichneRoute(m, route, theme);
+    if (!m) return;
+    const zeichne = () => zeichneRoute(m, routeRef.current, themeRef.current);
+    if (m.getSource("route") || m.isStyleLoaded()) zeichne();
+    else m.once("idle", zeichne);
   }, [route, theme]);
 
   // Pins als HTML-Marker (bleiben beim Stilwechsel erhalten)
@@ -193,19 +197,28 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     }
   }, [pins]);
 
-  // Ausschnitt einpassen
+  // Ausschnitt einpassen – nur wenn sich der Inhalt ändert (nicht bei jeder Größenänderung des Blatts: das ruckelte)
+  const abstandRef = useRef(abstand);
+  abstandRef.current = abstand;
   useEffect(() => {
     const m = map.current;
     if (!m || rahmen.length === 0) return;
-    const b = new maplibregl.LngLatBounds(rahmen[0], rahmen[0]);
-    rahmen.forEach((p) => b.extend(p));
-    const pad = { top: abstand.top + 70, right: abstand.right + 50, bottom: abstand.bottom + 40, left: abstand.left + 50 };
+    const a = abstandRef.current;
+    const pad = { top: a.top + 70, right: a.right + 50, bottom: a.bottom + 40, left: a.left + 50 };
     // Gespeicherten Rand zurücksetzen, sonst addiert MapLibre alten und neuen Rand
     m.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
-    if (rahmen.length === 1) m.easeTo({ center: rahmen[0], zoom: Math.max(m.getZoom(), 16), padding: pad, duration: 700 });
-    else m.fitBounds(b, { padding: pad, maxZoom: 16, duration: 800 });
+    if (rahmen.length === 1) {
+      // Ein Punkt (z. B. angetippt): nur verschieben, wenn er verdeckt wäre – wie Apple/Google Maps
+      const p = m.project(rahmen[0]), c = m.getCanvas();
+      const sichtbar = p.x > pad.left && p.x < c.clientWidth - pad.right && p.y > pad.top && p.y < c.clientHeight - pad.bottom;
+      if (!sichtbar) m.easeTo({ center: rahmen[0], zoom: Math.max(m.getZoom(), 15), padding: pad, duration: 450 });
+      return;
+    }
+    const b = new maplibregl.LngLatBounds(rahmen[0], rahmen[0]);
+    rahmen.forEach((p) => b.extend(p));
+    m.fitBounds(b, { padding: pad, maxZoom: 16, duration: 600 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rahmenSchluessel, abstand.bottom, abstand.left]);
+  }, [rahmenSchluessel]);
 
   return <div ref={box} className="karte" aria-label="Karte" />;
 }
