@@ -15,7 +15,9 @@
 .suche { display: flex; align-items: center; gap: 10px; }
 .brand-mini { display: inline-flex; }
 .suchfeld { flex: 1; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 10px 0 13px; border-radius: 13px; background: var(--fuell); color: var(--ink3); }
-.suchfeld:focus-within { background: var(--flaeche); box-shadow: 0 0 0 2px var(--akzent); }
+/* Fokus ohne Ring: Größe bleibt exakt gleich, nur der Ton wird heller */
+.suchfeld:focus-within, .suchfeld.aktiv { background: var(--flaeche); box-shadow: inset 0 0 0 1px var(--linie); }
+.suchfeld input:focus, .suchfeld input:focus-visible { outline: none; }
 .suchfeld input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 17px; color: var(--ink); }
 .suchfeld input::placeholder { color: var(--ink3); }
 
