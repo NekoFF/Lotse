@@ -10,6 +10,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      // Die KI-Bibliothek (~6 MB) wird nur geladen, wenn jemand die KI einschaltet – nicht für alle vorab speichern
+      workbox: { globIgnores: ["**/ki-*.js"] },
       includeAssets: ["apple-touch-icon.png", "favicon.png"],
       manifest: {
         name: "Lotse",
@@ -29,6 +31,11 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: { manualChunks: (id) => (id.includes("@mlc-ai") ? "ki" : undefined) },
+    },
+  },
   test: {
     include: ["src/**/*.test.ts"],
   },
