@@ -68,7 +68,13 @@ export function StandortPanel({ fachName, geteilt, onStart, onZurueck }: Props) 
         </div>
       )}
 
-      <p className="fein">Der Startpunkt bleibt nur in diesem Fenster und wird nirgends gespeichert. Adresssuche: Nominatim, © OpenStreetMap-Mitwirkende.</p>
+      <p className="fein">
+        Was Lotse sendet: deine Adresseingabe bzw. deinen Standort (auf etwa 10 m gerundet) an Nominatim (OpenStreetMap Foundation);
+        Startpunkt und die Orte der gefundenen Praxen an den Routingserver des FOSSGIS e. V. – daran lässt sich ablesen,
+        welche Art Praxis du suchst; die Kartenbilder für den gezeigten Ausschnitt von OpenFreeMap. Diese Dienste sehen deine
+        IP-Adresse und können Anfragen protokollieren. Öffnest du eine Praxis oder einen geteilten Link, geht genau diese Praxis an FOSSGIS bzw. Nominatim.
+        Deine Beschreibung verlässt das Gerät nie. Den Startpunkt merkt sich Lotse nur in diesem Fenster; Termine, die du in den Kalender legst, merkt sich Lotse nur in diesem Browser.
+      </p>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import maplibregl, { type Map as MlMap, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { DIENSTE } from "../config";
 import type { LngLat } from "../data/praxen";
+import { ortArt, symboleEinsetzen } from "./kartenSymbole";
 
 const STIL = DIENSTE.kartenStil;
 /** Ohne Startpunkt: Überblick Deutschland */
@@ -39,9 +40,17 @@ interface Props {
   abstand: Abstand;
   onPin?: (id: string) => void;
   onPinHover?: (id: string | null) => void;
+  /** 3D-Gebäude und geneigte Ansicht */
+  dreiD?: boolean;
+  /** Tipp auf einen Kartenpunkt (Haltestelle, Praxis, Laden …) aus OpenStreetMap */
+  onOrt?: (name: string, art: string) => void;
 }
 
-export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, abstand, onPin, onPinHover }: Props) {
+/** Ebenen mit antippbaren Kartenpunkten (aus public/karte/stil-*.json) */
+const ORT_EBENEN = ["lotse-poi-oepnv", "lotse-poi-medizin", "lotse-poi-orte"];
+const LIZENZ_URL = `${import.meta.env.BASE_URL}karte/LIZENZ.txt`;
+
+export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, abstand, onPin, onPinHover, dreiD = false, onOrt }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
   const markers = useRef(new Map<string, { m: Marker; el: HTMLButtonElement }>());
@@ -50,8 +59,10 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
   const meRef = useRef<Marker | null>(null);
   const startRef = useRef(start);
   startRef.current = start;
-  const cb = useRef({ onPin, onPinHover });
-  cb.current = { onPin, onPinHover };
+  const cb = useRef({ onPin, onPinHover, onOrt });
+  cb.current = { onPin, onPinHover, onOrt };
+  const dreiDRef = useRef(dreiD);
+  dreiDRef.current = dreiD;
   routeRef.current = route;
   themeRef.current = theme;
 
@@ -63,15 +74,42 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
       style: STIL[themeRef.current],
       center: start ?? UEBERBLICK.center,
       zoom: start ? 14.2 : UEBERBLICK.zoom,
-      attributionControl: { compact: true },
+      // Bedingung von FOSSGIS: Link „Kartenfehler melden“; OSM-Quellenangabe kommt aus dem Kartenstil
+      // Kartenstil nach BSD/CC BY: Herkunft und Lizenzen verlinkt
+      attributionControl: {
+        compact: true,
+        customAttribution: [
+          '<a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener noreferrer">Kartenfehler melden</a>',
+          `<a href="${LIZENZ_URL}" target="_blank" rel="noopener noreferrer">Kartenstil: OpenMapTiles, CARTO (CC BY)</a>`,
+        ],
+      },
       dragRotate: false,
       pitchWithRotate: false,
       touchPitch: false,
     });
     m.touchZoomRotate.disableRotation();
-    m.on("style.load", () => zeichneRoute(m, routeRef.current, themeRef.current));
-    // Quellenangabe eingeklappt starten (bleibt per Klick auf „i“ erreichbar)
-    m.once("load", () => box.current?.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show"));
+    m.on("style.load", () => {
+      symboleEinsetzen(m, themeRef.current);
+      zeige3D(m, dreiDRef.current);
+      zeichneRoute(m, routeRef.current, themeRef.current);
+    });
+    // falls ein Symbol vor dem Einsetzen gebraucht wird
+    m.on("styleimagemissing", (e) => { if (e.id.startsWith("lotse-")) symboleEinsetzen(m, themeRef.current); });
+    // Kartenpunkte antippen: Name und Art aus OpenStreetMap
+    m.on("click", (e) => {
+      const ebenen = ORT_EBENEN.filter((id) => m.getLayer(id));
+      if (!ebenen.length) return;
+      const f = m.queryRenderedFeatures([[e.point.x - 10, e.point.y - 10], [e.point.x + 10, e.point.y + 10]], { layers: ebenen })[0];
+      const p = f?.properties;
+      const name = p ? String(p["name:de"] ?? p.name_de ?? p.name ?? "") : "";
+      if (name) cb.current.onOrt?.(name, ortArt(String(p!.class ?? ""), String(p!.subclass ?? "")));
+    });
+    for (const id of ORT_EBENEN) {
+      m.on("mouseenter", id, () => { m.getCanvas().style.cursor = "pointer"; });
+      m.on("mouseleave", id, () => { m.getCanvas().style.cursor = ""; });
+    }
+    // OSMF-Richtlinie: beim Start sichtbar, darf nach 5 s einklappen (MapLibre klappt beim Verschieben ohnehin ein; „i“ öffnet wieder)
+    m.once("load", () => window.setTimeout(() => box.current?.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show"), 5000));
 
     const me = document.createElement("div");
     me.className = "me";
@@ -85,6 +123,8 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     window.addEventListener("lotse:zoom", zoom);
 
     map.current = m;
+    // nur im Entwicklungsmodus: Karte in der Konsole prüfen (fehlt im fertigen Build)
+    if (import.meta.env.DEV) (window as unknown as { __lotseKarte?: MlMap }).__lotseKarte = m;
     return () => {
       window.removeEventListener("lotse:start", zumStart);
       window.removeEventListener("lotse:zoom", zoom);
@@ -99,6 +139,14 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     if (!m || !me) return;
     if (start) me.setLngLat(start).addTo(m); else me.remove();
   }, [start]);
+
+  // 3D an/aus
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    if (m.isStyleLoaded()) zeige3D(m, dreiD);
+    m.easeTo({ pitch: dreiD ? 50 : 0, zoom: dreiD ? Math.max(m.getZoom(), 15.8) : m.getZoom(), duration: 700 });
+  }, [dreiD]);
 
   // Hell/Dunkel
   useEffect(() => {
@@ -155,6 +203,10 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
   }, [rahmenSchluessel, abstand.bottom, abstand.left]);
 
   return <div ref={box} className="karte" aria-label="Karte" />;
+}
+
+function zeige3D(m: MlMap, an: boolean) {
+  if (m.getLayer("lotse-3d")) m.setLayoutProperty("lotse-3d", "visibility", an ? "visible" : "none");
 }
 
 function zeichneRoute(m: MlMap, r: Route | null, theme: "light" | "dark") {

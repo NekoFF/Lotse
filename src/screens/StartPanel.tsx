@@ -120,7 +120,7 @@ export function StartPanel({ text, setText, live, termine, start, onSuchen, onHa
         </div>
       )}
 
-      {start && (
+      {start && !notfall && (
         <button type="button" className="start-zeile" onClick={onStartAendern}>
           <span>Startpunkt: <b>{start.name}</b></span><span className="link">ändern</span>
         </button>
@@ -128,7 +128,7 @@ export function StartPanel({ text, setText, live, termine, start, onSuchen, onHa
 
       <div className="fuss">
         <span><Telefon size={15} className="rot-t" /> Akuter Notfall: <a href="tel:112" className="rot-t stark">112</a> · Bereitschaftsdienst <a href="tel:116117">116 117</a></span>
-        {desktop && <span className="fein">Eingaben bleiben auf diesem Gerät.</span>}
+        {desktop && <span className="fein">Deine Beschreibung bleibt auf diesem Gerät.</span>}
       </div>
     </div>
   );
