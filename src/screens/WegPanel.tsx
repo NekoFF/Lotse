@@ -1,6 +1,8 @@
 import { useEffect } from "react";
+import { DIENSTE } from "../config";
 import { adresse, osmLink, zeitenLesbar, type Modus, type PraxisMitZeit, type Start } from "../data/praxen";
 import { alsEingabe, km, MODUS_NAME, PUFFER, tag, uhr, type Plan } from "../lib/plan";
+import { telLink } from "../services/dienste";
 import { Extern, Kalender, Teilen, Telefon, Zurueck } from "../ui/icons";
 import { ModusWahl } from "./PraxenPanel";
 
@@ -81,7 +83,11 @@ export function WegPanel({ p, start, termin, setTermin, modus, setModus, plan, w
             <span className="klein-g">{tag(termin)} · {plan.min} Min {MODUS_NAME[plan.modus]} · {km(plan.km)} km</span>
           </>
         ) : (
-          <span className="klein-g">Für diesen Weg {MODUS_NAME[modus]} gibt es gerade keine Berechnung. Wähle ein anderes Verkehrsmittel.</span>
+          p.ausstehend?.includes(modus)
+            ? <span className="klein-g">Weg {MODUS_NAME[modus]} wird berechnet …</span>
+            : p.nichtAbrufbar?.includes(modus)
+            ? <span className="klein-g">Der Wegdienst hat die Zeit {MODUS_NAME[modus]} gerade nicht geliefert. <button type="button" className="link" onClick={onNeu}>Erneut versuchen</button></span>
+            : <span className="klein-g">Für diesen Weg {MODUS_NAME[modus]} gibt es gerade keine Berechnung. Wähle ein anderes Verkehrsmittel.</span>
         )}
       </div>
 
@@ -90,13 +96,13 @@ export function WegPanel({ p, start, termin, setTermin, modus, setModus, plan, w
       </button>
 
       {wegStatus === "laden" && <p className="fein">Weg wird auf der Karte eingezeichnet …</p>}
-      {wegStatus === "fehler" && <p className="hinweis-fehler">{fehler} Die Fahrzeit oben stimmt trotzdem. <button type="button" className="link" onClick={onNeu}>Erneut versuchen</button></p>}
+      {wegStatus === "fehler" && <p className="hinweis-fehler">Weglinie für die Karte: {fehler} <button type="button" className="link" onClick={onNeu}>Erneut versuchen</button></p>}
 
       <div className="planb">
         <span className="pb">PLAN B</span>
         {plan?.planb
           ? <span>{plan.planb.min} Min {MODUS_NAME[plan.planb.modus]}, dann los um <b className="mono">{uhr(plan.planb.los)}</b>. Auf der Karte gestrichelt.</span>
-          : <span>Kein zweiter Weg berechnet.</span>}
+          : p.ausstehend?.length ? <span>Zweiter Weg wird berechnet …</span> : <span>Kein zweiter Weg berechnet.</span>}
       </div>
 
       <div className="infos">
@@ -114,20 +120,24 @@ export function WegPanel({ p, start, termin, setTermin, modus, setModus, plan, w
         {p.website ? (
           <a className="btn primaer" href={p.website} target="_blank" rel="noopener noreferrer">Website der Praxis <Extern size={17} /></a>
         ) : p.telefon ? (
-          <a className="btn primaer" href={`tel:${p.telefon.replace(/[^\d+]/g, "")}`}><Telefon size={17} /> {p.telefon}</a>
+          <a className="btn primaer" href={telLink(p.telefon)}><Telefon size={17} /> {p.telefon}</a>
         ) : (
           <div className="leer-box klein">
             <span>Weder Website noch Telefon sind in OpenStreetMap eingetragen.</span>
             <a href={osmLink(p)} target="_blank" rel="noopener noreferrer">Eintrag auf OpenStreetMap ansehen</a>
           </div>
         )}
-        {p.website && p.telefon && <a className="btn zweit" href={`tel:${p.telefon.replace(/[^\d+]/g, "")}`}><Telefon size={17} /> {p.telefon}</a>}
+        {p.website && p.telefon && <a className="btn zweit" href={telLink(p.telefon)}><Telefon size={17} /> {p.telefon}</a>}
         <div className="zwei">
           <button type="button" className="btn zweit" onClick={onKalender} disabled={!plan}><Kalender size={17} /> In Kalender</button>
           <button type="button" className="btn zweit" onClick={onTeilen}><Teilen size={17} /> Begleitung</button>
         </div>
       </div>
-      <p className="fein">Praxisdaten: © OpenStreetMap-Mitwirkende, <a href={osmLink(p)} target="_blank" rel="noopener noreferrer">Eintrag</a>. Wege: OSRM (FOSSGIS). Termine bucht man direkt bei der Praxis.</p>
+      <p className="fein">
+        Praxisdaten: <a href={DIENSTE.osmLizenz} target="_blank" rel="noopener noreferrer">© OpenStreetMap-Mitwirkende</a>, <a href={osmLink(p)} target="_blank" rel="noopener noreferrer">Eintrag</a>.
+        Wege: <a href={DIENSTE.routingInfo} target="_blank" rel="noopener noreferrer">OSRM (FOSSGIS)</a>, ohne aktuelle Verkehrslage. <a href={DIENSTE.osmFehlerMelden} target="_blank" rel="noopener noreferrer">Fehler melden</a>.
+        Öffnungszeiten und Kontakt laut OpenStreetMap, vor dem Besuch prüfen. Termine bucht man direkt bei der Praxis.
+      </p>
     </div>
   );
 }

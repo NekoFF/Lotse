@@ -31,7 +31,18 @@ export interface Praxis {
 /** Praxis mit Luftlinie und echten Fahrzeiten ab dem Startpunkt */
 export interface PraxisMitZeit extends Praxis {
   entfernung: number;
+  /** null = der Routendienst kennt keinen Weg (oder der Dienst war nicht erreichbar, siehe nichtAbrufbar) */
   zeiten: Record<Modus, Zeit | null>;
+  /** Verkehrsmittel, deren Fahrzeit der Dienst gerade nicht geliefert hat (Ausfall, zu viele Anfragen) – nicht „kein Weg“ */
+  nichtAbrufbar?: Modus[];
+  /** Verkehrsmittel, deren Fahrzeit noch geladen wird */
+  ausstehend?: Modus[];
+}
+
+/** Nur die Praxisfelder (ohne Fahrzeiten), so wie sie auf dem Gerät gemerkt werden */
+export function nurPraxis(p: Praxis): Praxis {
+  const { id, fach, name, strasse, ort, lngLat, website, telefon, oeffnungszeiten, rollstuhl } = p;
+  return { id, fach, name, strasse, ort, lngLat, website, telefon, oeffnungszeiten, rollstuhl };
 }
 
 export interface Start { lngLat: LngLat; name: string; quelle: "gps" | "adresse" }

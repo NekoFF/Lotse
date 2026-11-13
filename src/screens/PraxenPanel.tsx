@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { DIENSTE } from "../config";
+import { DIENSTE, NOMINATIM_MAX } from "../config";
 import type { Zuordnung } from "../core/match";
 import { adresse, minuten, type Modus, type PraxisMitZeit, type Start } from "../data/praxen";
 import { km, MODUS_KURZ, MODUS_NAME } from "../lib/plan";
@@ -17,6 +17,9 @@ interface Props {
   zeitFehler: string | null;
   liste: PraxisMitZeit[];
   gesamt: number;
+  /** so viele Praxen dieser Fachrichtung hat die Suche gefunden (vor Kürzung auf die nächsten) */
+  gefunden: number;
+  gekappt: boolean;
   modus: Modus;
   setModus: (m: Modus) => void;
   sort: Sortierung;
@@ -49,8 +52,10 @@ export function ModusWahl({ modus, setModus }: { modus: Modus; setModus: (m: Mod
 const rollstuhlText = (r: string | null) => (r === "yes" ? "rollstuhlgerecht" : r === "limited" ? "teilweise rollstuhlgerecht" : null);
 
 export function PraxenPanel(props: Props) {
-  const { z, text, start, status, fehler, zeitFehler, liste, gesamt, modus, setModus, sort, setSort, radius, kannErweitern, onErweitern, onNeu, hover, setHover, onWahl, onZurueck, onStartAendern, onHausarzt, onAlternative, desktop } = props;
+  const { z, text, start, status, fehler, zeitFehler, liste, gesamt, gefunden, gekappt, modus, setModus, sort, setSort, radius, kannErweitern, onErweitern, onNeu, hover, setHover, onWahl, onZurueck, onStartAendern, onHausarzt, onAlternative, desktop } = props;
   const listeRef = useRef<HTMLDivElement>(null);
+  const modusFehlt = !!liste[0]?.nichtAbrufbar?.includes(modus);
+  const modusLaedt = !!liste[0]?.ausstehend?.includes(modus);
 
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
@@ -105,7 +110,9 @@ export function PraxenPanel(props: Props) {
       {status === "leer" && (
         <div className="leer-box">
           <b>Keine {z.fach.name}-Praxis im Umkreis von {radius} km gefunden.</b>
-          <span>Lotse zeigt nur Praxen, die in OpenStreetMap mit Fachrichtung eingetragen sind. Fehlt eine, steht sie dort noch nicht.</span>
+          {gekappt
+            ? <span>Der Suchdienst liefert höchstens {NOMINATIM_MAX} Arzt- bzw. Zahnarztpraxen aller Fachrichtungen pro Suche, und diese Grenze war erreicht. Es kann hier also trotzdem {z.fach.name}-Praxen geben.</span>
+            : <span>Lotse zeigt nur Praxen, die in OpenStreetMap mit Fachrichtung eingetragen sind. Fehlt eine, ist sie dort (noch) nicht so eingetragen.</span>}
           {kannErweitern && <button type="button" className="btn zweit" onClick={onErweitern}>Umkreis erweitern</button>}
           <a className="btn zweit" href={DIENSTE.arztsuche} target="_blank" rel="noopener noreferrer">Offizielle Arztsuche 116117 <Extern size={16} /></a>
           {z.fach.id !== "allgemein" && <button type="button" className="link" onClick={onHausarzt}>Hausarztpraxen zeigen</button>}
@@ -120,7 +127,8 @@ export function PraxenPanel(props: Props) {
               <button key={k} type="button" role="tab" aria-selected={sort === k} className={sort === k ? "an" : ""} onClick={() => setSort(k)}>{l}</button>
             ))}
           </div>
-          <span className="unterzeile">{liste.length} von {gesamt} Praxen · {sort === "naehe" ? "nach Luftlinie" : `nach Fahrzeit ${MODUS_NAME[modus]}`} · Umkreis {radius} km</span>
+          {!zeitFehler && modusFehlt && <p className="hinweis-fehler" role="status">Fahrzeiten {MODUS_NAME[modus]} gerade nicht abrufbar. Sortiert nach Luftlinie. <button type="button" className="link" onClick={onNeu}>Erneut versuchen</button></p>}
+          <span className="unterzeile">{liste.length} von {gesamt} Praxen{gefunden > gesamt ? ` (die ${gesamt} nächsten von ${gefunden})` : ""} · {modusLaedt ? `Fahrzeiten ${MODUS_NAME[modus]} werden berechnet …` : sort === "naehe" || modusFehlt || zeitFehler ? "nach Luftlinie" : `nach Fahrzeit ${MODUS_NAME[modus]}`} · Umkreis {radius} km</span>
 
           <div className="liste" ref={listeRef}>
             {liste.map((p, i) => {
@@ -131,16 +139,20 @@ export function PraxenPanel(props: Props) {
                   onMouseEnter={() => setHover(p.id)} onFocus={() => setHover(p.id)} onClick={() => onWahl(p.id)}>
                   <span className="kp-l">
                     <b>{p.name}</b>
-                    <span className="adr">{adresse(p) || "Adresse nicht eingetragen"} · {km(p.entfernung)} km</span>
+                    <span className="adr">{adresse(p) || "Adresse nicht eingetragen"} · {km(p.entfernung)} km Luftlinie</span>
                     {r && <span className="marke-r">{r}</span>}
                   </span>
                   <span className="kp-r">
-                    {min === null ? <><b className="mono">–</b><span>kein Weg</span></> : <><b className="mono">{min}</b><span>Min</span></>}
+                    {min !== null ? <><b className="mono">{min}</b><span>Min</span></>
+                      : p.ausstehend?.includes(modus) ? <><b className="mono">…</b><span>lädt</span></>
+                      : p.nichtAbrufbar?.includes(modus) ? <><b className="mono">–</b><span>nicht verfügbar</span></>
+                      : <><b className="mono">–</b><span>keine Route</span></>}
                   </span>
                 </button>
               );
             })}
             {liste.length === 0 && <p className="fein">Keine Praxis in dieser Auswahl ist in OpenStreetMap als rollstuhlgerecht eingetragen.</p>}
+            {gekappt && <p className="fein">Der Suchdienst liefert höchstens {NOMINATIM_MAX} Treffer pro Suche. Es kann weitere, auch näher gelegene Praxen geben.</p>}
             {kannErweitern && <button type="button" className="link mehr" onClick={onErweitern}>Größeren Umkreis durchsuchen</button>}
           </div>
         </>
@@ -153,7 +165,11 @@ export function PraxenPanel(props: Props) {
           <span><span className="kbd">esc</span> zurück</span>
         </div>
       )}
-      <p className="fein">Praxen: © OpenStreetMap-Mitwirkende · Wege: OSRM (FOSSGIS) · Bus und Bahn werden noch angebunden.</p>
+      <p className="fein">
+        Praxen: <a href={DIENSTE.osmLizenz} target="_blank" rel="noopener noreferrer">© OpenStreetMap-Mitwirkende</a> ·
+        Wege: <a href={DIENSTE.routingInfo} target="_blank" rel="noopener noreferrer">OSRM (FOSSGIS)</a>, ohne aktuelle Verkehrslage ·
+        {" "}<a href={DIENSTE.osmFehlerMelden} target="_blank" rel="noopener noreferrer">Fehler melden</a> · Bus und Bahn werden noch angebunden.
+      </p>
     </div>
   );
 }

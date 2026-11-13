@@ -78,7 +78,7 @@ export function kalenderDatei(p: Praxis, termin: Date, plan: Plan): string {
     `DESCRIPTION:${esc(text)}`,
     "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${esc(`Jetzt losgehen zu ${p.name}`)}`,
     `TRIGGER;VALUE=DATE-TIME:${icsZeit(plan.los)}`, "END:VALARM",
-    "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${esc(`Morgen: ${p.name}, los um ${uhr(plan.los)}`)}`,
+    "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${esc(`Termin ${tag(termin)}: ${p.name}, los um ${uhr(plan.los)}`)}`,
     "TRIGGER:-PT15H", "END:VALARM",
     "END:VEVENT", "END:VCALENDAR", "",
   ].join("\r\n");

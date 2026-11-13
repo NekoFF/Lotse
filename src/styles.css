@@ -290,6 +290,8 @@ h1, h2, p { margin: 0; }
 .app.pc .kartenknoepfe { bottom: 36px; right: 20px; }
 .kartenknoepfe > button { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; color: var(--akzent); }
 .app.tel .kartenknoepfe > button { border-radius: 22px; }
+.kartenknoepfe > .drei-d { font-size: 13px; font-weight: 700; letter-spacing: 0.02em; color: var(--ink); }
+.kartenknoepfe > .drei-d.an { background: var(--akzent); color: var(--auf-akzent); }
 .zoom { border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; }
 .zoom button { width: 44px; height: 44px; display: grid; place-items: center; }
 .zoom span { height: 1px; background: var(--linie); }
