@@ -1,53 +1,58 @@
-# Übergabe: Stand 13.11.2026 (für die nächste KI / den nächsten Bearbeiter)
+# Übergabe – Stand 13.11.2026 (für den nächsten Chat / die nächste KI)
 
-## Projekt
-Lotse, Schulprojekt (4 Personen, Abgabe Ende Feb 2027). Dima = Projektleitung + gesamte Technik.
-Anliegen in Alltagssprache → Sicherheitsfilter (112 / 116117 / 116 123) → Fachrichtung (keine Diagnose!)
-→ Praxen nach echter Fahrzeit → Link zur Buchung der Praxis → Kalender mit Losgehzeit → Weg mit Plan B → Begleitung per Link.
-Alles kostenlos, kein eigener Server. App = PWA.
+Lies diese Datei komplett, bevor du etwas änderst. Antworte Dima auf Russisch.
 
-## Wo was liegt
-- `site/index.html`: Projektseite mit Umfrage, live auf https://nekoff.github.io/Lotse/
-- `src/`: App (React 19 + TS + Vite, PWA). Fachlogik in `src/core/` (safety.ts, match.ts, normalize.ts, 12 Tests grün), Daten in `src/data/`.
-  Die jetzige App-Oberfläche (`src/screens`, `src/styles.css`) gilt als VERWORFEN (zu sehr iOS-Einstellungen-Look). Fachlogik bleibt.
-- `design/entwuerfe/`: NEUE App-Entwürfe (Konzept „Karte als Leinwand“), siehe unten. Original-Canvas: https://claude.ai/artifact/XE9zKzk1AxbQmdugW6HQvx
-- `.github/workflows/deploy.yml`: Push auf main → Tests → Build → GitHub Pages.
-  `APP_VEROEFFENTLICHEN: "false"` NICHT umstellen, bis Dima es ausdrücklich sagt.
+## 1. Projekt in drei Sätzen
+Lotse ist ein Schulprojekt (Werner-von-Siemens-Schule Wetzlar, 4 Personen, Abgabe/Präsentation Ende Feb 2027, zählt als Prüfung, wird gefilmt, Ziel Note 1).
+Ablauf: Anliegen in Alltagssprache → Sicherheitsfilter (112 / 116 117 / Telefonseelsorge) → Fachrichtung (NIE eine Diagnose, sonst Medizinprodukt nach MDR) → echte Praxen in der Nähe nach echter Fahrzeit → Kontakt/Buchung bei der Praxis → Kalender mit Losgehzeit → Weg mit Plan B → Begleitung per Link.
+Team: Dima (Projektleitung, macht ALLE Technik mit KI), Michal (Datenquellen/ÖPNV-Recherche, Bericht 21.11.), Abdi (Nutzersicht, Umfrage), Fateme (Dokumentation).
 
-## Stand 13.11.: App nach den Entwürfen neu gebaut (noch nicht veröffentlicht)
-- `src/App.tsx` (Zustand, Ansichten start/praxen/weg, Notfall), `src/map/LotseMap.tsx` (MapLibre GL 5 + OpenFreeMap positron/dark, HTML-Pins, Route + Plan B),
-  `src/screens/StartPanel|PraxenPanel|WegPanel|Notfall.tsx`, `src/lib/plan.ts` (Losgehzeit, Schritte, .ics, Begleitlink im Hash, gemerkte Termine in localStorage).
-- `src/data/geo.ts` GENERIERT: echte Koordinaten (Nominatim) und Wege (routing.openstreetmap.de), Start = Wetzlar Bahnhof. Praxen bleiben erfunden.
-- Telefon: Blatt unten; Computer ab 900 px: Seitenleiste links. Hell/Dunkel nach Systemeinstellung.
-- Wichtig: `.karte.maplibregl-map` braucht position:absolute (MapLibre-CSS setzt relative). Vor fitBounds `setPadding(0)`, sonst addiert sich der Rand.
+## 2. Regeln von Dima (verbindlich)
+- **Nichts erfinden.** Jede Zahl hat eine Quelle. Fehlt sie oder fällt ein Dienst aus, zeigt die App das ehrlich an („nicht verfügbar“, „unbekannt“) statt zu schätzen. Keine Fake-Praxen, keine geschätzten Buszeiten.
+- **Live statt lokal.** Daten werden zur Laufzeit online geladen, für jeden Ort der Welt. Lokale Daten nur für Tests.
+- **Jetzt kostenlos, später kaufbar.** Alle Dienste stehen in `src/config.ts`; für den Echtbetrieb werden dort nur Adressen getauscht (Tabelle in der Datei).
+- **App NICHT veröffentlichen**, bis Dima es sagt (`APP_VEROEFFENTLICHEN: "false"` in `.github/workflows/deploy.yml`). Dima will lokal testen (`npm run dev`).
+- Design: Apple-Niveau mit eigener Note. Ehrliches, direktes Feedback. Nichts in seinem Namen versenden. Russisch nicht korrigieren.
+- Supabase-`service_role`-Schlüssel nie veröffentlichen.
+
+## 3. Wo was liegt
+| Was | Wo |
+| --- | --- |
+| Code, Projektseite, Entwürfe, diese Datei | GitHub `NekoFF/Lotse` (`main` = lauffähig; `arbeit/echte-daten` = laufende Umstellung auf Live-Daten) |
+| Projektseite mit Umfrage (live) | https://nekoff.github.io/Lotse/ (`site/index.html`) |
+| App-Entwürfe | `design/entwuerfe/` und Claude-Canvas „Lotse App Design“ |
+| Private Vorschau der App | Claude-Artefakt „Lotse App“ (Karte evtl. blockiert, Downloads gehen dort nicht) |
+| Konzept, Leistungsnachweis | Claude Docs „Lotse – Projektkonzept“, „Lotse – Leistungsnachweis“ (Name Michal dort noch falsch „Mischal“ – korrigieren) |
+| Umfrage-Daten | Supabase-Projekt `lotse-umfrage` (Tabellen `feedback`, `warteliste`; anon darf nur einfügen) |
+| Kooperationsvertrag (Entwurf) | `dokumente/Kooperationsvereinbarung_Entwurf.md` |
+
+## 4. Technik
+React 19 + TypeScript + Vite 6, PWA (vite-plugin-pwa), MapLibre GL 5, Tests mit vitest, Deploy über GitHub Actions → Pages.
+- `src/core/` Fachlogik: `safety.ts` (Sicherheitsfilter, läuft IMMER zuerst), `match.ts` (Zuordnung), `normalize.ts`, `osmFach.ts` (Fachrichtung aus OSM-Tags/Namen, sonst null) – unverändert lassen, nur erweitern, Tests in `core.test.ts`.
+- `src/data/` Begriffstabelle, Notfallbegriffe, Fachrichtungen, Typen (`praxen.ts`).
+- `src/config.ts` alle Dienste. `src/services/dienste.ts`: Standort (GPS/Adresse über Nominatim), Praxissuche (Nominatim `[doctors]`/`[dentist]` im Umkreis, extratags), Fahrzeiten (OSRM `table` je Modus fuss/rad/auto, eine Anfrage), Wegeslinie (OSRM `route`), Fehlertexte für die Oberfläche.
+- `src/lib/plan.ts` Losgehzeit (Termin − 10 Min Puffer − echte Fahrzeit), Plan B = zweitschnellster echter Modus, `.ics`, Begleitlink im URL-Hash (kein Server), gemerkte Termine in localStorage.
+- `src/map/LotseMap.tsx` Vollbildkarte, HTML-Pins, Route + Plan B gestrichelt. Achtung: `.karte.maplibregl-map` braucht `position:absolute`; vor `fitBounds` `setPadding(0)`.
+- `src/screens/` StartPanel, PraxenPanel, WegPanel, Notfall. Telefon = Glasblatt unten, Computer ≥ 900 px = Seitenleiste links, hell/dunkel nach System, Tasten `/ ↑ ↓ ↵ esc`.
+- `scripts/daten_laden.py` lädt echte Praxen + Wege für Tests (`scripts/beispieldaten/`).
 - Screenshots in Headless-Chromium nur mit `--use-angle=swiftshader --enable-unsafe-swiftshader`.
 
-## App-Design (Konzept)
-Konzept: Die Karte füllt immer den ganzen Bildschirm, alles andere schwebt als Glas darüber.
-5 Bildschirme, je Telefon (390×844) und Computer (1280×800), je hell und dunkel:
-1. Start: Karte + unten Glasfeld „Was ist los?“ + Beispiel-Chips; oben Chip „nächster Termin + Losgehzeit“.
-2. Eingabe: beim Tippen erscheint live „Passt zu: Orthopädie“ + erkannte Wörter (mono) + Button „5 Praxen in der Nähe“ + Ausweg Hausarztpraxis.
-3. Praxen: Pins mit Minuten auf der Karte; Liste (Telefon: Sheet unten, PC: Seitenleiste links wie Apple Maps auf dem Mac),
-   sortiert nach Fahrzeit, je Karte Mini-Route „zu Fuß 3 › Tram 12 › 2“. PC: Hover auf Karte hebt Pin hervor; ↑↓ ↵ esc.
-4. Weg: große Losgehzeit „08:23“ (mono, Akzentfarbe), Schritte mit Uhrzeiten, Plan B gestrichelt, Buttons
-   „Bei der Praxis buchen“ (extern), „In Kalender“ (.ics), „Begleitung“ (Link, Daten im URL-Hash).
-5. Notfall: roter Schleier über der Karte, „Ruf jetzt die 112.“, ein großer Button, keine Praxissuche.
-Tokens: Akzent hell #2447e6 / dunkel #6f8cff; Systemschrift (-apple-system, Inter), Zeiten in Monospace;
-Glas = backdrop-filter blur(28px) saturate(1.7). Logo: blaues abgerundetes Quadrat mit Pfeil („Lotse“).
-Die `.dc.html`-Dateien sind HTML mit `{{platzhaltern}}` (Design-Canvas-Format), als Vorlage lesbar. `Map.dc.html` = Platzhalter-Stadtkarte.
-Echte Karte geplant: MapLibre GL + kostenlose OSM-Kacheln (z. B. OpenFreeMap) – noch nicht geprüft.
+## 5. Stand der Umstellung auf Live-Daten (Zweig `arbeit/echte-daten`)
+Fertig: `config.ts`, `services/dienste.ts`, `core/osmFach.ts`, neue Typen in `data/praxen.ts`, `lib/plan.ts`, Karte mit wechselndem/fehlendem Startpunkt.
+Offen (in dieser Reihenfolge):
+1. `App.tsx` umbauen: Zustand `start` (GPS/Adresse, nur im Speicher/sessionStorage), Suche `laden | fehler | leer | fertig` mit Radius 4 → 10 → 25 km, Verkehrsmittel-Umschalter „Zu Fuß / Rad / Auto / Bus & Bahn (folgt, deaktiviert)“, Weglinie beim Öffnen einer Praxis nachladen.
+2. Neues Panel „Wo startest du?“ (Standort verwenden / Adresse suchen).
+3. `PraxenPanel`: Ladeskelett, Fehler mit „Erneut versuchen“, leer → Umkreis erweitern + Link zur offiziellen Arztsuche 116117 + Hausarztpraxis; Rollstuhl nur laut OSM („rollstuhlgerecht“, „teilweise“), sonst nichts behaupten.
+4. `WegPanel`: echte Zeiten je Modus; Kontakt: Website (extern) → sonst Telefon → sonst „keine Kontaktdaten in OpenStreetMap“ + Link zum OSM-Eintrag; Öffnungszeiten aus OSM oder „nicht eingetragen“; Quellenzeile „© OpenStreetMap-Mitwirkende“.
+5. Geteilter Link: Praxis per Nominatim `lookup` laden, Begleitperson wählt eigenen Startpunkt (eigener Weg je Person).
+6. Tests für `osmFach.ts` und Dienste (mit `scripts/beispieldaten`), Build, Screenshots Telefon/PC hell/dunkel, dann nach `main` mergen (App bleibt unveröffentlicht).
 
-## Nächste Schritte
-1. Dima nimmt Entwürfe ab / gibt Änderungen.
-2. Danach App-Oberfläche in `src/` nach den Entwürfen neu bauen, Fachlogik `src/core` unverändert weiterverwenden, Telefon UND PC.
-3. Begriffstabelle auf 200+ erweitern; Routing nach Michals Bericht (21.11.): db.transport.rest / RMV.
-4. Leistungsnachweis pflegen (KI-Nutzung offen angeben).
+## 6. Danach
+- **Partnerschaft mit Team „Find ur Room“** (3D-Gebäudemodell + Weg zum Raum): Lotse führt bis zum Eingang, Find ur Room vom Eingang zum Raum. Bevorzugt: deren Web-Ansicht in Lotse einbetten („Im Gebäude weiter“, Parameter Gebäude + Raum), sonst Link. Wir bauen nicht an ihrer App. Dima schickt deren Projektdatei → Vertrag finalisieren (Namen, Link, Gebäude) und schön gestalten (Claude Docs oder Word).
+- ÖPNV nach Michals Bericht (RMV / db.transport.rest, im Browser testen).
+- Umfrage auswerten (06.11.: 15 Antworten, ehrlich gezählt 9 Personen, Ø 3,9; 4 Testantworten von Dimas Gerät `gleacc8tm` herausrechnen) und in den Leistungsnachweis.
+- Projektseite: Szenario als „Beispielablauf“ kennzeichnen.
+- Ausblick für die Präsentation: eigener Server/gekaufte Dienste nach Investition; ein Sprachmodell nur als Übersetzer in Begriffe, nie als Entscheider.
 
-## Projektseite: letzter Stand
-- Handy: neue Story-Ansicht (ganzer Bildschirm steht, oben App-Animation, unten Text des Schritts mit Fortschrittsbalken),
-  stabile Höhe gegen Ruckeln (svh + Messung nur bei Breitenänderung), Listen-Hervorhebung blendet weich statt zu flackern.
-- Umfrage: Supabase-Projekt `lotse-umfrage` (Tabellen feedback, warteliste; nur Einfügen für anon). service_role-Schlüssel NIE veröffentlichen.
-  In `feedback` liegen 2 Testbewertungen (5 Sterne, 30.10., ein Gerät) – vor der Klassenumfrage löschen, wenn Dima zustimmt.
-
-## Regeln von Dima
-Ehrliches direktes Feedback; nichts in seinem Namen versenden; bestehende Architektur respektieren; Antworten auf Russisch.
+## 7. Commits
+Commits laufen als `Claude <noreply@anthropic.com>` mit Co-Author-Zeile (Vorgabe der Umgebung). Ältere Commits stehen auf Dimas Namen.
