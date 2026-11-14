@@ -279,28 +279,14 @@ export default function App() {
     </form>
   );
 
-  return (
-    <div className={`app ${desktop ? "pc" : "tel"}${notfall ? " im-notfall" : ""}`}>
-      <LotseMap
-        theme={dunkel ? "dark" : "light"}
-        start={start?.lngLat ?? null}
-        pins={pins}
-        route={routeLinie}
-        rahmen={rahmen}
-        rahmenSchluessel={rahmenKey}
-        abstand={abstand}
-        dreiD={dreiD}
-        onPin={(id) => { const o = listenOrte.find((x) => x.id === id); if (o) oeffneOrt(o, false); }}
-        onKarteTipp={karteTipp}
-        onMitte={setMitte}
-      />
-
-      <Blatt desktop={desktop} stufe={stufe} setStufe={setStufe} kopf={kopf} onGroesse={setGroesse}>
+  // Inhalt (Vorschläge, Ergebnisse, Ort, Route …): Telefon im Blatt, Computer in der Ablage unter der Suchleiste
+  const inhalt = (
+    <>
         {vorgemerkt && ansicht.art !== "termin" && (
           <div className="vorgemerkt">Termin {vorgemerkt.toLocaleString("de-DE", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}: Ort wählen <button type="button" className="link" onClick={() => setVorgemerkt(null)}>verwerfen</button></div>
         )}
         <div className="wechsel" key={`${verlauf.length}-${ansicht.art}`}>
-          {fokus && !desktop && (
+          {fokus && (
             <VorschlagInhalt text={text} zuletzt={zuletzt} termine={termine} ki={ki} onWahl={waehle}
               onInfo={() => { fertig(); gehe({ art: "info" }); }}
               onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} />
@@ -327,15 +313,34 @@ export default function App() {
           )}
           {!fokus && ansicht.art === "info" && <InfoInhalt onZurueck={zurueck} />}
         </div>
+    </>
+  );
+
+  return (
+    <div className={`app ${desktop ? "pc" : "tel"}${notfall ? " im-notfall" : ""}`}>
+      <LotseMap
+        theme={dunkel ? "dark" : "light"}
+        start={start?.lngLat ?? null}
+        pins={pins}
+        route={routeLinie}
+        rahmen={rahmen}
+        rahmenSchluessel={rahmenKey}
+        abstand={abstand}
+        dreiD={dreiD}
+        onPin={(id) => { const o = listenOrte.find((x) => x.id === id); if (o) oeffneOrt(o, false); }}
+        onKarteTipp={karteTipp}
+        onMitte={setMitte}
+      />
+
+      <Blatt desktop={desktop} stufe={stufe} setStufe={setStufe} kopf={kopf} onGroesse={setGroesse}>
+        {!desktop && inhalt}
       </Blatt>
 
-      {/* Computer: „Ablage“ unter der Suchleiste – Symbole im Ruhezustand, beim Tippen wächst sie zur Vorschlagsliste */}
-      {desktop && (fokus || ansicht.art === "start") && groesse.h > 0 && (
-        <Ablage offen={fokus} top={16 + groesse.h - 14}
+      {/* Computer: ALLES erscheint in der Ablage unter der Suchleiste – Ruhe: Symbole; sonst Vorschläge, Ergebnisse, Ort, Route */}
+      {desktop && groesse.h > 0 && (
+        <Ablage offen={fokus || ansicht.art !== "start"} top={16 + groesse.h - 14}
           symbole={<SchnellLeiste onKategorie={(k) => { setText(k.name); kategorieSuche(k); }} />}
-          vorschlaege={<VorschlagInhalt text={text} zuletzt={zuletzt} termine={termine} ki={ki} onWahl={waehle}
-            onInfo={() => { fertig(); gehe({ art: "info" }); }}
-            onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} />} />
+          inhalt={inhalt} />
       )}
       <div className="kartenknoepfe">
         <button type="button" className="glas" aria-label="Mein Standort" title="Mein Standort" onClick={() => (start?.quelle === "gps" ? window.dispatchEvent(new CustomEvent("lotse:start")) : gps())}><Standort size={18} /></button>

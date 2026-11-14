@@ -149,7 +149,7 @@
 .ablage .zeilen { background: var(--flaeche); }
 .ablage .vorschlaege { gap: 10px; }
 .ablage-rahmen { position: relative; transition: height 0.34s cubic-bezier(0.2, 0.9, 0.25, 1); overflow: hidden; }
-.ablage.offen .ablage-rahmen { overflow-y: auto; max-height: inherit; }
+.ablage.offen .ablage-rahmen { overflow-y: auto; }
 .ablage-platz { height: 46px; }
 
 /* Symbole: gleiten gestaffelt nach oben unter die Suchleiste und verschwinden */
@@ -168,10 +168,18 @@
 .ablage-symbole .schnell-knopf:nth-child(7) { transition-delay: 0.12s; }
 
 /* Vorschläge blenden nach den Symbolen ein */
-.ablage-vorschlaege { padding: 2px 10px 10px; animation: vorschlag-rein 0.3s ease 0.08s both; }
+.ablage-vorschlaege { padding: 12px 12px 14px; animation: vorschlag-rein 0.3s ease 0.08s both; }
 @keyframes vorschlag-rein { from { opacity: 0; transform: translateY(-6px); } }
 @media (prefers-reduced-motion: reduce) { .ablage, .ablage-rahmen, .ablage-symbole .schnell-knopf { transition: none; } }
 
 .suche { min-width: 0; }
 .suchfeld input { text-overflow: ellipsis; }
 .suchfeld .feld-x { width: 26px; height: 26px; flex-shrink: 0; }
+
+/* Einheitliche Abstände in der Ablage */
+.ablage .inhalt { gap: 14px; }
+.ablage .abschnitt { margin: 2px 2px 8px; }
+.ablage .fuss-zeile { padding: 2px 2px 0; }
+.ablage .ansicht-titel h2 { font-size: 20px; }
+.ablage .aktionen-reihe .aktion { flex-basis: 56px; min-height: 54px; }
+.ablage .vorgemerkt { margin: 0 0 12px; }

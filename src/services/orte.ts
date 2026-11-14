@@ -63,7 +63,9 @@ const box = (m: LngLat, km: number) => {
 export async function suchen(text: string, nahe: LngLat | null): Promise<Ort[]> {
   const q = new URLSearchParams({ ...basis, q: text, limit: "8", ...(nahe ? { viewbox: box(nahe, 30) } : {}) });
   const r = await holeJson<NomTreffer[]>(`${DIENSTE.nominatim}/search?${q}`, "Suche");
-  return r.map(alsOrt);
+  const orte = r.map(alsOrt);
+  // Nächste zuerst (wie bei Karten-Apps); ferne Treffer rutschen ans Ende
+  return nahe ? orte.sort((a, b) => luftlinie(nahe, a.lngLat) - luftlinie(nahe, b.lngLat)) : orte;
 }
 
 /** Orte einer Art in der Nähe (z. B. „[cafe]“), nach Luftlinie sortiert */
