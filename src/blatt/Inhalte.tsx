@@ -9,7 +9,7 @@ import type { WegStand } from "../lib/wege";
 import { PUFFER_MIN, type Termin } from "../lib/termine";
 import { telLink } from "../services/dienste";
 import type { Ort } from "../services/orte";
-import { Auto, Bus, Essen, Extern, Gehen, Kalender, Merken, Pille, Rad, Route as RouteIc, Schliessen, Standort, Stern, Stetho, Suche, Tasse, Teilen, Telefon, Uhr, Wagen, Zurueck } from "../ui/icons";
+import { Auto, Brief, Bus, Essen, Extern, Gehen, Kalender, Merken, Pille, Rad, Route as RouteIc, Schliessen, Standort, Stern, Stetho, Suche, Tasse, Teilen, Telefon, Uhr, Wagen, Zurueck } from "../ui/icons";
 
 export const uhr = (d: Date) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 export const tagKurz = (d: Date) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" });
@@ -97,6 +97,7 @@ export function OrtInhalt({ o, laden, weg, modus, gespeichert, onSpeichern, onRo
         <button type="button" className={`aktion${gespeichert ? " an" : ""}`} onClick={onSpeichern} aria-pressed={gespeichert}><Merken size={20} /><span>{gespeichert ? "Gespeichert" : "Speichern"}</span></button>
         {o.telefon && <a className="aktion" href={telLink(o.telefon)}><Telefon size={20} /><span>Anrufen</span></a>}
         {o.website && <a className="aktion" href={o.website} target="_blank" rel="noopener noreferrer"><Extern size={20} /><span>Website</span></a>}
+        {o.email && <a className="aktion" href={`mailto:${o.email}`}><Brief size={20} /><span>E-Mail</span></a>}
         <button type="button" className="aktion" onClick={onTermin}><Kalender size={20} /><span>Termin</span></button>
         <button type="button" className="aktion" onClick={onTeilen}><Teilen size={20} /><span>Teilen</span></button>
       </div>
@@ -104,6 +105,8 @@ export function OrtInhalt({ o, laden, weg, modus, gespeichert, onSpeichern, onRo
         {o.adresse && <div className="info"><span>Adresse</span><b>{o.adresse}</b></div>}
         {zeiten.length > 0 && <div className="info"><span>Geöffnet</span><b>{zeiten.map((z) => <span key={z}>{z}</span>)}</b></div>}
         {o.telefon && <div className="info"><span>Telefon</span><b><a href={telLink(o.telefon)}>{o.telefon}</a></b></div>}
+        {o.email && <div className="info"><span>E-Mail</span><b><a href={`mailto:${o.email}`}>{o.email}</a></b></div>}
+        {o.website && <div className="info"><span>Website</span><b><a href={o.website} target="_blank" rel="noopener noreferrer">{new URL(o.website).hostname.replace(/^www\./, "")}</a></b></div>}
         {o.rollstuhl && ROLLSTUHL[o.rollstuhl] && <div className="info"><span>Zugang</span><b>{ROLLSTUHL[o.rollstuhl]}</b></div>}
         {laden && <div className="info"><span /><b className="leise">Lädt Details …</b></div>}
       </div>

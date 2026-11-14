@@ -11,7 +11,7 @@ import { leseGespeichert, umschalten } from "./lib/gespeichert";
 import { LotseMap, type Abstand, type Pin } from "./map/LotseMap";
 import { Notfall } from "./screens/Notfall";
 import { fehlerText, gpsStandort } from "./services/dienste";
-import { inDerNaehe, ortAnStelle, ortLaden, suchen as ortSuchen, type Ort } from "./services/orte";
+import { inDerNaehe, ortAnStelle, ortLaden, ortMitNamen, suchen as ortSuchen, type Ort } from "./services/orte";
 import { Ablage } from "./blatt/Ablage";
 import { ChatVerlauf, type Nachricht } from "./blatt/Chat";
 import { Blatt, type Stufe } from "./blatt/Blatt";
@@ -241,14 +241,19 @@ export default function App() {
     if (!mitDetails) return;
     const ersetze = (f: (a: Extract<Ansicht, { art: "ort" }>) => Ansicht) =>
       setVerlauf((v) => v.map((a) => (a.art === "ort" && a.ort.id === o.id ? f(a) : a)));
-    ortAnStelle(o.lngLat).then((d) => {
+    const punkt = o.name === "Punkt auf der Karte";
+    // Kartensymbol: erst über den Namen suchen (volle OSM-Daten: Website, Telefon, Öffnungszeiten)
+    const zuerst = punkt ? Promise.resolve(null) : ortMitNamen(o.name, o.lngLat, o.art).catch(() => null);
+    zuerst.then((genau) => {
+      if (genau) { ersetze(() => ({ art: "ort", ort: { ...genau, art: genau.art !== "Ort" ? genau.art : o.art }, laden: false })); return; }
+      return ortAnStelle(o.lngLat).then((d) => {
       // Details nur übernehmen, wenn sie zu genau diesem Ort passen
-      const punkt = o.name === "Punkt auf der Karte";
       const neu: Ort = punkt
         ? { ...d, id: o.id, lngLat: o.lngLat, name: d.adresse ? `In der Nähe: ${d.name}` : d.name, website: null, telefon: null, oeffnungszeiten: null, rollstuhl: null, fach: null }
         : d.name === o.name ? { ...d, lngLat: o.lngLat, art: o.art } : { ...o, adresse: d.adresse };
       ersetze(() => ({ art: "ort", ort: neu, laden: false }));
-    }, () => ersetze((a) => ({ ...a, laden: false })));
+      });
+    }).catch(() => ersetze((a) => ({ ...a, laden: false })));
   }, [gehe, ansicht.art]);
 
   const karteTipp = useCallback((l: LngLat, poi: { name: string; art: string } | null) => {

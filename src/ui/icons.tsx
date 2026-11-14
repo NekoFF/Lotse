@@ -51,3 +51,4 @@ export const Stetho = (p: P) => <Ic {...p}><path d="M6 3v5a4 4 0 0 0 8 0V3M10 12
 export const Wagen = (p: P) => <Ic {...p}><path d="M3 4h2.5l2 11h10l2-8H7" /><circle cx="9" cy="19" r="1.5" /><circle cx="17" cy="19" r="1.5" /></Ic>;
 export const Stern = (p: P) => <Ic {...p}><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></Ic>;
 export const Merken = (p: P) => <Ic {...p}><path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1z" /></Ic>;
+export const Brief = (p: P) => <Ic {...p}><rect x="3.5" y="5.5" width="17" height="13" rx="2.5" /><path d="M4.5 7.5l7.5 5.5 7.5-5.5" /></Ic>;

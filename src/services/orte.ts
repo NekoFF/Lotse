@@ -14,6 +14,8 @@ export interface Ort {
   adresse: string | null;
   website: string | null;
   telefon: string | null;
+  /** fehlt bei älteren gespeicherten Orten */
+  email?: string | null;
   oeffnungszeiten: string | null;
   rollstuhl: string | null;
   fach: FachId | null;
@@ -50,6 +52,7 @@ export function alsOrt(t: NomTreffer): Ort {
     adresse: adresseVon(t),
     website: sichereWebsite(tags.website ?? tags["contact:website"]),
     telefon: ersteNummer(tags.phone ?? tags["contact:phone"]),
+    email: sichereEmail(tags.email ?? tags["contact:email"]),
     oeffnungszeiten: tags.opening_hours ?? null,
     rollstuhl: tags.wheelchair ?? null,
     fach: t.type === "doctors" || t.type === "dentist" ? fachAusOsm(tags, name, t.type) : null,
@@ -62,6 +65,12 @@ const box = (m: LngLat, km: number) => {
   const dLat = km / 111, dLng = km / (111 * Math.cos((m[1] * Math.PI) / 180));
   return [m[0] - dLng, m[1] + dLat, m[0] + dLng, m[1] - dLat].map((n) => n.toFixed(5)).join(",");
 };
+
+/** E-Mail aus OSM nur übernehmen, wenn sie wie eine Adresse aussieht (erste von mehreren) */
+export function sichereEmail(roh: string | undefined | null): string | null {
+  const e = roh?.split(";")[0].trim();
+  return e && /^[^@\s<>"']+@[^@\s<>"']+\.[a-z]{2,}$/i.test(e) ? e : null;
+}
 
 /** Freie Suche (Adresse, Ort, Name). Bevorzugt Treffer in der Nähe. Nur auf Knopfdruck (Nominatim-Regel). */
 export async function suchen(text: string, nahe: LngLat | null): Promise<Ort[]> {
@@ -89,8 +98,27 @@ export async function inDerNaehe(phrasen: string[], mitte: LngLat, km = 3): Prom
 export async function ortAnStelle(l: LngLat): Promise<Ort> {
   const q = new URLSearchParams({ ...basis, lat: l[1].toFixed(5), lon: l[0].toFixed(5), zoom: "18" });
   const t = await holeJson<NomTreffer & { error?: string }>(`${DIENSTE.nominatim}/reverse?${q}`, "Ortsabfrage");
-  if (t.error || !t.lat) return { id: `punkt-${l.join(",")}`, name: "Punkt auf der Karte", art: "Ort", lngLat: l, adresse: null, website: null, telefon: null, oeffnungszeiten: null, rollstuhl: null, fach: null };
+  if (t.error || !t.lat) return { id: `punkt-${l.join(",")}`, name: "Punkt auf der Karte", art: "Ort", lngLat: l, adresse: null, website: null, telefon: null, email: null, oeffnungszeiten: null, rollstuhl: null, fach: null };
   return alsOrt(t);
+}
+
+/** Kartensymbol angetippt: den Ort über seinen NAMEN in direkter Umgebung suchen – liefert Website, Telefon,
+ *  Öffnungszeiten aus OSM. (Die Koordinaten-Abfrage trifft oft nur das Gebäude daneben.) */
+export async function ortMitNamen(name: string, l: LngLat, art = ""): Promise<Ort | null> {
+  // Namen auf der Karte können älter sein als die Live-Daten („Dr. Wirth & Cem Canerik“ ↔ „Cem Canerik & Kollegen“):
+  // Ähnlichkeit über gemeinsame bedeutsame Wörter
+  const woerter = (x: string) => new Set(x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !["und", "der", "die", "das", "fur", "dres", "med", "praxis"].includes(w)));
+  const ziel = woerter(name);
+  const aehnlich = (o: Ort) => { const w = woerter(o.name); let g = 0; ziel.forEach((x) => { if (w.has(x)) g++; }); return ziel.size && w.size ? g / Math.min(ziel.size, w.size) : 0; };
+  const holen = async (q: string, km: number) => (await holeJson<NomTreffer[]>(`${DIENSTE.nominatim}/search?${new URLSearchParams({ ...basis, q, limit: "20", viewbox: box(l, km), bounded: "1" })}`, "Ortsdaten")).map(alsOrt);
+  const bester = (r: Ort[], min: number) => r.filter((o) => aehnlich(o) >= min).sort((a, b) => aehnlich(b) - aehnlich(a) || luftlinie(l, a.lngLat) - luftlinie(l, b.lngLat))[0] ?? null;
+  // 1. genau über den Namen
+  const genau = bester(await holen(name, 0.15), 0.5);
+  if (genau) return genau;
+  // 2. Orte dieser Art direkt daneben (z. B. alle Zahnarztpraxen im Umkreis von 100 m), ähnlichster Name
+  const phrase = ({ Zahnarztpraxis: "dentist", Arztpraxis: "doctors", Apotheke: "pharmacy", Klinik: "clinic", Krankenhaus: "hospital", Bushaltestelle: "bus_stop" } as Record<string, string>)[art];
+  if (!phrase) return null;
+  return bester(await holen(`[${phrase}]`, 0.1), 0.34);
 }
 
 /** Details zu einem Ort über seine OSM-Kennung (z. B. „node-123“) */
