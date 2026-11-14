@@ -346,3 +346,6 @@ h1, h2, p { margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+.marke-route path { fill: none; stroke: var(--auf-akzent); stroke-width: 2; stroke-linecap: round; }
+.marke-route circle { fill: var(--auf-akzent); }

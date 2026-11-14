@@ -263,7 +263,12 @@ export default function App() {
   const kiTitel = ki.art === "aus" ? "KI laden – läuft auf deinem Gerät, einmal ca. 0,4 GB" : ki.art === "laedt" ? `KI lädt … ${Math.round(ki.anteil * 100)} %` : ki.art === "bereit" ? "KI an – dein Text bleibt auf dem Gerät" : `KI nicht verfügbar: ${ki.text}`;
   const kopf = (
     <form className="suche" onSubmit={(e) => { e.preventDefault(); fertig(); void absenden(text); }}>
-      {desktop && <span className="brand-mini" title="Lotse"><Marke size={30} /></span>}
+      {desktop && (
+        <button type="button" className="brand-mini" aria-label="Lotse – alles schließen" data-tip="Alles schließen"
+          onMouseDown={(e) => e.preventDefault()} onClick={() => { fertig(); zurStart(); setDreiD(false); }}>
+          <Marke size={32} />
+        </button>
+      )}
       <label className={`suchfeld${text || fokus ? " aktiv" : ""}`}>
         <Suche size={18} />
         <span className="sr">Suche oder Frage</span>

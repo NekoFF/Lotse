@@ -30,7 +30,12 @@ export const Minus = (p: P) => <Ic {...p}><path d="M5 12h14" /></Ic>;
 export function Marke({ size = 26 }: { size?: number }) {
   return (
     <span className="marke" style={{ width: size, height: size, borderRadius: size * 0.3 }} aria-hidden="true">
-      <svg width={size * 0.58} height={size * 0.58} viewBox="0 0 20 20"><path d="M10 2 L16 17 L10 13.5 L4 17 Z" /></svg>
+      {/* Lotse-Zeichen: geschwungene Route mit Start- und Zielpunkt */}
+      <svg width={size * 0.62} height={size * 0.62} viewBox="0 0 20 20" className="marke-route">
+        <path d="M5.5 15.5C5.5 10.5 14.5 9.5 14.5 4.5" />
+        <circle cx="5.5" cy="15.5" r="1.6" />
+        <circle cx="14.5" cy="4.5" r="1.6" />
+      </svg>
     </span>
   );
 }
