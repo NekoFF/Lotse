@@ -335,6 +335,7 @@ export default function App() {
         onPin={(id) => { const o = listenOrte.find((x) => x.id === id); if (o) oeffneOrt(o, false); }}
         onKarteTipp={karteTipp}
         onMitte={setMitte}
+        onLeer={() => { if (fokus) fertig(); }}
       />
 
       <Blatt desktop={desktop} stufe={stufe} setStufe={setStufe} kopf={kopf} onGroesse={setGroesse}>

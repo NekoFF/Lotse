@@ -47,13 +47,15 @@ interface Props {
   onKarteTipp?: (lngLat: LngLat, poi: { name: string; art: string } | null) => void;
   /** Kartenmitte nach jeder Bewegung (für „in der Nähe“) */
   onMitte?: (lngLat: LngLat) => void;
+  /** Klick auf eine leere Stelle */
+  onLeer?: () => void;
 }
 
 /** Ebenen mit antippbaren Kartenpunkten (aus public/karte/stil-*.json) */
 const ORT_EBENEN = ["lotse-poi-oepnv", "lotse-poi-medizin", "lotse-poi-orte"];
 const LIZENZ_URL = `${import.meta.env.BASE_URL}karte/LIZENZ.txt`;
 
-export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, abstand, onPin, onPinHover, dreiD = false, onKarteTipp, onMitte }: Props) {
+export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, abstand, onPin, onPinHover, dreiD = false, onKarteTipp, onMitte, onLeer }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
   const markers = useRef(new Map<string, { m: Marker; el: HTMLButtonElement }>());
@@ -62,8 +64,8 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
   const meRef = useRef<Marker | null>(null);
   const startRef = useRef(start);
   startRef.current = start;
-  const cb = useRef({ onPin, onPinHover, onKarteTipp, onMitte });
-  cb.current = { onPin, onPinHover, onKarteTipp, onMitte };
+  const cb = useRef({ onPin, onPinHover, onKarteTipp, onMitte, onLeer });
+  cb.current = { onPin, onPinHover, onKarteTipp, onMitte, onLeer };
   const dreiDRef = useRef(dreiD);
   dreiDRef.current = dreiD;
   routeRef.current = route;
@@ -107,8 +109,14 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
       const name = p ? String(p["name:de"] ?? p.name_de ?? p.name ?? "") : "";
       const poi = name ? { name, art: ortArt(String(p!.class ?? ""), String(p!.subclass ?? "")) } : null;
       const g = f?.geometry.type === "Point" ? (f.geometry.coordinates as LngLat) : null;
-      cb.current.onKarteTipp?.(poi && g ? [g[0], g[1]] : [e.lngLat.lng, e.lngLat.lat], poi);
+      // Wie Google Maps: ein Klick öffnet nur echte Kartensymbole; leere Stellen erst per Doppelklick / langem Drücken
+      if (poi && g) cb.current.onKarteTipp?.([g[0], g[1]], poi);
+      else cb.current.onLeer?.();
     });
+    m.doubleClickZoom.disable();
+    const punkt = (e: maplibregl.MapMouseEvent) => { e.preventDefault(); cb.current.onKarteTipp?.([e.lngLat.lng, e.lngLat.lat], null); };
+    m.on("dblclick", punkt);
+    m.on("contextmenu", punkt); // Rechtsklick bzw. langes Drücken am Telefon
     for (const id of ORT_EBENEN) {
       m.on("mouseenter", id, () => { m.getCanvas().style.cursor = "pointer"; });
       m.on("mouseleave", id, () => { m.getCanvas().style.cursor = ""; });
