@@ -213,18 +213,19 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     if (!m || rahmen.length === 0) return;
     const a = abstandRef.current;
     const pad = { top: a.top + 70, right: a.right + 50, bottom: a.bottom + 40, left: a.left + 50 };
-    // Gespeicherten Rand zurücksetzen, sonst addiert MapLibre alten und neuen Rand
-    m.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+    // Kein m.setPadding und kein „padding“ in easeTo: MapLibre merkt sich das, und das spätere Zurücksetzen
+    // ließ die Karte springen. Stattdessen Kamera vorab berechnen und EINE weiche Bewegung machen.
     if (rahmen.length === 1) {
-      // Ein Punkt (z. B. angetippt): nur verschieben, wenn er verdeckt wäre – wie Apple/Google Maps
+      // Ein Punkt (angetippt): nur verschieben, wenn er verdeckt wäre – wie Apple/Google Maps
       const p = m.project(rahmen[0]), c = m.getCanvas();
       const sichtbar = p.x > pad.left && p.x < c.clientWidth - pad.right && p.y > pad.top && p.y < c.clientHeight - pad.bottom;
-      if (!sichtbar) m.easeTo({ center: rahmen[0], zoom: Math.max(m.getZoom(), 15), padding: pad, duration: 450 });
+      if (!sichtbar) m.easeTo({ center: rahmen[0], zoom: Math.max(m.getZoom(), 15), offset: [(pad.left - pad.right) / 2, (pad.top - pad.bottom) / 2], duration: 450 });
       return;
     }
     const b = new maplibregl.LngLatBounds(rahmen[0], rahmen[0]);
     rahmen.forEach((p) => b.extend(p));
-    m.fitBounds(b, { padding: pad, maxZoom: 16, duration: 600 });
+    const ziel = m.cameraForBounds(b, { padding: pad, maxZoom: 16 });
+    if (ziel) m.easeTo({ center: ziel.center, zoom: ziel.zoom, bearing: m.getBearing(), duration: 600 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rahmenSchluessel]);
 
