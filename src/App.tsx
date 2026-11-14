@@ -346,7 +346,7 @@ export default function App() {
 
       {/* Computer: ALLES erscheint in der Ablage unter der Suchleiste – Ruhe: Symbole; sonst Vorschläge, Ergebnisse, Ort, Route */}
       {desktop && groesse.h > 0 && (
-        <Ablage offen={fokus || ansicht.art !== "start"} top={16 + groesse.h - 14}
+        <Ablage offen={fokus || ansicht.art !== "start"} top={16 + groesse.h - 12}
           symbole={<SchnellLeiste onKategorie={(k) => { setText(k.name); kategorieSuche(k); }} />}
           inhalt={inhalt} />
       )}

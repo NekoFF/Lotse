@@ -185,3 +185,17 @@
 .ablage .ansicht-titel h2 { font-size: 20px; }
 .ablage .aktionen-reihe .aktion { flex-basis: 56px; min-height: 54px; }
 .ablage .vorgemerkt { margin: 0 0 12px; }
+
+/* Kompaktere Suchleiste (Höhe), Breite unverändert */
+.suchfeld { height: 38px; border-radius: 11px; padding: 0 5px 0 11px; gap: 8px; }
+.suchfeld input { font-size: 15px; }
+.suchfeld .ic { width: 16px; height: 16px; }
+.blatt.pc .blatt-kopf { padding: 9px 10px; }
+.blatt.pc:not(:has(.wechsel:not(:empty))) .blatt-kopf { padding-bottom: 9px; }
+.blatt.pc { border-radius: 18px; }
+.suche { gap: 8px; }
+.ki-knopf { width: 28px; height: 28px; border-radius: 14px; }
+.ki-knopf .ic { width: 15px; height: 15px; }
+.brand-mini .marke { width: 30px !important; height: 30px !important; border-radius: 9px !important; }
+.ablage { padding-top: 12px; }
+.ablage-symbole { top: 6px; }
