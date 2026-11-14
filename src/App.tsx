@@ -14,7 +14,7 @@ import { inDerNaehe, ortAnStelle, ortLaden, suchen as ortSuchen, type Ort } from
 import { Ablage } from "./blatt/Ablage";
 import { Blatt, type Stufe } from "./blatt/Blatt";
 import { InfoInhalt, ListenInhalt, OrtInhalt, RouteInhalt, SchnellLeiste, TerminInhalt, VorschlagInhalt, type ListenStand, type Vorschlag } from "./blatt/Inhalte";
-import { Ki, Marke, Schliessen, Standort, Suche, Plus, Minus } from "./ui/icons";
+import { Ki, Marke, Standort, Suche, Plus, Minus } from "./ui/icons";
 import "./blatt/blatt.css";
 
 type Ansicht =
@@ -157,6 +157,8 @@ export default function App() {
   }, [fachSuche, kategorieSuche, liste, ki.art, nahe, zeige, merke]);
 
   const fertig = () => { setFokus(false); (document.activeElement as HTMLElement | null)?.blur(); };
+  /** Kreuz in der Ablage: alles schließen, zurück zur Ruhe-Ansicht */
+  const schliessen = () => { fertig(); zurStart(); if (!desktop) setStufe("klein"); };
   const waehle = (v: Vorschlag) => {
     fertig();
     if (v.art === "suchen") void absenden(v.text);
@@ -275,7 +277,6 @@ export default function App() {
         <input value={text} onChange={(e) => setText(e.target.value)} onFocus={() => { setFokus(true); if (!desktop) setStufe("gross"); }}
           onKeyDown={(e) => { if (e.key === "Escape") fertig(); }}
           placeholder={ki.art === "bereit" ? "Frag Lotse" : "Suchen"} autoComplete="off" enterKeyHint="search" />
-        {text && <button type="button" className="feld-x" aria-label="Schließen" onMouseDown={(e) => e.preventDefault()} onClick={() => { fertig(); zurStart(); if (!desktop) setStufe("klein"); }}><Schliessen size={14} /></button>}
         <button type="button" className={`ki-knopf ${ki.art}`} data-tip={kiTitel} aria-label={kiTitel} onMouseDown={(e) => e.preventDefault()} onClick={kiUmschalten}
           style={ki.art === "laedt" ? { ["--anteil" as string]: `${Math.round(ki.anteil * 360)}deg` } : undefined}>
           <Ki size={17} />
@@ -294,29 +295,30 @@ export default function App() {
           {fokus && (
             <VorschlagInhalt text={text} zuletzt={zuletzt} termine={termine} ki={ki} onWahl={waehle}
               onInfo={() => { fertig(); gehe({ art: "info" }); }}
-              onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} />
+              onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} onZu={schliessen} />
           )}
           {!fokus && !desktop && ansicht.art === "start" && <SchnellLeiste onKategorie={(k) => { setText(k.name); kategorieSuche(k); }} />}
           {!fokus && ansicht.art === "liste" && (
-            <ListenInhalt l={ansicht.l} aktiv={null} onOrt={(o) => oeffneOrt(o, false)} onZu={zurStart} onNeu={ansicht.neu} />
+            <ListenInhalt l={ansicht.l} aktiv={null} onOrt={(o) => oeffneOrt(o, false)} onZu={schliessen} onNeu={ansicht.neu} />
           )}
           {!fokus && ansicht.art === "ort" && (
-            <OrtInhalt o={ansicht.ort} laden={ansicht.laden} weg={weg} modus={modus} onZu={zurueck}
+            <OrtInhalt o={ansicht.ort} laden={ansicht.laden} weg={weg} modus={modus} onZu={schliessen}
+              onZurueck={verlauf.length > 1 && verlauf[verlauf.length - 2].art !== "start" ? zurueck : undefined}
               onRoute={() => gehe({ art: "route", ort: ansicht.ort })}
               onTermin={() => gehe({ art: "termin", ort: ansicht.ort, zeit: vorgemerkt })}
               onTeilen={() => void teilen(ansicht.ort)} />
           )}
           {!fokus && ansicht.art === "route" && (
             <RouteInhalt o={ansicht.ort} start={start} modus={modus} setModus={setModus} weg={weg} termin={terminFuer(ansicht.ort)}
-              onStartGps={gps} onStartAdresse={startAdresse} onZurueck={zurueck} onNeu={() => setVersuch((n) => n + 1)} />
+              onStartGps={gps} onStartAdresse={startAdresse} onZurueck={zurueck} onNeu={() => setVersuch((n) => n + 1)} onZu={schliessen} />
           )}
           {!fokus && ansicht.art === "termin" && (
-            <TerminInhalt o={ansicht.ort} vorschlag={ansicht.zeit ?? morgenNeun()} vorhanden={terminFuer(ansicht.ort)} onZurueck={zurueck}
+            <TerminInhalt o={ansicht.ort} vorschlag={ansicht.zeit ?? morgenNeun()} vorhanden={terminFuer(ansicht.ort)} onZurueck={zurueck} onZu={schliessen}
               onSpeichern={(d) => terminSpeichern(ansicht.ort, d)}
               onLoeschen={() => { const t = terminFuer(ansicht.ort); if (t) setTermine(loescheTermin(t.id)); zurueck(); }}
               onKalender={() => { const t = terminFuer(ansicht.ort); if (t) kalenderLaden(t); }} />
           )}
-          {!fokus && ansicht.art === "info" && <InfoInhalt onZurueck={zurueck} />}
+          {!fokus && ansicht.art === "info" && <InfoInhalt onZu={schliessen} />}
         </div>
     </>
   );

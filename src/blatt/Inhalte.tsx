@@ -114,14 +114,14 @@ export function ListenInhalt({ l, aktiv, onOrt, onZu, onNeu }: {
 
 /* ---------- Ortskarte ---------- */
 
-export function OrtInhalt({ o, laden, weg, modus, onRoute, onTermin, onTeilen, onZu }: {
+export function OrtInhalt({ o, laden, weg, modus, onRoute, onTermin, onTeilen, onZu, onZurueck }: {
   o: Ort; laden: boolean; weg: WegStand; modus: Modus;
-  onRoute: () => void; onTermin: () => void; onTeilen: () => void; onZu: () => void;
+  onRoute: () => void; onTermin: () => void; onTeilen: () => void; onZu: () => void; onZurueck?: () => void;
 }) {
   const zeiten = o.oeffnungszeiten ? zeitenLesbar(o.oeffnungszeiten) : [];
   return (
     <div className="inhalt ort">
-      <Kopf titel={o.name} unter={[o.art, weg.route ? `${min(weg.route.s)} Min ${MODUS_NAME[modus]}` : null].filter(Boolean).join(" · ")} onZu={onZu} />
+      <Kopf titel={o.name} unter={[o.art, weg.route ? `${min(weg.route.s)} Min ${MODUS_NAME[modus]}` : null].filter(Boolean).join(" · ")} onZu={onZu} onZurueck={onZurueck} />
       <div className="aktionen-reihe">
         <button type="button" className="aktion primaer" onClick={onRoute}><RouteIc size={20} /><span>Route</span></button>
         {o.telefon && <a className="aktion" href={telLink(o.telefon)}><Telefon size={20} /><span>Anrufen</span></a>}
@@ -143,9 +143,9 @@ export function OrtInhalt({ o, laden, weg, modus, onRoute, onTermin, onTeilen, o
 
 /* ---------- Route ---------- */
 
-export function RouteInhalt({ o, start, modus, setModus, weg, termin, onStartGps, onStartAdresse, onZurueck, onNeu }: {
+export function RouteInhalt({ o, start, modus, setModus, weg, termin, onStartGps, onStartAdresse, onZurueck, onNeu, onZu }: {
   o: Ort; start: Start | null; modus: Modus; setModus: (m: Modus) => void; weg: WegStand; termin: Termin | null;
-  onStartGps: () => void; onStartAdresse: (text: string) => void; onZurueck: () => void; onNeu: () => void;
+  onStartGps: () => void; onStartAdresse: (text: string) => void; onZurueck: () => void; onNeu: () => void; onZu: () => void;
 }) {
   const [text, setText] = useState("");
   const r = weg.route;
@@ -153,7 +153,7 @@ export function RouteInhalt({ o, start, modus, setModus, weg, termin, onStartGps
   const los = r && termin ? new Date(new Date(termin.zeit).getTime() - (PUFFER_MIN * 60 + min(r.s) * 60) * 1000) : null;
   return (
     <div className="inhalt route">
-      <Kopf titel={`Route nach ${o.name}`} onZurueck={onZurueck} />
+      <Kopf titel={`Route nach ${o.name}`} onZurueck={onZurueck} onZu={onZu} />
       <div className="start-wahl">
         <span className="punkt-ic"><Standort size={15} /></span>
         {start ? <span className="start-name">{start.name}</span> : <span className="start-name leise">Startpunkt wählen</span>}
@@ -193,9 +193,9 @@ export function RouteInhalt({ o, start, modus, setModus, weg, termin, onStartGps
 
 /* ---------- Termin ---------- */
 
-export function TerminInhalt({ o, vorschlag, vorhanden, onSpeichern, onLoeschen, onKalender, onZurueck }: {
+export function TerminInhalt({ o, vorschlag, vorhanden, onSpeichern, onLoeschen, onKalender, onZurueck, onZu }: {
   o: Ort; vorschlag: Date; vorhanden: Termin | null;
-  onSpeichern: (d: Date) => void; onLoeschen: () => void; onKalender: () => void; onZurueck: () => void;
+  onSpeichern: (d: Date) => void; onLoeschen: () => void; onKalender: () => void; onZurueck: () => void; onZu: () => void;
 }) {
   const z = (n: number) => String(n).padStart(2, "0");
   const alsWert = (d: Date) => `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;
@@ -203,7 +203,7 @@ export function TerminInhalt({ o, vorschlag, vorhanden, onSpeichern, onLoeschen,
   const d = new Date(wert);
   return (
     <div className="inhalt termin">
-      <Kopf titel="Termin" unter={o.name} onZurueck={onZurueck} />
+      <Kopf titel="Termin" unter={o.name} onZurueck={onZurueck} onZu={onZu} />
       <label className="feld-zeile"><span>Wann?</span><input type="datetime-local" value={wert} onChange={(e) => setWert(e.target.value)} /></label>
       <button type="button" className="btn primaer" disabled={isNaN(d.getTime())} onClick={() => onSpeichern(d)}>{vorhanden ? "Ändern" : "Merken"}</button>
       {vorhanden && (
@@ -219,10 +219,10 @@ export function TerminInhalt({ o, vorschlag, vorhanden, onSpeichern, onLoeschen,
 
 /* ---------- Daten & Quellen ---------- */
 
-export function InfoInhalt({ onZurueck }: { onZurueck: () => void }) {
+export function InfoInhalt({ onZurueck, onZu }: { onZurueck?: () => void; onZu: () => void }) {
   return (
     <div className="inhalt info-seite">
-      <Kopf titel="Daten & Quellen" onZurueck={onZurueck} />
+      <Kopf titel="Daten & Quellen" onZurueck={onZurueck} onZu={onZu} />
       <ul className="liste-punkte">
         <li><b>Deine Beschreibung</b> bleibt auf dem Gerät. Lotse ordnet sie nur einer Fachrichtung zu und stellt keine Diagnose.</li>
         <li><b>Suche und Orte</b>: Nominatim (OpenStreetMap). <b>Wege</b>: FOSSGIS-Routingserver. <b>Karte</b>: OpenFreeMap. Diese Dienste sehen deine IP-Adresse und den gesuchten Ort bzw. Startpunkt.</li>
@@ -285,14 +285,16 @@ export function vorschlaegeFuer(text: string, zuletzt: string[], termine: Termin
   return aus.slice(0, 8);
 }
 
-export function VorschlagInhalt({ text, zuletzt, termine, ki, onWahl, onInfo, onVerlaufLoeschen }: {
+export function VorschlagInhalt({ text, zuletzt, termine, ki, onWahl, onInfo, onVerlaufLoeschen, onZu }: {
   text: string; zuletzt: string[]; termine: Termin[]; ki: KiStatus;
-  onWahl: (v: Vorschlag) => void; onInfo: () => void; onVerlaufLoeschen: () => void;
+  onWahl: (v: Vorschlag) => void; onInfo: () => void; onVerlaufLoeschen: () => void; onZu: () => void;
 }) {
   const liste = vorschlaegeFuer(text, zuletzt, termine);
+  const kopf = <Kopf titel={text.trim() ? "Vorschläge" : "Suche"} onZu={onZu} />;
   if (text.trim()) {
     return (
       <div className="inhalt vorschlaege">
+        {kopf}
         <div className="zeilen">
           {liste.map((v, i) => (
             <button key={i} type="button" className="zeile" onClick={() => onWahl(v)}>
@@ -309,6 +311,7 @@ export function VorschlagInhalt({ text, zuletzt, termine, ki, onWahl, onInfo, on
   }
   return (
     <div className="inhalt vorschlaege">
+      {kopf}
       {zuletzt.length > 0 && (
         <section>
           <div className="abschnitt-kopf"><h3 className="abschnitt">Zuletzt</h3><button type="button" className="link klein-link" onClick={onVerlaufLoeschen}>Löschen</button></div>
