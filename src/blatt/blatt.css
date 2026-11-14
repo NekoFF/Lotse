@@ -222,3 +222,25 @@
 /* Keine sichtbaren Scrollbalken – Scrollen funktioniert weiter */
 * { scrollbar-width: none; }
 *::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* ---------- Chat: wächst über der Suchleiste ---------- */
+.chat { display: flex; flex-direction: column; min-height: 0; animation: chat-auf 0.3s cubic-bezier(0.2, 0.9, 0.25, 1); }
+@keyframes chat-auf { from { opacity: 0; transform: translateY(8px); } }
+.chat-kopf { display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 0 14px; font-size: 13px; font-weight: 600; color: var(--akzent); }
+.chat-kopf span { display: inline-flex; align-items: center; gap: 6px; }
+.chat-verlauf { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; max-height: min(52dvh, 460px); overflow-y: auto; }
+.blase { max-width: 85%; font-size: 14px; line-height: 1.4; }
+.blase p { margin: 0; display: inline-flex; gap: 5px; align-items: center; }
+.blase.ich { align-self: flex-end; background: var(--akzent); color: var(--auf-akzent); padding: 8px 12px; border-radius: 16px 16px 4px 16px; }
+.blase.ki { align-self: flex-start; background: var(--flaeche); padding: 8px 12px; border-radius: 16px 16px 16px 4px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.blase.ki p .ic { color: var(--akzent); }
+.blase.mit-liste { max-width: 100%; width: 100%; display: flex; flex-direction: column; gap: 8px; background: transparent; padding: 0; box-shadow: none; }
+.blase.mit-liste > p { padding: 0 2px; color: var(--ink2); font-size: 13px; }
+.blase.mit-liste .zeilen { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.klein-btn { height: 36px; margin-top: 8px; font-size: 14px; }
+.denkt { display: inline-flex; gap: 4px; padding: 4px 2px; }
+.denkt i { width: 6px; height: 6px; border-radius: 3px; background: var(--ink3); animation: denkt 1s infinite ease-in-out; }
+.denkt i:nth-child(2) { animation-delay: 0.15s; }
+.denkt i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes denkt { 50% { transform: translateY(-3px); opacity: 0.5; } }
+.blatt.pc:has(.chat) .blatt-kopf { padding-top: 6px; }

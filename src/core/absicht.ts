@@ -21,6 +21,7 @@ export const KATEGORIEN: Kategorie[] = [
   { id: "einkaufen", name: "Supermärkte", phrasen: ["supermarket"] },
   { id: "baecker", name: "Bäckereien", phrasen: ["bakery"] },
   { id: "freizeit", name: "Freizeit", phrasen: ["cinema", "museum", "park"] },
+  { id: "sehenswert", name: "Sehenswertes", phrasen: ["attraction", "museum", "viewpoint"] },
   { id: "haltestelle", name: "Haltestellen", phrasen: ["bus_stop"] },
   { id: "bahnhof", name: "Bahnhöfe", phrasen: ["station"] },
   { id: "tanken", name: "Tankstellen", phrasen: ["fuel"] },
@@ -32,7 +33,7 @@ const KAT_WOERTER: [string, string][] = [
   ["zahnarzt", "zahnarzt"], ["zahnaerzt", "zahnarzt"], ["apothek", "apotheke"], ["krankenhaus", "krankenhaus"], ["klinik", "krankenhaus"],
   ["notaufnahme", "krankenhaus"], ["arzt", "arzt"], ["aerzt", "arzt"], ["praxis", "arzt"], ["restaurant", "essen"], ["essen", "essen"],
   ["imbiss", "essen"], ["pizza", "essen"], ["hunger", "essen"], ["medikament", "apotheke"], ["tablette", "apotheke"], ["doener", "essen"], ["cafe", "cafe"], ["kaffee", "cafe"], ["supermarkt", "einkaufen"],
-  ["einkauf", "einkaufen"], ["baecker", "baecker"], ["kino", "freizeit"], ["film", "freizeit"], ["ausgehen", "freizeit"], ["spazier", "freizeit"], ["museum", "freizeit"], ["freizeit", "freizeit"],
+  ["einkauf", "einkaufen"], ["baecker", "baecker"], ["kino", "freizeit"], ["film", "freizeit"], ["ausgehen", "freizeit"], ["spazier", "freizeit"], ["sehenswuerdig", "sehenswert"], ["sightseeing", "sehenswert"], ["museum", "freizeit"], ["freizeit", "freizeit"],
   ["unternehmen", "freizeit"], ["park", "freizeit"], ["haltestelle", "haltestelle"], ["bushaltestelle", "haltestelle"], ["bus ", "haltestelle"],
   ["bahnhof", "bahnhof"], ["zug", "bahnhof"], ["tankstelle", "tanken"], ["tanken", "tanken"],
 ];
@@ -92,6 +93,11 @@ export function ohneZeit(text: string): string {
     .replace(/\s+/g, " ").trim();
 }
 
+/** Hausnummer oder Straßenwort → Adresse */
+export function siehtAusWieAdresse(text: string): boolean {
+  return /\d/.test(text) || /(stra(ss|ß|s)e|str\.?|weg|platz|gasse|allee|ring|ufer|chaussee)(\s|,|$)/i.test(text);
+}
+
 export function verstehe(text: string, jetzt = new Date()): Absicht {
   const s = pruefeSicherheit(text);
   if (s.stufe) return { typ: "notfall", stufe: s.stufe };
@@ -100,9 +106,18 @@ export function verstehe(text: string, jetzt = new Date()): Absicht {
     const zeit = zeitAus(text, jetzt);
     if (zeit) return { typ: "termin", zeit, rest: text };
   }
+  // Sieht wie eine Adresse aus („Bahnhofstraße 1“)? Dann keine Kategorie aus Wortteilen raten
+  if (siehtAusWieAdresse(text)) return { typ: "suche", text: text.trim() };
   for (const [w, f] of FACH_WOERTER) if (containsTerm(n, w)) return { typ: "fach", fach: f };
   for (const [w, id] of KAT_WOERTER) if (w.endsWith(" ") ? n.includes(" " + w) || n.startsWith(w) : containsTerm(n, w)) return { typ: "kategorie", kategorie: kat(id) };
   const z = ordneZu(text);
   if (!z.unsicher) return { typ: "anliegen", zuordnung: z };
   return { typ: "suche", text: text.trim() };
+}
+
+/** Klingt nach Gespräch oder Frage statt nach einer Adresse? Dann direkt in den Chat. */
+export function istGespraech(text: string): boolean {
+  const n = normalize(text);
+  return /\?\s*$/.test(text.trim())
+    || /^(hi|hallo|hey|moin|servus|danke|guten (morgen|tag|abend)|wie|was|wo|wann|warum|wieso|welche[rsn]?|gibt es|zeig|finde|such|empfiehl|kannst du|ich (will|moechte|brauche|suche))\b/.test(n);
 }

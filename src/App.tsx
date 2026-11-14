@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { klingtNachBeschwerde, ohneZeit, verstehe, KATEGORIEN, type Kategorie } from "./core/absicht";
+import { istGespraech, klingtNachBeschwerde, ohneZeit, siehtAusWieAdresse, verstehe, KATEGORIEN, type Kategorie } from "./core/absicht";
 import type { Zuordnung } from "./core/match";
 import { FACHRICHTUNGEN, type FachId } from "./data/fachrichtungen";
 import type { Notfallstufe } from "./data/notfall";
 import type { LngLat, Modus, Start } from "./data/praxen";
-import { kiStarten, kiVerstehen, type KiStatus } from "./ki/assistent";
+import { kiChat, kiStarten, type KiStatus } from "./ki/assistent";
 import { erinnerungenPlanen, kalenderLaden, leseTermine, loescheTermin, losgehzeit, speichereTermin, type Termin } from "./lib/termine";
 import { useRoute } from "./lib/wege";
 import { leseGespeichert, umschalten } from "./lib/gespeichert";
@@ -13,6 +13,7 @@ import { Notfall } from "./screens/Notfall";
 import { fehlerText, gpsStandort } from "./services/dienste";
 import { inDerNaehe, ortAnStelle, ortLaden, suchen as ortSuchen, type Ort } from "./services/orte";
 import { Ablage } from "./blatt/Ablage";
+import { ChatVerlauf, type Nachricht } from "./blatt/Chat";
 import { Blatt, type Stufe } from "./blatt/Blatt";
 import { InfoInhalt, ListenInhalt, OrtInhalt, RouteInhalt, SchnellLeiste, TerminInhalt, VorschlagInhalt, type ListenStand, type Vorschlag } from "./blatt/Inhalte";
 import { Ki, Marke, Standort, Suche, Plus, Minus } from "./ui/icons";
@@ -48,6 +49,7 @@ export default function App() {
   const desktop = useMedia("(min-width: 900px)");
   const dunkel = useMedia("(prefers-color-scheme: dark)");
   const [verlauf, setVerlauf] = useState<Ansicht[]>([{ art: "start" }]);
+  const [chat, setChat] = useState<Nachricht[]>([]);
   const ansicht = verlauf[verlauf.length - 1];
   const [text, setText] = useState("");
   const [notfall, setNotfall] = useState<{ stufe: Notfallstufe; text: string } | null>(null);
@@ -70,7 +72,7 @@ export default function App() {
     if (!desktop) setStufe((s) => (s === "klein" ? "mittel" : s));
   }, [desktop]);
   const zurueck = useCallback(() => setVerlauf((v) => (v.length > 1 ? v.slice(0, -1) : v)), []);
-  const zurStart = useCallback(() => { setVerlauf([{ art: "start" }]); setText(""); setVorgemerkt(null); }, []);
+  const zurStart = useCallback(() => { setVerlauf([{ art: "start" }]); setText(""); setVorgemerkt(null); setChat([]); }, []);
   // Suchfeld aktiv → Schublade mit Vorschlägen; sonst nur Suchleiste (+ Symbole)
   const [fokus, setFokus] = useState(false);
   const [zuletzt, setZuletzt] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("lotse.zuletzt") ?? "[]"); } catch { return []; } });
@@ -122,12 +124,77 @@ export default function App() {
   const kategorieSuche = useCallback((k: Kategorie) => liste(k.name, () => inDerNaehe(k.phrasen, nahe, 3), { unter: "in der Nähe" }), [liste, nahe]);
 
   const anfrage = useRef(0);
+
+  /* ---------- Chat mit der KI: kurz, möglichst gleich Ergebnisse ---------- */
+  const chatNr = useRef(0);
+  const sag = (n: Omit<Nachricht, "id">) => { const id = ++chatNr.current; setChat((c) => [...c, { ...n, id }]); return id; };
+  const ersetze = (id: number, n: Omit<Nachricht, "id">) => setChat((c) => c.map((x) => (x.id === id ? { ...n, id } : x)));
+
+  const chatSenden = async (t: string, nr: number, schonGesucht = false) => {
+    sag({ von: "ich", text: t });
+    setText("");
+    let a = verstehe(t);
+    if (a.typ === "notfall") { setNotfall({ stufe: a.stufe, text: t }); return; }
+    if (a.typ === "termin") { setVorgemerkt(a.zeit); const rest = ohneZeit(t.replace(/termin/gi, " ")); a = rest.length > 1 ? verstehe(rest) : a; }
+    const id = sag({ von: "ki", denkt: true });
+    try {
+      if (a.typ === "fach") {
+        const f = FACHRICHTUNGEN[a.fach];
+        return ersetze(id, { von: "ki", text: `${f.name} in der Nähe:`, orte: (await inDerNaehe([a.fach === "zahn" ? "dentist" : "doctors"], nahe, 5)).filter((o) => o.fach === a.fach) });
+      }
+      if (a.typ === "kategorie") return ersetze(id, { von: "ki", text: `${a.kategorie.name} in der Nähe:`, orte: await inDerNaehe(a.kategorie.phrasen, nahe, 3) });
+      const beschwerde = klingtNachBeschwerde(t);
+      if (a.typ === "anliegen" && (beschwerde || ki.art !== "bereit")) {
+        const f = a.zuordnung.fach;
+        return ersetze(id, { von: "ki", text: `${f.name} – passt zu deiner Beschreibung, keine Diagnose:`, orte: (await inDerNaehe([f.id === "zahn" ? "dentist" : "doctors"], nahe, 5)).filter((o) => o.fach === f.id) });
+      }
+      if (beschwerde) {
+        // unklare Beschwerde: nie als Text an Dienste – Hausarztpraxis zeigen
+        return ersetze(id, { von: "ki", text: "Hausarztpraxen – der erste Anlaufpunkt, keine Diagnose:", orte: (await inDerNaehe(["doctors"], nahe, 5)).filter((o) => o.fach === "allgemein") });
+      }
+      if (!schonGesucht && !istGespraech(t) && a.typ !== "anliegen") {
+        const r = await ortSuchen(t, nahe);
+        if (r.length) return ersetze(id, { von: "ki", text: `„${t}“:`, orte: r });
+      }
+      if (ki.art !== "bereit") return ersetze(id, { von: "ki", text: "Dazu habe ich nichts gefunden. Mit der KI verstehe ich auch Fragen und Tippfehler.", knopf: "ki-laden" });
+      const k = await kiChat(t);
+      if (nr !== anfrage.current) return;
+      if (!k) return ersetze(id, { von: "ki", text: "Das habe ich nicht verstanden. Versuch es mit einem Ort." });
+      const kat = k.aktion === "kategorie" ? KATEGORIEN.find((x) => x.id === k.kategorie) : undefined;
+      // Bei möglichen Beschwerden keine medizinischen Kategorien von der KI
+      if (kat && !(a.typ === "anliegen" && ["arzt", "zahnarzt", "apotheke", "krankenhaus"].includes(kat.id))) {
+        const mitte = k.ort ? (await ortSuchen(k.ort, null))[0]?.lngLat ?? nahe : nahe;
+        return ersetze(id, { von: "ki", text: k.antwort || `${kat.name}:`, orte: await inDerNaehe(kat.phrasen, mitte, 3), gedeutet: true });
+      }
+      if (a.typ === "anliegen") {
+        const f = a.zuordnung.fach;
+        return ersetze(id, { von: "ki", text: `${f.name} – keine Diagnose:`, orte: (await inDerNaehe([f.id === "zahn" ? "dentist" : "doctors"], nahe, 5)).filter((o) => o.fach === f.id) });
+      }
+      // Sieht wie eine Adresse aus: nie mit Smalltalk antworten, sondern immer Adresssuche versuchen
+      if (k.aktion === "suche" || siehtAusWieAdresse(t)) {
+        // KI-Korrektur zuerst; sonst einfache Tippfehler-Varianten (Straße, ohne den vertippten Ort – Suche bleibt in deiner Nähe)
+        const korr = (x: string) => x.replace(/stra(s|ss)e\b|strsse\b|str\b\.?/gi, "straße");
+        const varianten = [k.aktion === "suche" ? k.suchtext : "", korr(t), korr(t).split(/\s+/).slice(0, -1).join(" ")].filter((x, i, l) => x && x.length > 2 && l.indexOf(x) === i);
+        for (const v of varianten) {
+          const r = await ortSuchen(v, nahe);
+          if (r.length) return ersetze(id, { von: "ki", text: k.aktion === "suche" && k.antwort ? k.antwort : "Meintest du das?", orte: r, gedeutet: true });
+        }
+        return ersetze(id, { von: "ki", text: "Diese Adresse finde ich nicht. Prüf die Schreibweise." });
+      }
+      ersetze(id, { von: "ki", text: k.antwort });
+    } catch (e) {
+      ersetze(id, { von: "ki", text: fehlerText(e) });
+    }
+  };
+
   const absenden = useCallback(async (eingabe: string) => {
     let t = eingabe.trim();
     if (t.length < 2) return;
     const nr = ++anfrage.current;
     let a = verstehe(t);
     if (a.typ === "notfall") { setNotfall({ stufe: a.stufe, text: t }); return; }
+    // Chat offen oder Gesprächs-/Fragesatz → alles läuft im Chat weiter
+    if (chat.length > 0 || istGespraech(t)) return chatSenden(t, nr);
     if (a.typ === "termin") {
       setVorgemerkt(a.zeit);
       // Zeitangaben gehören nicht in die Ortssuche
@@ -143,20 +210,17 @@ export default function App() {
     if (beschwerde && !(ki.art === "bereit" && a.typ === "anliegen" && !klingtNachBeschwerde(t))) {
       return a.typ === "anliegen" ? fachSuche(a.zuordnung.fach.id, a.zuordnung) : fachSuche("allgemein", { fach: FACHRICHTUNGEN.allgemein, erkannt: [], unsicher: true });
     }
-    // Ganze Sätze: die KI auf dem Gerät übersetzt sie (nur wenn eingeschaltet)
-    if (ki.art === "bereit" && t.split(/\s+/).length >= 3) {
-      const k = await kiVerstehen(t).catch(() => null);
-      if (nr !== anfrage.current) return; // inzwischen neue Suche
-      const kat = k?.aktion === "kategorie" ? KATEGORIEN.find((x) => x.id === k.kategorie) : undefined;
-      // Bei möglichen Beschwerden nur nicht-medizinische Kategorien von der KI annehmen, nie eine Textsuche
-      if (kat && !(a.typ === "anliegen" && ["arzt", "zahnarzt", "apotheke", "krankenhaus"].includes(kat.id))) return kategorieSuche(kat);
-      if (a.typ === "anliegen") return fachSuche(a.zuordnung.fach.id, a.zuordnung);
-      if (k?.aktion === "suche") { merke(k.suchtext); return liste(k.suchtext, () => ortSuchen(k.suchtext, nahe), { unter: "von der KI verstanden" }); }
-    }
+    // Kein Hinweis auf Beschwerden und KI an (z. B. „einen Film sehen“): die KI im Chat entscheiden lassen
+    if (ki.art === "bereit" && a.typ === "anliegen" && !klingtNachBeschwerde(t)) return chatSenden(t, nr);
     if (a.typ === "anliegen") return fachSuche(a.zuordnung.fach.id, a.zuordnung);
+    // Adresse/Ort: erst genau suchen; nichts gefunden → Chat (die KI kann Tippfehler deuten)
     merke(t);
-    liste(t, () => ortSuchen(t, nahe));
-  }, [fachSuche, kategorieSuche, liste, ki.art, nahe, zeige, merke]);
+    const r = await ortSuchen(t, nahe).catch((e) => { zeige(fehlerText(e)); return null; });
+    if (r === null || nr !== anfrage.current) return;
+    if (r.length) liste(t, async () => r);
+    else void chatSenden(t, nr, true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fachSuche, kategorieSuche, liste, ki.art, nahe, zeige, merke, chat.length]);
 
   const fertig = () => { setFokus(false); (document.activeElement as HTMLElement | null)?.blur(); };
   /** Kreuz in der Ablage: alles schließen, zurück zur Ruhe-Ansicht */
@@ -297,6 +361,10 @@ export default function App() {
     </form>
   );
 
+  const chatEl = chat.length > 0 ? (
+    <ChatVerlauf nachrichten={chat} bezug={nahe} onOrt={(o) => oeffneOrt(o, false)} onKi={kiUmschalten} onZu={() => setChat([])} />
+  ) : null;
+
   // Inhalt (Vorschläge, Ergebnisse, Ort, Route …): Telefon im Blatt, Computer in der Ablage unter der Suchleiste
   const inhalt = (
     <>
@@ -355,7 +423,8 @@ export default function App() {
         onLeer={() => { if (fokus) fertig(); }}
       />
 
-      <Blatt desktop={desktop} stufe={stufe} setStufe={setStufe} kopf={kopf} onGroesse={setGroesse}>
+      <Blatt desktop={desktop} stufe={stufe} setStufe={setStufe} kopf={kopf} oben={desktop ? chatEl : undefined} onGroesse={setGroesse}>
+        {!desktop && chatEl}
         {!desktop && inhalt}
       </Blatt>
 

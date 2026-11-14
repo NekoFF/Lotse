@@ -14,13 +14,15 @@ interface Props {
   setStufe: (s: Stufe) => void;
   /** immer oben: das Suchfeld */
   kopf: ReactNode;
+  /** Computer: Chatverlauf ÜBER der Suchleiste (die Leiste wandert nach unten) */
+  oben?: ReactNode;
   children: ReactNode;
   /** meldet die sichtbare Höhe (Telefon) bzw. Breite (Computer), damit die Karte Platz lässt */
   onGroesse: (g: { w: number; h: number }) => void;
 }
 
 /** EIN Blatt für alles (wie Apple/Google Maps): Suche bleibt, nur der Inhalt darunter wechselt. */
-export function Blatt({ desktop, stufe, setStufe, kopf, children, onGroesse }: Props) {
+export function Blatt({ desktop, stufe, setStufe, kopf, oben, children, onGroesse }: Props) {
   const ref = useRef<HTMLElement>(null);
   const [zug, setZug] = useState<number | null>(null);
   const start = useRef<{ y: number; h: number } | null>(null);
@@ -63,6 +65,7 @@ export function Blatt({ desktop, stufe, setStufe, kopf, children, onGroesse }: P
           <div className="griff" />
         </div>
       )}
+      {oben}
       <div className="blatt-kopf" onFocus={() => !desktop && stufe === "klein" && setStufe("mittel")}>{kopf}</div>
       <div className="blatt-inhalt">{children}</div>
     </aside>

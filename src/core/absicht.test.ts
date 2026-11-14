@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { klingtNachBeschwerde, ohneZeit, verstehe, zeitAus } from "./absicht";
+import { istGespraech, klingtNachBeschwerde, ohneZeit, verstehe, zeitAus } from "./absicht";
 import { schrittText } from "../services/orte";
 
 const FR = new Date(2026, 10, 13, 12, 0); // Freitag, 13.11.2026, 12:00
@@ -69,5 +69,23 @@ describe("Termintext ohne Zeitangaben für die Ortssuche", () => {
   it("entfernt Datum und Uhrzeit", () => {
     expect(ohneZeit(" morgen um 10 Uhr bei Dr. Weber")).toBe("Dr. Weber");
     expect(ohneZeit(" am 20.11. 14:30")).toBe("");
+  });
+});
+
+describe("Gespräch oder Adresse?", () => {
+  it("Fragen und Grüße gehen in den Chat, Adressen nicht", () => {
+    expect(istGespraech("hi")).toBe(true);
+    expect(istGespraech("wo sind die besten Orte in Frankfurt")).toBe(true);
+    expect(istGespraech("Gibt es hier ein Kino?")).toBe(true);
+    expect(istGespraech("Bahnhofstraße 1, Wetzlar")).toBe(false);
+    expect(istGespraech("Domplatz")).toBe(false);
+  });
+});
+
+describe("Adressen werden nicht als Kategorie geraten", () => {
+  it("Bahnhofstraße ist kein Bahnhof", () => {
+    expect(verstehe("Bahnhofstrase 1 Wetzlr", FR).typ).toBe("suche");
+    expect(verstehe("Parkstraße", FR).typ).toBe("suche");
+    expect(verstehe("Bahnhof", FR).typ).toBe("kategorie");
   });
 });

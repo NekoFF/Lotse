@@ -82,3 +82,86 @@ export async function kiVerstehen(text: string): Promise<KiAnweisung | null> {
   } catch { /* ungültig */ }
   return null;
 }
+
+/* ---------- Chat: sehr kurze Antworten, möglichst gleich ein Ergebnis ---------- */
+
+export interface KiAntwort {
+  /** höchstens ein kurzer Satz */
+  antwort: string;
+  aktion: "keine" | "suche" | "kategorie";
+  /** Adresse/Name (bei Tippfehlern korrigiert) */
+  suchtext: string;
+  kategorie: string;
+  /** Stadt/Ort, falls genannt („in Frankfurt“) */
+  ort: string;
+}
+
+// Reihenfolge wichtig: erst entscheiden (Aktion, Kategorie, Ort, Suchtext), dann der kurze Satz – kleine Modelle füllen sonst die Felder nicht
+const CHAT_SCHEMA = {
+  type: "object",
+  properties: {
+    aktion: { type: "string", enum: ["keine", "suche", "kategorie"] },
+    kategorie: { type: "string", enum: ["keine", ...KATEGORIEN.map((k) => k.id)] },
+    ort: { type: "string" },
+    suchtext: { type: "string" },
+    antwort: { type: "string", maxLength: 100 },
+  },
+  required: ["aktion", "kategorie", "ort", "suchtext", "antwort"],
+};
+
+const CHAT_SYSTEM = `Du bist Lotse, ein Karten-Assistent. Antworte NUR mit JSON nach Schema.
+Zuerst entscheiden: aktion "kategorie" (Art von Orten; "kategorie" = passende Kategorie; "ort" = genannte Stadt oder leer),
+aktion "suche" ("suchtext" = die gemeinte Adresse oder der Name, Tippfehler verbessert) oder aktion "keine".
+Kategorien: ${KATEGORIEN.map((k) => `${k.id} (${k.name})`).join(", ")}.
+Dann "antwort": höchstens EIN sehr kurzer Satz auf Deutsch, kein Smalltalk.
+Gib nie medizinische Ratschläge und stelle keine Diagnosen.`;
+
+const a = (aktion: KiAntwort["aktion"], kategorie: string, ort: string, suchtext: string, antwort: string): KiAntwort => ({ aktion, kategorie, ort, suchtext, antwort });
+const CHAT_BEISPIELE: [string, KiAntwort][] = [
+  ["hi", a("keine", "keine", "", "", "Hallo! Was suchst du?")],
+  ["wo sind die besten Orte in Frankfurt", a("kategorie", "sehenswert", "Frankfurt am Main", "", "Sehenswertes in Frankfurt:")],
+  ["Bahnhofstrase 1 Wetzlr", a("suche", "keine", "", "Bahnhofstraße 1, Wetzlar", "Meintest du das?")],
+  ["Goethestrsse 5 Gisen", a("suche", "keine", "", "Goethestraße 5, Gießen", "Meintest du das?")],
+  ["ich habe Hunger", a("kategorie", "essen", "", "", "Essen in der Nähe:")],
+  ["wie geht es dir", a("keine", "keine", "", "", "Gut! Wohin soll es gehen?")],
+  ["Cafés in Gießen", a("kategorie", "cafe", "Gießen", "", "Cafés in Gießen:")],
+];
+
+/** Stadt aus „… in Frankfurt“ (Ersatz, falls das Modell „ort“ leer lässt) */
+export function ortAusText(text: string): string {
+  const m = text.match(/\b(?:in|im|um|bei)\s+([A-ZÄÖÜ][\wäöüß.-]+(?:\s+(?:am|an der|im)\s+[A-ZÄÖÜ][\wäöüß-]+)?)/);
+  return m ? m[1] : "";
+}
+
+/** Kategorie aus dem Antwortsatz ablesen (Ersatz, falls das Modell das Feld leer lässt) */
+export function kategorieAusSatz(satz: string): string {
+  const n = satz.toLowerCase();
+  return KATEGORIEN.find((k) => n.includes(k.name.toLowerCase()))?.id ?? "";
+}
+
+export async function kiChat(text: string): Promise<KiAntwort | null> {
+  if (!motor) return null;
+  const r = await motor.chat.completions.create({
+    messages: [
+      { role: "system", content: CHAT_SYSTEM },
+      ...CHAT_BEISPIELE.flatMap(([f, a]) => [{ role: "user" as const, content: f }, { role: "assistant" as const, content: JSON.stringify(a) }]),
+      { role: "user", content: text.slice(0, 300) },
+    ],
+    temperature: 0,
+    max_tokens: 120,
+    response_format: { type: "json_object", schema: JSON.stringify(CHAT_SCHEMA) },
+  });
+  try {
+    const j = JSON.parse(r.choices[0]?.message?.content ?? "") as KiAntwort;
+    const antwort = String(j.antwort ?? "").replace(/\s+/g, " ").trim().slice(0, 100);
+    const ort = (String(j.ort ?? "").trim() || ortAusText(text)).slice(0, 60);
+    const kategorie = KATEGORIEN.some((k) => k.id === j.kategorie) ? j.kategorie : kategorieAusSatz(antwort);
+    const suchtext = String(j.suchtext ?? "").trim().slice(0, 120);
+    if (j.aktion === "kategorie" && kategorie) return { aktion: "kategorie", kategorie, ort, suchtext: "", antwort };
+    if (j.aktion === "suche" && suchtext.length >= 2) return { aktion: "suche", kategorie: "", ort, suchtext, antwort };
+    if (j.aktion === "suche") return { aktion: "suche", kategorie: "", ort, suchtext: "", antwort }; // App versucht es dann unscharf
+    return { antwort: antwort || "Dazu finde ich nichts. Versuch es mit einem Ort oder einer Adresse.", aktion: "keine", suchtext: "", kategorie: "", ort: "" };
+  } catch {
+    return null;
+  }
+}
