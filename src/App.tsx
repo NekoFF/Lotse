@@ -7,6 +7,7 @@ import type { LngLat, Modus, Start } from "./data/praxen";
 import { kiStarten, kiVerstehen, type KiStatus } from "./ki/assistent";
 import { erinnerungenPlanen, kalenderLaden, leseTermine, loescheTermin, losgehzeit, speichereTermin, type Termin } from "./lib/termine";
 import { useRoute } from "./lib/wege";
+import { leseGespeichert, umschalten } from "./lib/gespeichert";
 import { LotseMap, type Abstand, type Pin } from "./map/LotseMap";
 import { Notfall } from "./screens/Notfall";
 import { fehlerText, gpsStandort } from "./services/dienste";
@@ -57,6 +58,7 @@ export default function App() {
   const [groesse, setGroesse] = useState({ w: 0, h: 0 });
   const [termine, setTermine] = useState<Termin[]>(leseTermine);
   const [vorgemerkt, setVorgemerkt] = useState<Date | null>(null);
+  const [gespeichert, setGespeichert] = useState<Ort[]>(leseGespeichert);
   const [ki, setKi] = useState<KiStatus>({ art: "aus" });
   const [toast, setToast] = useState<string | null>(null);
   const [dreiD, setDreiD] = useState(false);
@@ -164,6 +166,7 @@ export default function App() {
     if (v.art === "suchen") void absenden(v.text);
     else if (v.art === "zuletzt") { setText(v.text); void absenden(v.text); }
     else if (v.art === "kategorie") { setText(v.k.name); kategorieSuche(v.k); }
+    else if (v.art === "ort") gehe({ art: "ort", ort: v.o, laden: false });
     else gehe({ art: "ort", ort: v.t.ort, laden: false });
   };
 
@@ -207,10 +210,17 @@ export default function App() {
 
   const zielOrt = ansicht.art === "ort" || ansicht.art === "route" || ansicht.art === "termin" ? ansicht.ort : null;
   const weg = useRoute(start?.lngLat ?? null, zielOrt?.lngLat ?? null, modus, versuch);
+  // Im Routen-Blatt: Zeiten für alle Verkehrsmittel (gleiche Anfrage wie oben wird aus dem Speicher bedient)
+  const routeZiel = ansicht.art === "route" ? ansicht.ort.lngLat : null;
+  const wegFuss = useRoute(start?.lngLat ?? null, routeZiel, "fuss", versuch);
+  const wegRad = useRoute(start?.lngLat ?? null, routeZiel, "rad", versuch);
+  const wegAuto = useRoute(start?.lngLat ?? null, routeZiel, "auto", versuch);
+  const [routeWahl, setRouteWahl] = useState(0);
+  const gewaehlteRoute = weg.routen[routeWahl] ?? weg.route;
   const terminFuer = (o: Ort) => termine.find((t) => t.ort.id === o.id) ?? null;
 
   const terminSpeichern = (o: Ort, d: Date) => {
-    const los = weg.route ? losgehzeit(d, weg.route.s) : null;
+    const los = gewaehlteRoute ? losgehzeit(d, gewaehlteRoute.s) : null;
     const t: Termin = { id: terminFuer(o)?.id ?? `${o.id}-${d.getTime()}`, ort: o, zeit: d.toISOString(), los: los?.toISOString() ?? null, modus: weg.route ? modus : null };
     setTermine(speichereTermin(t));
     setVorgemerkt(null);
@@ -243,9 +253,11 @@ export default function App() {
     return listenOrte.slice(0, 40).map((o) => ({ id: o.id, lngLat: o.lngLat, label: o.name.length > 18 ? o.name.slice(0, 16) + "…" : o.name, aktiv: false }));
   }, [zielOrt, listenOrte]);
 
-  const routeLinie = useMemo(() => (ansicht.art === "route" && weg.route ? { linie: weg.route.line, planb: null, modus } : null), [ansicht.art, weg.route, modus]);
+  const routeLinie = useMemo(() => (ansicht.art === "route" && gewaehlteRoute
+    ? { linie: gewaehlteRoute.line, planb: null, modus, alternativen: weg.routen.filter((x) => x !== gewaehlteRoute).map((x) => x.line) }
+    : null), [ansicht.art, gewaehlteRoute, weg.routen, modus]);
   const [rahmen, rahmenKey] = useMemo((): [LngLat[], string] => {
-    if (routeLinie) return [routeLinie.linie, `route-${zielOrt?.id}-${modus}-${start?.lngLat.join()}`];
+    if (routeLinie) return [[...routeLinie.linie, ...(routeLinie.alternativen ?? []).flat()], `route-${zielOrt?.id}-${modus}-${start?.lngLat.join()}`];
     if (zielOrt) return [[zielOrt.lngLat], `ort-${zielOrt.id}`];
     if (listenOrte.length) return [[nahe, ...listenOrte.slice(0, 8).map((o) => o.lngLat)], `liste-${listenOrte.slice(0, 3).map((o) => o.id).join()}`];
     return start ? [[start.lngLat], `start-${start.lngLat.join()}`] : [[], "leer"];
@@ -293,7 +305,7 @@ export default function App() {
         )}
         <div className="wechsel" key={`${verlauf.length}-${ansicht.art}`}>
           {fokus && (
-            <VorschlagInhalt text={text} zuletzt={zuletzt} termine={termine} ki={ki} onWahl={waehle}
+            <VorschlagInhalt text={text} zuletzt={zuletzt} termine={termine} gespeichert={gespeichert} ki={ki} onWahl={waehle}
               onInfo={() => { fertig(); gehe({ art: "info" }); }}
               onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} onZu={schliessen} />
           )}
@@ -303,13 +315,16 @@ export default function App() {
           )}
           {!fokus && ansicht.art === "ort" && (
             <OrtInhalt o={ansicht.ort} laden={ansicht.laden} weg={weg} modus={modus} onZu={schliessen}
+              gespeichert={gespeichert.some((x) => x.id === ansicht.ort.id)}
+              onSpeichern={() => { const l = umschalten(ansicht.ort); setGespeichert(l); zeige(l.some((x) => x.id === ansicht.ort.id) ? "Gespeichert." : "Nicht mehr gespeichert."); }}
               onZurueck={verlauf.length > 1 && verlauf[verlauf.length - 2].art !== "start" ? zurueck : undefined}
               onRoute={() => gehe({ art: "route", ort: ansicht.ort })}
               onTermin={() => gehe({ art: "termin", ort: ansicht.ort, zeit: vorgemerkt })}
               onTeilen={() => void teilen(ansicht.ort)} />
           )}
           {!fokus && ansicht.art === "route" && (
-            <RouteInhalt o={ansicht.ort} start={start} modus={modus} setModus={setModus} weg={weg} termin={terminFuer(ansicht.ort)}
+            <RouteInhalt o={ansicht.ort} start={start} modus={modus} setModus={setModus} wege={{ fuss: wegFuss, rad: wegRad, auto: wegAuto }}
+              wahl={routeWahl} setWahl={setRouteWahl} termin={terminFuer(ansicht.ort)}
               onStartGps={gps} onStartAdresse={startAdresse} onZurueck={zurueck} onNeu={() => setVersuch((n) => n + 1)} onZu={schliessen} />
           )}
           {!fokus && ansicht.art === "termin" && (

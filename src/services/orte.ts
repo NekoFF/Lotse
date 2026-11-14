@@ -3,6 +3,7 @@ import { fachAusOsm } from "../core/osmFach";
 import type { FachId } from "../data/fachrichtungen";
 import { luftlinie, type LngLat, type Modus } from "../data/praxen";
 import { DienstFehler, ersteNummer, holeJson, pkt, profil, sichereWebsite, type NomTreffer } from "./dienste";
+import { commonsDatei, type BildHinweis } from "./foto";
 
 /** Ein beliebiger Ort auf der Karte: Adresse, Laden, Haltestelle, Praxis … (alles aus OpenStreetMap) */
 export interface Ort {
@@ -16,6 +17,8 @@ export interface Ort {
   oeffnungszeiten: string | null;
   rollstuhl: string | null;
   fach: FachId | null;
+  /** Verweis auf ein freies Foto (Wikimedia Commons / Wikidata), falls in OSM eingetragen */
+  bild?: BildHinweis;
 }
 
 const ART: Record<string, string> = {
@@ -50,6 +53,7 @@ export function alsOrt(t: NomTreffer): Ort {
     oeffnungszeiten: tags.opening_hours ?? null,
     rollstuhl: tags.wheelchair ?? null,
     fach: t.type === "doctors" || t.type === "dentist" ? fachAusOsm(tags, name, t.type) : null,
+    bild: commonsDatei(tags) || tags.wikidata ? { commons: commonsDatei(tags) ?? undefined, wikidata: tags.wikidata } : undefined,
   };
 }
 
@@ -101,7 +105,7 @@ export async function ortLaden(id: string): Promise<Ort | null> {
 /* ---------- Route mit Schritten ---------- */
 
 export interface Schritt { text: string; m: number }
-export interface Route { s: number; m: number; line: LngLat[]; schritte: Schritt[] }
+export interface Route { s: number; m: number; line: LngLat[]; schritte: Schritt[]; /** Hauptstraßen laut Routendienst, z. B. „B49, L3020“ */ ueber?: string }
 
 export interface OsrmSchritt { distance: number; name: string; maneuver: { type: string; modifier?: string; exit?: number } }
 
@@ -123,11 +127,18 @@ export function schrittText(s: OsrmSchritt): string {
   }
 }
 
+/** Bis zu drei echte Routen (Hauptroute + Alternativen des Routendienstes) */
+export async function routenLaden(start: LngLat, ziel: LngLat, m: Modus): Promise<Route[]> {
+  const u = `${DIENSTE.routing[m]}/route/v1/${profil[m]}/${pkt(start)};${pkt(ziel)}?overview=full&geometries=geojson&steps=true&alternatives=true`;
+  const r = await holeJson<{ code: string; routes?: { distance: number; duration: number; geometry: { coordinates: LngLat[] }; legs: { summary?: string; steps: OsrmSchritt[] }[] }[] }>(u, "Wegberechnung");
+  if (r.code !== "Ok" || !r.routes?.length) throw new DienstFehler("Für diesen Weg gibt es gerade keine Route.");
+  return r.routes.slice(0, 3).map((x) => ({
+    s: x.duration, m: x.distance, line: x.geometry.coordinates,
+    schritte: x.legs.flatMap((l) => l.steps).map((st) => ({ text: schrittText(st), m: st.distance })),
+    ueber: x.legs.map((l) => l.summary).filter(Boolean).join(", "),
+  }));
+}
+
 export async function routeLaden(start: LngLat, ziel: LngLat, m: Modus): Promise<Route> {
-  const u = `${DIENSTE.routing[m]}/route/v1/${profil[m]}/${pkt(start)};${pkt(ziel)}?overview=full&geometries=geojson&steps=true`;
-  const r = await holeJson<{ code: string; routes?: { distance: number; duration: number; geometry: { coordinates: LngLat[] }; legs: { steps: OsrmSchritt[] }[] }[] }>(u, "Wegberechnung");
-  const x = r.routes?.[0];
-  if (r.code !== "Ok" || !x) throw new DienstFehler("Für diesen Weg gibt es gerade keine Route.");
-  const schritte = x.legs.flatMap((l) => l.steps).map((s) => ({ text: schrittText(s), m: s.distance }));
-  return { s: x.duration, m: x.distance, line: x.geometry.coordinates, schritte };
+  return (await routenLaden(start, ziel, m))[0];
 }

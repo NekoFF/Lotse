@@ -10,8 +10,8 @@ const STIL = DIENSTE.kartenStil;
 const UEBERBLICK = { center: [8.5044, 50.5558] as LngLat, zoom: 13.6 };
 
 const FARBE = {
-  light: { accent: "#2f5bff", rand: "#1a36a8", casing: "#ffffff", rad: "#18a058", planb: "#8597e6" },
-  dark: { accent: "#6f8cff", rand: "#24357d", casing: "#15161a", rad: "#3ccf82", planb: "#5a6db5" },
+  light: { accent: "#2f5bff", rand: "#1a36a8", casing: "#ffffff", rad: "#18a058", planb: "#8597e6", alt: "#a9b8f5" },
+  dark: { accent: "#6f8cff", rand: "#24357d", casing: "#15161a", rad: "#3ccf82", planb: "#5a6db5", alt: "#3d4a80" },
 };
 
 export interface Pin {
@@ -25,6 +25,8 @@ export interface Route {
   linie: LngLat[];
   planb: LngLat[] | null;
   modus: "fuss" | "rad" | "auto";
+  /** weitere echte Routen, blass gezeichnet */
+  alternativen?: LngLat[][];
 }
 
 export interface Abstand { top: number; right: number; bottom: number; left: number }
@@ -243,7 +245,7 @@ function zeichneRoute(m: MlMap, r: Route | null, theme: "light" | "dark") {
   const f = FARBE[theme];
   const daten: GeoJSON.FeatureCollection = {
     type: "FeatureCollection",
-    features: r ? [...(r.planb ? [linie(r.planb, "planb")] : []), linie(r.linie, r.modus)] : [],
+    features: r ? [...(r.alternativen ?? []).map((l) => linie(l, "alt")), ...(r.planb ? [linie(r.planb, "planb")] : []), linie(r.linie, r.modus)] : [],
   };
   const quelle = m.getSource("route") as maplibregl.GeoJSONSource | undefined;
   if (quelle) { quelle.setData(daten); return; }
@@ -255,6 +257,7 @@ function zeichneRoute(m: MlMap, r: Route | null, theme: "light" | "dark") {
   const ebene = (id: string, art: string, paint: Record<string, unknown>) =>
     m.addLayer({ id, type: "line", source: "route", filter: ist(art), layout: rund, paint } as maplibregl.LineLayerSpecification, vor);
 
+  ebene("alt", "alt", { "line-color": f.alt, "line-width": breite(4, 11), "line-opacity": 0.85 });
   ebene("planb", "planb", { "line-color": f.planb, "line-width": breite(3, 7), "line-dasharray": [1.4, 1.4], "line-opacity": 0.9 });
   // Auto: kräftige Linie mit dunklerem Rand
   ebene("auto-rand", "auto", { "line-color": f.rand, "line-width": breite(7, 18) });
@@ -263,8 +266,26 @@ function zeichneRoute(m: MlMap, r: Route | null, theme: "light" | "dark") {
   ebene("rad-rand", "rad", { "line-color": f.casing, "line-width": breite(6, 15) });
   ebene("rad", "rad", { "line-color": f.rad, "line-width": breite(3.5, 10) });
   // Zu Fuß: runde Punkte auf zarter Spur
-  ebene("fuss-spur", "fuss", { "line-color": f.accent, "line-opacity": 0.18, "line-width": breite(4, 10) });
-  ebene("fuss", "fuss", { "line-color": f.accent, "line-width": breite(5, 12), "line-dasharray": [0, 1.7] });
+  ebene("fuss-spur", "fuss", { "line-color": f.accent, "line-opacity": 0.16, "line-width": breite(4, 10) });
+  // Zu Fuß: gleichmäßige runde Punkte als Symbole entlang der Linie (Strichmuster wird in Kurven ungleichmäßig)
+  if (!m.hasImage("lotse-wegpunkt")) m.addImage("lotse-wegpunkt", wegpunkt(f.accent), { pixelRatio: 2 });
+  m.addLayer({
+    id: "fuss", type: "symbol", source: "route", filter: ist("fuss"),
+    layout: {
+      "symbol-placement": "line", "symbol-spacing": ["interpolate", ["linear"], ["zoom"], 12, 9, 18, 18] as unknown as number,
+      "icon-image": "lotse-wegpunkt", "icon-size": ["interpolate", ["linear"], ["zoom"], 12, 0.55, 18, 1.1] as unknown as number,
+      "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-rotation-alignment": "map",
+    },
+  } as maplibregl.SymbolLayerSpecification, vor);
+}
+
+/** runder Wegpunkt (weißer Rand) für die Fußroute */
+function wegpunkt(farbe: string): ImageData {
+  const c = document.createElement("canvas"); c.width = c.height = 24;
+  const x = c.getContext("2d")!;
+  x.fillStyle = "#ffffff"; x.beginPath(); x.arc(12, 12, 11, 0, Math.PI * 2); x.fill();
+  x.fillStyle = farbe; x.beginPath(); x.arc(12, 12, 8, 0, Math.PI * 2); x.fill();
+  return x.getImageData(0, 0, 24, 24);
 }
 
 function linie(coords: LngLat[], art: string): GeoJSON.Feature {

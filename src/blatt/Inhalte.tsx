@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { fotoLaden, type Foto } from "../services/foto";
 import { DIENSTE } from "../config";
 import type { Kategorie } from "../core/absicht";
 import { KATEGORIEN } from "../core/absicht";
@@ -8,7 +9,7 @@ import type { WegStand } from "../lib/wege";
 import { PUFFER_MIN, type Termin } from "../lib/termine";
 import { telLink } from "../services/dienste";
 import type { Ort } from "../services/orte";
-import { Auto, Bus, Essen, Extern, Gehen, Kalender, Ki, Pille, Rad, Route as RouteIc, Schliessen, Standort, Stern, Stetho, Suche, Tasse, Teilen, Telefon, Uhr, Wagen, Zurueck } from "../ui/icons";
+import { Auto, Bus, Essen, Extern, Gehen, Kalender, Merken, Pille, Rad, Route as RouteIc, Schliessen, Standort, Stern, Stetho, Suche, Tasse, Teilen, Telefon, Uhr, Wagen, Zurueck } from "../ui/icons";
 
 export const uhr = (d: Date) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 export const tagKurz = (d: Date) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" });
@@ -26,56 +27,6 @@ export function Kopf({ titel, unter, onZu, onZurueck }: { titel: string; unter?:
       {onZurueck && <button type="button" className="rund klein" aria-label="Zurück" onClick={onZurueck}><Zurueck size={17} /></button>}
       <div className="ansicht-titel"><h2>{titel}</h2>{unter && <span>{unter}</span>}</div>
       {onZu && <button type="button" className="rund klein" aria-label="Schließen" onClick={onZu}><Schliessen size={15} /></button>}
-    </div>
-  );
-}
-
-/* ---------- Start ---------- */
-
-export function StartInhalt({ onKategorie, termine, onTermin, ki, onKi, onInfo }: {
-  onKategorie: (k: Kategorie) => void;
-  termine: Termin[];
-  onTermin: (t: Termin) => void;
-  ki: KiStatus;
-  onKi: () => void;
-  onInfo: () => void;
-}) {
-  const auswahl = ["arzt", "apotheke", "essen", "cafe", "einkaufen", "freizeit", "haltestelle"];
-  return (
-    <div className="inhalt start">
-      <div className="chips">
-        {auswahl.map((id) => { const k = KATEGORIEN.find((x) => x.id === id)!; return <button key={id} type="button" className="chip" onClick={() => onKategorie(k)}>{k.name}</button>; })}
-      </div>
-
-      {termine.length > 0 && (
-        <section>
-          <h3 className="abschnitt">Termine</h3>
-          <div className="zeilen">
-            {termine.slice(0, 4).map((t) => {
-              const d = new Date(t.zeit);
-              return (
-                <button key={t.id} type="button" className="zeile" onClick={() => onTermin(t)}>
-                  <span className="zeile-ic akzent-ic"><Kalender size={17} /></span>
-                  <span className="zeile-t"><b>{t.ort.name}</b><span>{tagKurz(d)}, {uhr(d)}{t.los ? ` · los ${uhr(new Date(t.los))}` : ""}</span></span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      <button type="button" className={`ki-zeile${ki.art === "bereit" ? " an" : ""}`} onClick={onKi} disabled={ki.art === "laedt"}>
-        <Ki size={18} />
-        <span className="zeile-t">
-          <b>KI auf diesem Gerät</b>
-          <span>{ki.art === "aus" ? "Versteht ganze Sätze. Einmal ca. 0,4 GB laden." : ki.art === "laedt" ? `Lädt … ${Math.round(ki.anteil * 100)} %` : ki.art === "bereit" ? "An – dein Text bleibt auf dem Gerät" : ki.text}</span>
-        </span>
-      </button>
-
-      <div className="fuss-zeile">
-        <span>Notfall <a href="tel:112" className="rot-t stark">112</a> · Bereitschaftsdienst <a href="tel:116117">116 117</a></span>
-        <button type="button" className="link" onClick={onInfo}>Daten & Quellen</button>
-      </div>
     </div>
   );
 }
@@ -114,16 +65,36 @@ export function ListenInhalt({ l, aktiv, onOrt, onZu, onNeu }: {
 
 /* ---------- Ortskarte ---------- */
 
-export function OrtInhalt({ o, laden, weg, modus, onRoute, onTermin, onTeilen, onZu, onZurueck }: {
-  o: Ort; laden: boolean; weg: WegStand; modus: Modus;
+/** Freies Foto zum Ort (nur wenn in OSM mit Commons/Wikidata verknüpft) */
+function useFoto(o: Ort): Foto | null {
+  const [f, setF] = useState<{ id: string; foto: Foto | null }>({ id: "", foto: null });
+  useEffect(() => {
+    if (!o.bild) return;
+    let aus = false;
+    fotoLaden(o.bild).then((foto) => { if (!aus) setF({ id: o.id, foto }); }, () => { if (!aus) setF({ id: o.id, foto: null }); });
+    return () => { aus = true; };
+  }, [o.id, o.bild]);
+  return f.id === o.id ? f.foto : null;
+}
+
+export function OrtInhalt({ o, laden, weg, modus, gespeichert, onSpeichern, onRoute, onTermin, onTeilen, onZu, onZurueck }: {
+  o: Ort; laden: boolean; weg: WegStand; modus: Modus; gespeichert: boolean; onSpeichern: () => void;
   onRoute: () => void; onTermin: () => void; onTeilen: () => void; onZu: () => void; onZurueck?: () => void;
 }) {
+  const foto = useFoto(o);
   const zeiten = o.oeffnungszeiten ? zeitenLesbar(o.oeffnungszeiten) : [];
   return (
     <div className="inhalt ort">
       <Kopf titel={o.name} unter={[o.art, weg.route ? `${min(weg.route.s)} Min ${MODUS_NAME[modus]}` : null].filter(Boolean).join(" · ")} onZu={onZu} onZurueck={onZurueck} />
+      {foto && (
+        <figure className="ort-foto">
+          <img src={foto.url} alt={o.name} loading="lazy" referrerPolicy="no-referrer" />
+          <figcaption><a href={foto.seite} target="_blank" rel="noopener noreferrer">Foto: {foto.autor} · {foto.lizenz} · Wikimedia Commons</a></figcaption>
+        </figure>
+      )}
       <div className="aktionen-reihe">
         <button type="button" className="aktion primaer" onClick={onRoute}><RouteIc size={20} /><span>Route</span></button>
+        <button type="button" className={`aktion${gespeichert ? " an" : ""}`} onClick={onSpeichern} aria-pressed={gespeichert}><Merken size={20} /><span>{gespeichert ? "Gespeichert" : "Speichern"}</span></button>
         {o.telefon && <a className="aktion" href={telLink(o.telefon)}><Telefon size={20} /><span>Anrufen</span></a>}
         {o.website && <a className="aktion" href={o.website} target="_blank" rel="noopener noreferrer"><Extern size={20} /><span>Website</span></a>}
         <button type="button" className="aktion" onClick={onTermin}><Kalender size={20} /><span>Termin</span></button>
@@ -143,17 +114,20 @@ export function OrtInhalt({ o, laden, weg, modus, onRoute, onTermin, onTeilen, o
 
 /* ---------- Route ---------- */
 
-export function RouteInhalt({ o, start, modus, setModus, weg, termin, onStartGps, onStartAdresse, onZurueck, onNeu, onZu }: {
-  o: Ort; start: Start | null; modus: Modus; setModus: (m: Modus) => void; weg: WegStand; termin: Termin | null;
+export function RouteInhalt({ o, start, modus, setModus, wege, wahl, setWahl, termin, onStartGps, onStartAdresse, onZurueck, onNeu, onZu }: {
+  o: Ort; start: Start | null; modus: Modus; setModus: (m: Modus) => void;
+  /** echte Routen je Verkehrsmittel (für die Zeiten oben) */
+  wege: Record<Modus, WegStand>; wahl: number; setWahl: (i: number) => void; termin: Termin | null;
   onStartGps: () => void; onStartAdresse: (text: string) => void; onZurueck: () => void; onNeu: () => void; onZu: () => void;
 }) {
   const [text, setText] = useState("");
-  const r = weg.route;
-  const ankunft = r ? new Date(Date.now() + r.s * 1000) : null;
+  const [schritteAuf, setSchritteAuf] = useState(false);
+  const weg = wege[modus];
+  const r = weg.routen[wahl] ?? weg.route;
   const los = r && termin ? new Date(new Date(termin.zeit).getTime() - (PUFFER_MIN * 60 + min(r.s) * 60) * 1000) : null;
   return (
     <div className="inhalt route">
-      <Kopf titel={`Route nach ${o.name}`} onZurueck={onZurueck} onZu={onZu} />
+      <Kopf titel={o.name} unter="Route" onZurueck={onZurueck} onZu={onZu} />
       <div className="start-wahl">
         <span className="punkt-ic"><Standort size={15} /></span>
         {start ? <span className="start-name">{start.name}</span> : <span className="start-name leise">Startpunkt wählen</span>}
@@ -164,26 +138,49 @@ export function RouteInhalt({ o, start, modus, setModus, weg, termin, onStartGps
           <input value={text} onChange={(e) => setText(e.target.value)} placeholder="oder Startadresse eingeben" enterKeyHint="go" />
         </form>
       )}
-      <div className="segment vier" role="radiogroup" aria-label="Verkehrsmittel">
-        {MODI.map((m) => (
-          <button key={m} type="button" role="radio" aria-checked={modus === m} className={modus === m ? "an" : ""} onClick={() => setModus(m)}>{MODUS_ICON[m]} {MODUS_KURZ[m]}</button>
-        ))}
-        <button type="button" disabled title="Fahrplandaten folgen">Bus <small>folgt</small></button>
+
+      {/* Verkehrsmittel mit echter Zeit darunter – wie bei Google Maps */}
+      <div className="modi" role="radiogroup" aria-label="Verkehrsmittel">
+        {MODI.map((m) => {
+          const w = wege[m];
+          return (
+            <button key={m} type="button" role="radio" aria-checked={modus === m} className={`modus${modus === m ? " an" : ""}`} onClick={() => { setModus(m); setWahl(0); setSchritteAuf(false); }}>
+              {MODUS_ICON[m]}
+              <span>{!start ? MODUS_KURZ[m] : w.route ? `${min(w.route.s)} Min` : w.status === "fehler" ? "–" : "…"}</span>
+            </button>
+          );
+        })}
+        <button type="button" className="modus" disabled title="Fahrplandaten folgen"><Bus size={17} /><span>folgt</span></button>
       </div>
-      {start && weg.status === "laden" && <div className="zeile skelett"><span /><span /></div>}
+
+      {start && weg.status === "laden" && <div className="zeilen"><div className="zeile skelett"><span /><span /></div></div>}
       {start && weg.status === "fehler" && <div className="box"><span>{weg.fehler}</span><button type="button" className="btn zweit" onClick={onNeu}>Erneut versuchen</button></div>}
+
+      {weg.routen.length > 0 && (
+        <div className="zeilen routen">
+          {weg.routen.map((x, i) => (
+            <button key={i} type="button" className={`zeile route-wahl${i === wahl ? " an" : ""}`} onClick={() => { setWahl(i); setSchritteAuf(false); }}>
+              <span className="zeile-t"><b>{x.ueber ? `über ${x.ueber}` : MODUS_NAME[modus]}</b><span>{km(x.m)}{i === 0 ? " · schnellste" : ""}</span></span>
+              <span className="route-min"><b className="mono">{min(x.s)}</b> Min</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {r && los && termin && (
+        <div className="los-box"><Uhr size={18} /><span>Termin <b>{uhr(new Date(termin.zeit))}</b> – los um <b className="mono">{uhr(los)}</b> ({PUFFER_MIN} Min Puffer)</span></div>
+      )}
+
       {r && (
         <>
-          <div className="route-gross">
-            <div><b className="mono">{min(r.s)}</b><span>Min</span></div>
-            <div className="route-neben"><span>{km(r.m)}</span>{ankunft && <span>an {uhr(ankunft)} bei Start jetzt</span>}</div>
-          </div>
-          {los && termin && (
-            <div className="los-box"><Uhr size={18} /><span>Für deinen Termin um <b>{uhr(new Date(termin.zeit))}</b>: los um <b className="mono">{uhr(los)}</b> ({PUFFER_MIN} Min Puffer)</span></div>
+          <button type="button" className="btn zweit" onClick={() => setSchritteAuf((x) => !x)} aria-expanded={schritteAuf}>
+            {schritteAuf ? "Schritte ausblenden" : `Schritte anzeigen (${r.schritte.length})`}
+          </button>
+          {schritteAuf && (
+            <ol className="schritte">
+              {r.schritte.map((st, i) => <li key={i}><span>{st.text}</span>{st.m > 0 && <span className="leise">{km(st.m)}</span>}</li>)}
+            </ol>
           )}
-          <ol className="schritte">
-            {r.schritte.map((s, i) => <li key={i}><span>{s.text}</span>{s.m > 0 && <span className="leise">{km(s.m)}</span>}</li>)}
-          </ol>
           <p className="fein">Wege: <a href={DIENSTE.routingInfo} target="_blank" rel="noopener noreferrer">OSRM (FOSSGIS)</a>, ohne aktuelle Verkehrslage · <a href={DIENSTE.osmFehlerMelden} target="_blank" rel="noopener noreferrer">Fehler melden</a></p>
         </>
       )}
@@ -227,7 +224,8 @@ export function InfoInhalt({ onZurueck, onZu }: { onZurueck?: () => void; onZu: 
         <li><b>Deine Beschreibung</b> bleibt auf dem Gerät. Lotse ordnet sie nur einer Fachrichtung zu und stellt keine Diagnose.</li>
         <li><b>Suche und Orte</b>: Nominatim (OpenStreetMap). <b>Wege</b>: FOSSGIS-Routingserver. <b>Karte</b>: OpenFreeMap. Diese Dienste sehen deine IP-Adresse und den gesuchten Ort bzw. Startpunkt.</li>
         <li><b>KI</b> (wenn eingeschaltet) läuft im Browser. Nur das Modell wird einmal von Hugging Face geladen.</li>
-        <li><b>Termine und Startpunkt</b> bleiben in diesem Browser.</li>
+        <li><b>Fotos</b> nur aus Wikimedia Commons, wenn ein Ort in OpenStreetMap damit verknüpft ist – immer mit Urheber und Lizenz.</li>
+        <li><b>Termine, gespeicherte Orte und Startpunkt</b> bleiben in diesem Browser.</li>
       </ul>
       <p className="fein">
         Kartendaten <a href={DIENSTE.osmLizenz} target="_blank" rel="noopener noreferrer">© OpenStreetMap-Mitwirkende</a> ·
@@ -271,25 +269,27 @@ export type Vorschlag =
   | { art: "suchen"; text: string }
   | { art: "kategorie"; k: Kategorie }
   | { art: "zuletzt"; text: string }
-  | { art: "termin"; t: Termin };
+  | { art: "termin"; t: Termin }
+  | { art: "ort"; o: Ort };
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ß/g, "ss");
 
-export function vorschlaegeFuer(text: string, zuletzt: string[], termine: Termin[]): Vorschlag[] {
+export function vorschlaegeFuer(text: string, zuletzt: string[], termine: Termin[], gespeichert: Ort[] = []): Vorschlag[] {
   const q = norm(text.trim());
   if (!q) return [];
   const aus: Vorschlag[] = [{ art: "suchen", text: text.trim() }];
   for (const k of KATEGORIEN) if (norm(k.name).includes(q) || norm(k.id).startsWith(q)) aus.push({ art: "kategorie", k });
   for (const z of zuletzt) if (norm(z).includes(q) && norm(z) !== q) aus.push({ art: "zuletzt", text: z });
   for (const t of termine) if (norm(t.ort.name).includes(q)) aus.push({ art: "termin", t });
+  for (const o of gespeichert) if (norm(o.name).includes(q)) aus.push({ art: "ort", o });
   return aus.slice(0, 8);
 }
 
-export function VorschlagInhalt({ text, zuletzt, termine, ki, onWahl, onInfo, onVerlaufLoeschen, onZu }: {
-  text: string; zuletzt: string[]; termine: Termin[]; ki: KiStatus;
+export function VorschlagInhalt({ text, zuletzt, termine, gespeichert, ki, onWahl, onInfo, onVerlaufLoeschen, onZu }: {
+  text: string; zuletzt: string[]; termine: Termin[]; gespeichert: Ort[]; ki: KiStatus;
   onWahl: (v: Vorschlag) => void; onInfo: () => void; onVerlaufLoeschen: () => void; onZu: () => void;
 }) {
-  const liste = vorschlaegeFuer(text, zuletzt, termine);
+  const liste = vorschlaegeFuer(text, zuletzt, termine, gespeichert);
   const kopf = <Kopf titel={text.trim() ? "Vorschläge" : "Suche"} onZu={onZu} />;
   if (text.trim()) {
     return (
@@ -298,10 +298,10 @@ export function VorschlagInhalt({ text, zuletzt, termine, ki, onWahl, onInfo, on
         <div className="zeilen">
           {liste.map((v, i) => (
             <button key={i} type="button" className="zeile" onClick={() => onWahl(v)}>
-              <span className="zeile-ic">{v.art === "suchen" ? <Suche size={16} /> : v.art === "zuletzt" ? <Uhr size={16} /> : v.art === "termin" ? <Kalender size={16} /> : SCHNELL.find((s) => s.id === v.k.id)?.ic ?? <Suche size={16} />}</span>
+              <span className="zeile-ic">{v.art === "suchen" ? <Suche size={16} /> : v.art === "zuletzt" ? <Uhr size={16} /> : v.art === "termin" ? <Kalender size={16} /> : v.art === "ort" ? <Merken size={16} /> : SCHNELL.find((s) => s.id === v.k.id)?.ic ?? <Suche size={16} />}</span>
               <span className="zeile-t">
-                <b>{v.art === "suchen" ? `„${v.text}“` : v.art === "kategorie" ? v.k.name : v.art === "zuletzt" ? v.text : v.t.ort.name}</b>
-                <span>{v.art === "suchen" ? (ki.art === "bereit" ? "Suchen oder fragen" : "Suchen") : v.art === "kategorie" ? "in der Nähe" : v.art === "zuletzt" ? "zuletzt gesucht" : `Termin ${tagKurz(new Date(v.t.zeit))}, ${uhr(new Date(v.t.zeit))}`}</span>
+                <b>{v.art === "suchen" ? `„${v.text}“` : v.art === "kategorie" ? v.k.name : v.art === "zuletzt" ? v.text : v.art === "ort" ? v.o.name : v.t.ort.name}</b>
+                <span>{v.art === "suchen" ? (ki.art === "bereit" ? "Suchen oder fragen" : "Suchen") : v.art === "kategorie" ? "in der Nähe" : v.art === "zuletzt" ? "zuletzt gesucht" : v.art === "ort" ? `gespeichert · ${v.o.art}` : `Termin ${tagKurz(new Date(v.t.zeit))}, ${uhr(new Date(v.t.zeit))}`}</span>
               </span>
             </button>
           ))}
@@ -319,6 +319,19 @@ export function VorschlagInhalt({ text, zuletzt, termine, ki, onWahl, onInfo, on
             {zuletzt.slice(0, 5).map((z) => (
               <button key={z} type="button" className="zeile" onClick={() => onWahl({ art: "zuletzt", text: z })}>
                 <span className="zeile-ic"><Uhr size={16} /></span><span className="zeile-t"><b>{z}</b></span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+      {gespeichert.length > 0 && (
+        <section>
+          <h3 className="abschnitt">Gespeichert</h3>
+          <div className="zeilen">
+            {gespeichert.slice(0, 5).map((o) => (
+              <button key={o.id} type="button" className="zeile" onClick={() => onWahl({ art: "ort", o })}>
+                <span className="zeile-ic akzent-ic"><Merken size={16} /></span>
+                <span className="zeile-t"><b>{o.name}</b><span>{o.art}{o.adresse ? ` · ${o.adresse}` : ""}</span></span>
               </button>
             ))}
           </div>

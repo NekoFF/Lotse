@@ -199,3 +199,26 @@
 .brand-mini .marke { width: 30px !important; height: 30px !important; border-radius: 9px !important; }
 .ablage { padding-top: 12px; }
 .ablage-symbole { top: 6px; }
+
+/* ---------- Route: Verkehrsmittel mit Zeit, Routenwahl ---------- */
+.modi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.modus { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; border-radius: 12px; background: var(--flaeche); font-size: 12px; font-weight: 600; color: var(--ink2); transition: background 0.15s, color 0.15s; }
+.modus.an { background: var(--akzent-weich); color: var(--akzent); box-shadow: inset 0 0 0 1.5px var(--akzent); }
+.modus:disabled { opacity: 0.45; cursor: not-allowed; }
+.routen .route-wahl { position: relative; }
+.route-wahl.an::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--akzent); }
+.route-wahl.an { background: var(--akzent-weich); }
+.route-min { font-size: 13px; color: var(--ink2); flex-shrink: 0; }
+.route-min b { font-size: 20px; color: var(--ink); font-weight: 700; }
+.route-wahl.an .route-min b { color: var(--akzent); }
+
+/* Foto aus Wikimedia Commons */
+.ort-foto { margin: 0; border-radius: 14px; overflow: hidden; background: var(--fuell); }
+.ort-foto img { display: block; width: 100%; height: 170px; object-fit: cover; }
+.ort-foto figcaption { padding: 6px 10px; font-size: 11px; color: var(--ink3); background: var(--flaeche); }
+.ort-foto figcaption a { color: inherit; text-decoration: none; }
+.aktion.an { background: var(--akzent-weich); }
+
+/* Keine sichtbaren Scrollbalken – Scrollen funktioniert weiter */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }
