@@ -22,3 +22,17 @@ describe("Doctolib nur als Link", () => {
     expect(doctolibLink(ort({ fach: null, adresse: "Weg 2, 35578 Wetzlar" }))).toBe("https://www.doctolib.de/");
   });
 });
+
+import { suchName } from "./doctolib";
+describe("suchName für Doctolibs Suchfeld", () => {
+  it.each([
+    ["Zahnarztpraxis Dr. med. dent. Anna Weber", "Anna Weber"],
+    ["Dr. Julian Velten", "Julian Velten"],
+    ["Praxis Dr. Müller", "Müller"],
+    ["Gemeinschaftspraxis Schmidt & Klein", "Schmidt Klein"],
+    ["Hausarztpraxis am Dom", "am Dom"],
+  ])("%s → %s", (ein, aus) => expect(suchName(ein)).toBe(aus));
+});
+describe("suchName mit Bindestrichen", () => {
+  it("Silvia Ebert - Praxis für Zahnheilkunde", () => expect(suchName("Silvia Ebert - Praxis für Zahnheilkunde")).toBe("Silvia Ebert"));
+});

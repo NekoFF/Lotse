@@ -26,3 +26,12 @@ export function doctolibLink(o: Ort): string {
   const stadt = stadtAus(o.adresse);
   return pfad && stadt ? `https://www.doctolib.de/${pfad}/${slug(stadt)}` : "https://www.doctolib.de/";
 }
+
+/** Suchbegriff für Doctolibs eigenes Suchfeld: Praxis-Wörter und Titel weg, Name bleibt („Zahnarztpraxis Dr. med. dent. Anna Weber“ → „Anna Weber“) */
+export function suchName(name: string): string {
+  const rest = name
+    .replace(/\b(zahnarzt|gemeinschafts)?praxis\s+(für|fuer)\s.*$/i, " ")
+    .replace(/\b(gemeinschafts|zahnarzt|zahn|fach|haus|kinder|frauen|augen|haut|hno-?)?(arzt)?praxis\b|\b(zahn)?ärzte\b|\bpraxis\s+(für|fuer)\b.*$|\bmvz\b|\bdr\.?|\bmed\.?|\bdent\.?|\bprof\.?|\bdipl\.?-?\w*\.?|\bu\.\b|\bund\b|&/gi, " ")
+    .replace(/[,|·]+|\s[-–]\s|\s[-–]$/g, " ").replace(/\s+/g, " ").trim().replace(/[-–]$/, "").trim();
+  return rest.length >= 3 ? rest : name.trim();
+}

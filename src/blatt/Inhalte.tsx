@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { fotoLaden, type Foto } from "../services/foto";
-import { doctolibLink, istDoctolib } from "../services/doctolib";
+import { doctolibLink, istDoctolib, suchName } from "../services/doctolib";
 import { geoeffnet } from "../core/oeffnung";
 import { DIENSTE } from "../config";
 import type { Kategorie } from "../core/absicht";
@@ -105,7 +105,7 @@ export function OrtInhalt({ o, laden, weg, modus, gespeichert, onSpeichern, onRo
         {o.email && <a className="aktion" href={`mailto:${o.email}`}><Brief size={20} /><span>E-Mail</span></a>}
         {istPraxis && (istDoctolib(o.website)
           ? <a className="aktion" href={o.website!} target="_blank" rel="noopener noreferrer"><Kalender size={20} /><span>Online buchen</span></a>
-          : <a className="aktion" href={doctolibLink(o)} target="_blank" rel="noopener noreferrer" title="Freie Termine bei Doctolib suchen"><Kalender size={20} /><span>Doctolib</span></a>)}
+          : <DoctolibKnopf o={o} />)}
         <button type="button" className="aktion" onClick={onTermin}><Kalender size={20} /><span>Termin</span></button>
         <button type="button" className="aktion" onClick={onTeilen}><Teilen size={20} /><span>Teilen</span></button>
       </div>
@@ -241,6 +241,19 @@ export function RouteInhalt({ o, start, modus, setModus, oepnv, setOepnv, fahrte
         </>
       )}
     </div>
+  );
+}
+
+/* Doctolib kennt keine Suche per Link (geprüft 15.11.2026): wir öffnen Fach + Stadt und kopieren den Namen
+   in die Zwischenablage – einfügen, und Doctolib zeigt die Praxis in seinen eigenen Vorschlägen. */
+function DoctolibKnopf({ o }: { o: Ort }) {
+  const [kopiert, setKopiert] = useState<"" | "ja" | "nein">("");
+  const name = suchName(o.name);
+  return (
+    <a className="aktion" href={doctolibLink(o)} target="_blank" rel="noopener noreferrer" title={`Doctolib öffnen – „${name}“ wird kopiert, im Suchfeld einfügen`}
+      onClick={() => { if (!navigator.clipboard) { setKopiert("nein"); return; } navigator.clipboard.writeText(name).then(() => setKopiert("ja"), () => setKopiert("nein")); }}>
+      <Kalender size={20} /><span className="doctolib-name">{kopiert === "ja" ? "Name kopiert" : kopiert === "nein" ? `„${name}“ suchen` : "Doctolib"}</span>
+    </a>
   );
 }
 

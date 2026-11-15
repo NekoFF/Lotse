@@ -280,3 +280,4 @@
 .offen-t { color: #18a058 !important; font-weight: 600; font-size: 12px; }
 .zu-t { color: var(--rot) !important; font-weight: 600; font-size: 12px; }
 .leise-t { color: var(--text-2, #8a8f98) !important; font-size: 12px; }
+.doctolib-name { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
