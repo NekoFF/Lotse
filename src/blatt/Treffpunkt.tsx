@@ -76,7 +76,8 @@ export function TreffpunktInhalt({ start, personen, setPersonen, ergebnis, setEr
                   {v === "oepnv" ? <Bus size={15} /> : MODUS_ICON[v]}
                 </button>
               ))}
-              {fahrer.filter((f) => f.id !== p.id).map((f) => (
+              {/* ein Fahrer nimmt eine Person mit; wer selbst jemanden abholt, fährt nicht bei anderen mit */}
+              {!personen.some((x) => x.mitBei === p.id) && fahrer.filter((f) => f.id !== p.id && !f.mitBei && !personen.some((x) => x.mitBei === f.id && x.id !== p.id)).map((f) => (
                 <button key={f.id} type="button" className={`mit${p.mitBei === f.id ? " an" : ""}`} onClick={() => aendern(p.id, { mitBei: p.mitBei === f.id ? null : f.id })}>mit {f.name}</button>
               ))}
             </div>

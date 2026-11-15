@@ -97,3 +97,13 @@ describe("Bestimmter Ort statt Kategorie", () => {
     expect(verstehe("Apotheke in der Nähe", FR).typ).toBe("kategorie");
   });
 });
+
+import { gesundheitlich } from "./absicht";
+describe("gesundheitlich – nichts davon geht an Suchdienste", () => {
+  it.each(["Apotheke offen bei Migräne", "Café bei Kopfweh in Wetzlar", "bei Durchfall", "Halsweh", "Wo ist jetzt offen bei Asthma?", "Café bei Depression jetzt offen", "Die Wunde ist offen und eitert", "Hexenschuss"])("%s", (t) => {
+    expect(gesundheitlich(t)).toBe(true);
+  });
+  it.each(["Pizza nahe Römer in Frankfurt", "Feuerwehr Wetzlar", "Bahnhofstraße 1", "Café nahe Dom"])("nicht: %s", (t) => {
+    expect(gesundheitlich(t)).toBe(false);
+  });
+});

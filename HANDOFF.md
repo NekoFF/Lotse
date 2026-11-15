@@ -1,4 +1,4 @@
-# Übergabe – Stand 13.11.2026 (für den nächsten Chat / die nächste KI)
+# Übergabe – Stand 15.11.2026 (für den nächsten Chat / die nächste KI)
 
 Lies diese Datei komplett, bevor du etwas änderst. Antworte Dima auf Russisch.
 
@@ -41,6 +41,15 @@ React 19 + TypeScript + Vite 6, PWA (vite-plugin-pwa), MapLibre GL 5, Tests mit 
 Konzept nach Dimas Vorgabe neu: **Karten-App wie Apple/Google Maps mit KI**. EIN Blatt (`src/blatt/`), Suche oben fest, Inhalt wechselt (Start, Ergebnisse, Ort, Route, Termin, Daten & Quellen). Eine Eingabe für alles (`src/core/absicht.ts`: Notfall → Termin → Fach → Kategorie → Anliegen → Ortssuche). Jeder Kartenpunkt antippbar (`services/orte.ts`). Route mit deutschen Schritten. Termine + Losgehzeit + Erinnerung (`lib/termine.ts`). KI auf dem Gerät (`ki/assistent.ts`, WebLLM 0.2.86 + Qwen2.5-0.5B, nur Übersetzer, festes Schema). Beschwerden gehen nie als Text an Dienste. 40 Tests. Alte Panels entfernt (in Git-Historie).
 **Abgabeordner für die Lehrkraft:** `~/Documents/Lotse-Abgabe` (Dokumente als docx/html/md, Screenshots, Kooperationsvereinbarung, Quellcode-Zip). Bei Änderungen neu erzeugen.
 Dima: „Push wie nötig, nicht fragen“; App bleibt unveröffentlicht, bis er es sagt. Kein Juristen-Overkill – Schulprojekt.
+
+## 4c. Lotse v2.1 (15.11.2026): Termine 2.0, Bus & Bahn, Treffpunkt, kluge Suche
+- **Termine 2.0** (`lib/termine.ts`, `blatt/Termine.tsx`): Arten Arzt / Treffen / Erinnerung; Losgehzeit aus dem echten Weg (Fuß/Rad/Auto über OSRM, Bus & Bahn über Transitous mit „spätestens ankommen“), Puffer 5/10/20 Min wählbar. `lib/waechter.ts` rechnet Termine der nächsten 18 h alle 5 Min neu, solange die App offen ist, und warnt bei ≥ 3 Min Verschiebung („früher los“). Speicher `lotse.termine.v5` (migriert v4). Kalenderdatei + Browser-Erinnerung.
+- **Bus & Bahn** (`services/oepnv.ts`): Transitous (offener MOTIS, DELFI-Fahrplan + Echtzeit, Verspätung/Ausfall). Bedingungen: Open Source, **nicht kommerziell**, sparsam (< 720 Anfragen/Tag), Quellenlink sichtbar (in Route und „Daten & Quellen“). Für ein Startup: eigener MOTIS-Server mit denselben offenen Daten, nur Adresse tauschen.
+- **Doctolib** (`services/doctolib.ts`): nur Links. Hat die Praxis eine Doctolib-Website → „Online buchen“, sonst geprüfter Fach-/Stadt-Pfad (6 Fächer, im Browser geprüft) bzw. Startseite. Kein Auslesen freier Termine (Nutzungsbedingungen, keine offene Schnittstelle).
+- **Kluge Suche** (`core/wunsch.ts`, `core/oeffnung.ts`): „Pizza nahe Römer in Frankfurt jetzt offen“, „Döner …“, „mit meinen Eltern ruhig spazieren in Wetzlar“. Feste Regeln: Küche (OSM `cuisine`), Stimmung → Parks/Museen, „nahe X“/„in Stadt“ als Mittelpunkt (Nominatim), Zeitpunkt (jetzt / genannt) → Öffnungszeiten aus OSM ausgewertet: geöffnete zuerst mit „geöffnet bis …“, geschlossene raus, unbekannte ehrlich „Öffnungszeiten unbekannt“. Ort-Karte zeigt „Jetzt geöffnet bis …“. Beschwerden laufen nie in diesen Zweig. Termin aus dem Chat: Zeitangabe merkt den Termin vor, Ort antippen → Formular.
+- **Treffpunkt** (`lib/treffpunkt.ts`, `blatt/Treffpunkt.tsx`): 2–4 Personen mit eigenem Verkehrsmittel und „mit X“ (Abholen). Fair = längste Anreise möglichst kurz. Wege aller Personen als farbige, animierte Punkte auf der Karte. Startadressen werden nicht gespeichert.
+- 63 Tests (neu: Öffnungszeiten, Wunsch, Polylinie, Doctolib, Treffpunkt-Fairness/Abholen).
+- **Offen / Entscheidung Dima:** Lizenz des Repos (Transitous verlangt Open Source; beeinflusst die Startup-Idee); für kommerziellen Betrieb eigene Server (MOTIS, OSRM, Nominatim/Overpass).
 
 ## 5. Umstellung auf Live-Daten – lauffähig in `arbeit/echte-daten` (NOCH NICHT in `main`)
 Stand 13.11. abends: Commit 1e798c5 (Live-Daten) + Prüfrunde danach (Claude lokal, im echten Browser mit echten Diensten geprüft, Start Bahnhofstraße 1 Wetzlar: Orthopädie 5, Zahnmedizin 23, HNO 1 Praxis; Weg, Plan B, Öffnungszeiten, Kontakt aus OSM).

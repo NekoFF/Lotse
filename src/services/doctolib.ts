@@ -15,7 +15,10 @@ const slug = (s: string) => s.toLowerCase().replace(/ä/g, "ae").replace(/ö/g, 
 /** Stadt aus „Straße, 35578 Wetzlar“ */
 export const stadtAus = (adresse: string | null) => adresse?.match(/\b\d{5}\s+([^,]+)$/)?.[1]?.trim() ?? null;
 
-export const istDoctolib = (url: string | null) => !!url && /(^|\.)doctolib\.(de|fr|it)$/i.test(new URL(url).hostname);
+export function istDoctolib(url: string | null): boolean {
+  if (!url) return false;
+  try { return /(^|\.)doctolib\.(de|fr|it)$/i.test(new URL(url).hostname); } catch { return false; }
+}
 
 /** Link zur passenden Doctolib-Übersicht (Fach + Stadt) oder zur Startseite */
 export function doctolibLink(o: Ort): string {

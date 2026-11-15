@@ -276,3 +276,7 @@
 .zeit-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 10px; font-size: 11px; font-weight: 700; color: #fff; background: var(--p); }
 .zeile.treff { cursor: pointer; }
 .gruppe-punkt { width: 26px; height: 26px; border-radius: 13px; border: 2.5px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); display: grid; place-items: center; font-size: 12px; font-weight: 800; color: #fff; }
+
+.offen-t { color: #18a058 !important; font-weight: 600; font-size: 12px; }
+.zu-t { color: var(--rot) !important; font-weight: 600; font-size: 12px; }
+.leise-t { color: var(--text-2, #8a8f98) !important; font-size: 12px; }

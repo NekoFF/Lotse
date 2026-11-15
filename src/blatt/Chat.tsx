@@ -13,6 +13,10 @@ export interface Nachricht {
   gedeutet?: boolean;
   denkt?: boolean;
   knopf?: "ki-laden";
+  /** kurzer Zustand je Ort, z. B. „geöffnet bis 22:00“ */
+  status?: Record<string, string>;
+  /** Bezugspunkt der Entfernungen (z. B. „nahe Römer“) statt des eigenen Standorts */
+  mitte?: LngLat;
 }
 
 const km = (m: number) => (m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(1).replace(".", ",")} km`);
@@ -38,10 +42,10 @@ export function ChatVerlauf({ nachrichten, bezug, onOrt, onKi, onZu }: {
                 {n.knopf === "ki-laden" && <button type="button" className="btn zweit klein-btn" onClick={onKi}><Ki size={15} /> KI einschalten</button>}
                 {n.orte && n.orte.length > 0 && (
                   <div className="zeilen">
-                    {n.orte.slice(0, 6).map((o) => (
+                    {n.orte.slice(0, 8).map((o) => (
                       <button key={o.id} type="button" className="zeile" onClick={() => onOrt(o)}>
-                        <span className="zeile-t"><b>{o.name}</b><span>{o.art}{o.adresse ? ` · ${o.adresse}` : ""}</span></span>
-                        <span className="zeile-r">{km(luftlinie(bezug, o.lngLat) * 1000)}</span>
+                        <span className="zeile-t"><b>{o.name}</b><span>{o.art}{o.adresse ? ` · ${o.adresse}` : ""}</span>{n.status?.[o.id] && <span className={n.status[o.id].startsWith("geöffnet") ? "offen-t" : n.status[o.id].startsWith("geschlossen") ? "zu-t" : "leise-t"}>{n.status[o.id]}</span>}</span>
+                        <span className="zeile-r">{km(luftlinie(n.mitte ?? bezug, o.lngLat) * 1000)}</span>
                       </button>
                     ))}
                   </div>

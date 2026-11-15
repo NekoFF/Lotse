@@ -56,12 +56,25 @@ interface MLeg {
   from: { name: string }; to: { name: string }; legGeometry?: { points: string; precision?: number };
 }
 
-/** Verbindungen; mit ankunft = „spätestens dort sein“, sonst Abfahrt ab jetzt/ab */
-export async function verbindungen(start: LngLat, ziel: LngLat, zeit: { ankunft?: Date; ab?: Date } = {}): Promise<Fahrt[]> {
+/** Sparsam: höchstens so viele Transitous-Anfragen je Browser und Tag (Bedingung: < 720 insgesamt) */
+export const TAGES_GRENZE = 150;
+const ZAEHLER = "lotse.transitous.tag";
+function zaehlen() {
+  const heute = new Date().toISOString().slice(0, 10);
+  let z = { tag: heute, n: 0 };
+  try { const roh = JSON.parse(localStorage.getItem(ZAEHLER) ?? "null"); if (roh?.tag === heute) z = roh; } catch { /* privat */ }
+  if (z.n >= TAGES_GRENZE) throw new DienstFehler("Für heute sind genug Fahrplananfragen gestellt (sparsamer Betrieb). Morgen geht es wieder.");
+  z.n++;
+  try { localStorage.setItem(ZAEHLER, JSON.stringify(z)); } catch { /* privat */ }
+}
+
+/** Verbindungen; mit ankunft = „spätestens dort sein“, sonst Abfahrt ab jetzt/ab. frisch = Echtzeit neu holen */
+export async function verbindungen(start: LngLat, ziel: LngLat, zeit: { ankunft?: Date; ab?: Date; frisch?: boolean } = {}): Promise<Fahrt[]> {
   const p = new URLSearchParams({ fromPlace: `${start[1].toFixed(5)},${start[0].toFixed(5)}`, toPlace: `${ziel[1].toFixed(5)},${ziel[0].toFixed(5)}`, numItineraries: "3" });
   if (zeit.ankunft) { p.set("time", zeit.ankunft.toISOString()); p.set("arriveBy", "true"); }
   else if (zeit.ab) p.set("time", zeit.ab.toISOString());
-  const r = await holeJson<{ itineraries?: { duration: number; startTime: string; endTime: string; transfers: number; legs: MLeg[] }[] }>(`${TRANSITOUS}?${p}`, "Fahrplanauskunft");
+  zaehlen();
+  const r = await holeJson<{ itineraries?: { duration: number; startTime: string; endTime: string; transfers: number; legs: MLeg[] }[] }>(`${TRANSITOUS}?${p}`, "Fahrplanauskunft", !!zeit.frisch);
   if (!r.itineraries) throw new DienstFehler("Fahrplanauskunft lieferte keine Verbindungen.");
   return r.itineraries.map((it) => ({
     ab: new Date(it.startTime), an: new Date(it.endTime), dauerS: it.duration, umstiege: it.transfers,

@@ -16,6 +16,8 @@ export interface Ort {
   telefon: string | null;
   /** fehlt bei älteren gespeicherten Orten */
   email?: string | null;
+  /** Küche laut OSM (cuisine), z. B. „pizza;italian“ */
+  kueche?: string | null;
   oeffnungszeiten: string | null;
   rollstuhl: string | null;
   fach: FachId | null;
@@ -53,6 +55,7 @@ export function alsOrt(t: NomTreffer): Ort {
     website: sichereWebsite(tags.website ?? tags["contact:website"]),
     telefon: ersteNummer(tags.phone ?? tags["contact:phone"]),
     email: sichereEmail(tags.email ?? tags["contact:email"]),
+    kueche: tags.cuisine ?? null,
     oeffnungszeiten: tags.opening_hours ?? null,
     rollstuhl: tags.wheelchair ?? null,
     fach: t.type === "doctors" || t.type === "dentist" ? fachAusOsm(tags, name, t.type) : null,

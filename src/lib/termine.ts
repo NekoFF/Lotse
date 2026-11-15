@@ -81,10 +81,10 @@ export function losgehzeit(zeit: Date, wegSekunden: number, puffer = PUFFER_MIN)
 export interface Planung { los: Date | null; dauerS: number | null; weg: string | null; hinweis: string | null }
 
 /** Weg für einen Termin berechnen – Bus & Bahn: Verbindung, die spätestens zur Zielzeit ankommt (inkl. Echtzeit) */
-export async function plane(ort: Ort, start: Start, zeit: Date, verkehr: Verkehr, puffer: number): Promise<Planung> {
+export async function plane(ort: Ort, start: Start, zeit: Date, verkehr: Verkehr, puffer: number, frisch = false): Promise<Planung> {
   const ankunft = new Date(zeit.getTime() - puffer * 60000);
   if (verkehr === "oepnv") {
-    const f = (await verbindungen(start.lngLat, ort.lngLat, { ankunft }))
+    const f = (await verbindungen(start.lngLat, ort.lngLat, { ankunft, frisch }))
       .filter((x) => x.an.getTime() <= ankunft.getTime() + 60000 && !x.abschnitte.some((a) => a.ausfall))
       .sort((a, b) => b.ab.getTime() - a.ab.getTime())[0];
     if (!f) return { los: null, dauerS: null, weg: null, hinweis: "Keine passende Verbindung gefunden." };

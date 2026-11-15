@@ -80,7 +80,15 @@ export function zeitAus(text: string, jetzt = new Date()): Date | null {
 /** Klingt der Text nach gesundheitlichen Beschwerden? (sonst kann „sehen“ auch „einen Film sehen“ sein) */
 export function klingtNachBeschwerde(text: string): boolean {
   const n = normalize(text);
-  return /\b(weh|schmerz|tut|tun|juck|brenn|krank|blut|geschwollen|seit|fieber|husten|uebel|schwindel|probleme?|verletz|gebrochen|abgebrochen|entzuend|ausschlag)/.test(n);
+  return /\b(weh|schmerz|tut|tun|juck|brenn|krank|blut|geschwollen|seit|fieber|husten|uebel|schwindel|probleme?|verletz|gebrochen|abgebrochen|entzuend|ausschlag)/.test(n)
+    || /weh\b/.test(n)
+    || /(migraen|durchfall|sodbrenn|asthma|diabet|depress|hexenschuss|erbrech|kotz|eiter|wunde|allerg|infekt|grippe|erkaelt|schnupfen|panik|angststoer|schlaflos|verstopf|zyste|tumor|krebs|herzras|herzstech|atemnot|ohnmacht|krampf|zerrung|prellung|bandscheib|tinnitus|ekzem|warze|harnweg|regelschmerz|blutdruck)/.test(n);
+}
+
+/** Deutet irgendetwas im Text auf Gesundheit hin? Dann geht der Text NIE an einen Dienst (auch nicht als „nahe …“). */
+export function gesundheitlich(text: string): boolean {
+  return klingtNachBeschwerde(text) || ordneZu(text).erkannt.length > 0
+    || /(pilz|blase|schwanger|verhuet|periode|zucker|corona|covid|impf|therapie|psych|sucht|drogen|alkohol)/.test(normalize(text));
 }
 
 /** Entfernt Datum/Uhrzeit-Wörter („morgen“, „um 10 Uhr“, „20.11.“) für die Ortssuche */

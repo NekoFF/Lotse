@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { fotoLaden, type Foto } from "../services/foto";
 import { doctolibLink, istDoctolib } from "../services/doctolib";
+import { geoeffnet } from "../core/oeffnung";
 import { DIENSTE } from "../config";
 import type { Kategorie } from "../core/absicht";
 import { KATEGORIEN } from "../core/absicht";
@@ -86,6 +87,7 @@ export function OrtInhalt({ o, laden, weg, modus, gespeichert, onSpeichern, onRo
   const foto = useFoto(o);
   const istPraxis = !!o.fach || /arzt|praxis|klinik/i.test(o.art);
   const zeiten = o.oeffnungszeiten ? zeitenLesbar(o.oeffnungszeiten) : [];
+  const jetzt = geoeffnet(o.oeffnungszeiten, new Date());
   return (
     <div className="inhalt ort">
       <Kopf titel={o.name} unter={[o.art, weg.route ? `${min(weg.route.s)} Min ${MODUS_NAME[modus]}` : null].filter(Boolean).join(" · ")} onZu={onZu} onZurueck={onZurueck} />
@@ -109,7 +111,7 @@ export function OrtInhalt({ o, laden, weg, modus, gespeichert, onSpeichern, onRo
       </div>
       <div className="infos">
         {o.adresse && <div className="info"><span>Adresse</span><b>{o.adresse}</b></div>}
-        {zeiten.length > 0 && <div className="info"><span>Geöffnet</span><b>{zeiten.map((z) => <span key={z}>{z}</span>)}</b></div>}
+        {zeiten.length > 0 && <div className="info"><span>Geöffnet</span><b>{jetzt && <span className={jetzt.offen ? "offen-t" : "zu-t"}>{jetzt.offen ? `Jetzt geöffnet${jetzt.bis ? ` bis ${jetzt.bis}` : ""}` : `Jetzt geschlossen${jetzt.ab ? ` · ab ${jetzt.ab}` : ""}`}</span>}{zeiten.map((z) => <span key={z}>{z}</span>)}</b></div>}
         {o.telefon && <div className="info"><span>Telefon</span><b><a href={telLink(o.telefon)}>{o.telefon}</a></b></div>}
         {o.email && <div className="info"><span>E-Mail</span><b><a href={`mailto:${o.email}`}>{o.email}</a></b></div>}
         {o.website && <div className="info"><span>Website</span><b><a href={o.website} target="_blank" rel="noopener noreferrer">{new URL(o.website).hostname.replace(/^www\./, "")}</a></b></div>}
@@ -250,7 +252,9 @@ export function InfoInhalt({ onZurueck, onZu }: { onZurueck?: () => void; onZu: 
       <Kopf titel="Daten & Quellen" onZurueck={onZurueck} onZu={onZu} />
       <ul className="liste-punkte">
         <li><b>Deine Beschreibung</b> bleibt auf dem Gerät. Lotse ordnet sie nur einer Fachrichtung zu und stellt keine Diagnose.</li>
-        <li><b>Suche und Orte</b>: Nominatim (OpenStreetMap). <b>Wege</b>: FOSSGIS-Routingserver. <b>Karte</b>: OpenFreeMap. Diese Dienste sehen deine IP-Adresse und den gesuchten Ort bzw. Startpunkt.</li>
+        <li><b>Suche und Orte</b>: Nominatim (OpenStreetMap). <b>Wege</b>: FOSSGIS-Routingserver. <b>Bus & Bahn</b>: Transitous. <b>Karte</b>: OpenFreeMap. Diese Dienste sehen deine IP-Adresse und den gesuchten Ort bzw. Start und Ziel. Bei Bus-&-Bahn-Terminen fragt Lotse etwa alle 5 Minuten nach Verspätungen, nur in den 3 Stunden vor dem Losgehen und nur, solange die App sichtbar offen ist.</li>
+        <li><b>Treffpunkt</b>: die Startadressen der Mitreisenden gehen nur an diese Dienste und werden nicht gespeichert.</li>
+        <li><b>Doctolib, Telefon und E-Mail</b> sind nur Links. Lotse liest keine fremden Seiten aus und schickt nichts in deinem Namen.</li>
         <li><b>KI</b> (wenn eingeschaltet) läuft im Browser. Nur das Modell wird einmal von Hugging Face geladen.</li>
         <li><b>Fotos</b> nur aus Wikimedia Commons, wenn ein Ort in OpenStreetMap damit verknüpft ist – immer mit Urheber und Lizenz.</li>
         <li><b>Termine, gespeicherte Orte und Startpunkt</b> bleiben in diesem Browser.</li>
@@ -258,6 +262,7 @@ export function InfoInhalt({ onZurueck, onZu }: { onZurueck?: () => void; onZu: 
       <p className="fein">
         Kartendaten <a href={DIENSTE.osmLizenz} target="_blank" rel="noopener noreferrer">© OpenStreetMap-Mitwirkende</a> ·
         {" "}<a href={`${import.meta.env.BASE_URL}karte/LIZENZ.txt`} target="_blank" rel="noopener noreferrer">Kartenstil und Lizenzen</a> ·
+        {" "}<a href={TRANSITOUS_QUELLEN} target="_blank" rel="noopener noreferrer">Fahrplandaten: Transitous und Quellen</a> ·
         {" "}<a href={DIENSTE.osmFehlerMelden} target="_blank" rel="noopener noreferrer">Kartenfehler melden</a> · Schulprojekt der Werner-von-Siemens-Schule Wetzlar.
       </p>
     </div>

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { istGespraech, klingtNachBeschwerde, ohneZeit, siehtAusWieAdresse, verstehe, KATEGORIEN, type Kategorie } from "./core/absicht";
+import { wunschAus, istWunsch } from "./core/wunsch";
+import { geoeffnet } from "./core/oeffnung";
+import { gesundheitlich, istGespraech, klingtNachBeschwerde, ohneZeit, siehtAusWieAdresse, verstehe, KATEGORIEN, type Kategorie } from "./core/absicht";
 import type { Zuordnung } from "./core/match";
 import { FACHRICHTUNGEN, type FachId } from "./data/fachrichtungen";
 import type { Notfallstufe } from "./data/notfall";
@@ -154,6 +156,32 @@ export default function App() {
     if (a.typ === "termin") { setVorgemerkt(a.zeit); const rest = ohneZeit(t.replace(/termin/gi, " ")); a = rest.length > 1 ? verstehe(rest) : a; }
     const id = sag({ von: "ki", denkt: true });
     try {
+      // Wünsche wie „Pizza nahe Römer in Frankfurt, jetzt geöffnet“ – feste Regeln, echte Daten
+      const w = wunschAus(t);
+      if (istWunsch(w, a.typ === "kategorie") && a.typ !== "anliegen" && a.typ !== "fach" && (a.typ === "kategorie" || !klingtNachBeschwerde(t))) {
+        // Gesundheitsbezug: kein Text an Nominatim („Apotheke offen bei Migräne“ → nicht „Migräne“ suchen)
+        const privat = gesundheitlich(t);
+        if (privat) { w.nahe = ""; w.ort = ""; }
+        const bezug = w.nahe ? `${w.nahe}${w.ort ? `, ${w.ort}` : ""}` : w.ort;
+        const mitte = bezug ? (await ortSuchen(bezug, nahe))[0]?.lngLat ?? null : nahe;
+        if (!mitte) return ersetze(id, { von: "ki", text: `„${bezug}“ finde ich nicht.` });
+        const art = w.kueche ?? (a.typ === "kategorie" ? { name: a.kategorie.name, phrasen: a.kategorie.phrasen } : w.kategorie ? { name: w.kategorie.name, phrasen: w.kategorie.phrasen } : KATEGORIEN.find((k) => k.id === "essen")!);
+        let orte = await inDerNaehe(art.phrasen, mitte, w.nahe ? 1.5 : 3);
+        if (w.kueche) orte = orte.filter((o) => w.kueche!.osm.test((o.kueche ?? "").toLowerCase()) || w.kueche!.wort.test(o.name.toLowerCase()));
+        const status: Record<string, string> = {};
+        if (w.zeit) {
+          const bewertet = orte.map((o) => ({ o, g: geoeffnet(o.oeffnungszeiten, w.zeit!) }));
+          bewertet.forEach(({ o, g }) => { status[o.id] = g ? (g.offen ? `geöffnet${g.bis ? ` bis ${g.bis}` : ""}` : `geschlossen${g.ab ? ` · ab ${g.ab}` : ""}`) : "Öffnungszeiten unbekannt"; });
+          // geöffnete zuerst, geschlossene raus, unbekannte dahinter
+          orte = [...bewertet.filter((x) => x.g?.offen), ...bewertet.filter((x) => !x.g)].map((x) => x.o);
+          if (!orte.length && bewertet.length) {
+            const notdienst = art.name.startsWith("Apothek") ? " Notdienst-Apotheken findest du unter aponet.de (Notdienstsuche der Apothekerverbände)." : "";
+            return ersetze(id, { von: "ki", text: `Laut OpenStreetMap hat von ${bewertet.length} ${art.name} in der Nähe gerade keine geöffnet.${notdienst}` });
+          }
+        }
+        const wann = w.zeit ? (Math.abs(w.zeit.getTime() - Date.now()) < 5 * 60000 ? " · jetzt geöffnet" : ` · geöffnet ${w.zeit.toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" })}`) : "";
+        return ersetze(id, { von: "ki", text: `${art.name}${w.nahe ? ` nahe ${w.nahe}` : ""}${w.ort ? ` in ${w.ort}` : ""}${wann}:`, orte, status, mitte });
+      }
       if (a.typ === "fach") {
         const f = FACHRICHTUNGEN[a.fach];
         return ersetze(id, { von: "ki", text: `${f.name} in der Nähe:`, orte: (await inDerNaehe([a.fach === "zahn" ? "dentist" : "doctors"], nahe, 5)).filter((o) => o.fach === a.fach) });
@@ -169,6 +197,7 @@ export default function App() {
         return ersetze(id, { von: "ki", text: "Hausarztpraxen – der erste Anlaufpunkt, keine Diagnose:", orte: (await inDerNaehe(["doctors"], nahe, 5)).filter((o) => o.fach === "allgemein") });
       }
       if (!schonGesucht && !istGespraech(t) && a.typ !== "anliegen") {
+        if (gesundheitlich(t)) return ersetze(id, { von: "ki", text: "Das klingt nach Gesundheit – solche Sätze schicke ich nicht an Suchdienste. Beschreib kurz, was weh tut, dann zeige ich die passende Fachrichtung." });
         const r = await ortSuchen(t, nahe);
         if (r.length) return ersetze(id, { von: "ki", text: `„${t}“:`, orte: r });
       }
@@ -177,9 +206,11 @@ export default function App() {
       if (nr !== anfrage.current) return;
       if (!k) return ersetze(id, { von: "ki", text: "Das habe ich nicht verstanden. Versuch es mit einem Ort." });
       const kat = k.aktion === "kategorie" ? KATEGORIEN.find((x) => x.id === k.kategorie) : undefined;
+      // Gesundheitsbezug im Satz: auch was die KI daraus macht, geht nicht als Text an Suchdienste
+      const privat = gesundheitlich(t);
       // Bei möglichen Beschwerden keine medizinischen Kategorien von der KI
       if (kat && !(a.typ === "anliegen" && ["arzt", "zahnarzt", "apotheke", "krankenhaus"].includes(kat.id))) {
-        const mitte = k.ort ? (await ortSuchen(k.ort, null))[0]?.lngLat ?? nahe : nahe;
+        const mitte = k.ort && !privat && !gesundheitlich(k.ort) ? (await ortSuchen(k.ort, null))[0]?.lngLat ?? nahe : nahe;
         return ersetze(id, { von: "ki", text: k.antwort || `${kat.name}:`, orte: await inDerNaehe(kat.phrasen, mitte, 3), gedeutet: true });
       }
       if (a.typ === "anliegen") {
@@ -187,7 +218,7 @@ export default function App() {
         return ersetze(id, { von: "ki", text: `${f.name} – keine Diagnose:`, orte: (await inDerNaehe([f.id === "zahn" ? "dentist" : "doctors"], nahe, 5)).filter((o) => o.fach === f.id) });
       }
       // Sieht wie eine Adresse aus: nie mit Smalltalk antworten, sondern immer Adresssuche versuchen
-      if (k.aktion === "suche" || siehtAusWieAdresse(t)) {
+      if (!privat && (k.aktion === "suche" || siehtAusWieAdresse(t))) {
         // KI-Korrektur zuerst; sonst einfache Tippfehler-Varianten (Straße, ohne den vertippten Ort – Suche bleibt in deiner Nähe)
         const korr = (x: string) => x.replace(/stra(s|ss)e\b|strsse\b|str\b\.?/gi, "straße");
         const varianten = [k.aktion === "suche" ? k.suchtext : "", korr(t), korr(t).split(/\s+/).slice(0, -1).join(" ")].filter((x, i, l) => x && x.length > 2 && l.indexOf(x) === i);
@@ -209,8 +240,9 @@ export default function App() {
     const nr = ++anfrage.current;
     let a = verstehe(t);
     if (a.typ === "notfall") { setNotfall({ stufe: a.stufe, text: t }); return; }
-    // Chat offen oder Gesprächs-/Fragesatz → alles läuft im Chat weiter
-    if (chat.length > 0 || istGespraech(t)) return chatSenden(t, nr);
+    // Chat offen, Gesprächs-/Fragesatz oder genauer Wunsch (Küche, „nahe …“, „jetzt offen“) → Chat mit Ergebnisliste
+    const w = wunschAus(t);
+    if (chat.length > 0 || istGespraech(t) || (istWunsch(w, a.typ === "kategorie" || (a.typ === "termin" && verstehe(ohneZeit(t.replace(/termin/gi, " "))).typ === "kategorie")) && a.typ !== "anliegen" && a.typ !== "fach")) return chatSenden(t, nr);
     if (a.typ === "termin") {
       setVorgemerkt(a.zeit);
       // Zeitangaben gehören nicht in die Ortssuche
@@ -221,7 +253,7 @@ export default function App() {
     }
     if (a.typ === "fach") return fachSuche(a.fach);
     if (a.typ === "kategorie") { merke(t); return kategorieSuche(a.kategorie); }
-    const beschwerde = a.typ === "anliegen" || klingtNachBeschwerde(t);
+    const beschwerde = a.typ === "anliegen" || klingtNachBeschwerde(t) || gesundheitlich(t);
     // Beschwerden nie als Text an Dienste schicken: nur Fachrichtung (oder Hausarzt, wenn unklar)
     if (beschwerde && !(ki.art === "bereit" && a.typ === "anliegen" && !klingtNachBeschwerde(t))) {
       return a.typ === "anliegen" ? fachSuche(a.zuordnung.fach.id, a.zuordnung) : fachSuche("allgemein", { fach: FACHRICHTUNGEN.allgemein, erkannt: [], unsicher: true });
@@ -333,7 +365,9 @@ export default function App() {
 
   /* ---------- Karte ---------- */
 
-  const listenOrte = useMemo(() => (ansicht.art === "liste" ? ansicht.l.orte : []), [ansicht]);
+  // Ergebnisse aus dem Chat (letzte Liste) gehören auch auf die Karte
+  const chatListe = useMemo(() => [...chat].reverse().find((n) => n.orte?.length) ?? null, [chat]);
+  const listenOrte = useMemo(() => (ansicht.art === "liste" ? ansicht.l.orte : chatListe?.orte ?? []), [ansicht, chatListe]);
   const pins: Pin[] = useMemo(() => {
     if (ansicht.art === "treffpunkt" && treffErgebnis) return treffErgebnis.map((v, i) => ({ id: v.ort.id, lngLat: v.ort.lngLat, label: v.ort.name.length > 18 ? v.ort.name.slice(0, 16) + "…" : v.ort.name, aktiv: i === treffWahl }));
     if (zielOrt) return [{ id: zielOrt.id, lngLat: zielOrt.lngLat, label: zielOrt.name.length > 24 ? zielOrt.name.slice(0, 22) + "…" : zielOrt.name, aktiv: true }];
@@ -353,11 +387,11 @@ export default function App() {
     }
     if (routeLinie) return [[...routeLinie.linie, ...(routeLinie.alternativen ?? []).flat()], `route-${zielOrt?.id}-${oepnv ? `oepnv${fahrtWahl}` : modus}-${start?.lngLat.join()}`];
     if (zielOrt) return [[zielOrt.lngLat], `ort-${zielOrt.id}`];
-    if (listenOrte.length) return [[nahe, ...listenOrte.slice(0, 8).map((o) => o.lngLat)], `liste-${listenOrte.slice(0, 3).map((o) => o.id).join()}`];
+    if (listenOrte.length) return [[ansicht.art !== "liste" && chatListe?.mitte ? chatListe.mitte : nahe, ...listenOrte.slice(0, 8).map((o) => o.lngLat)], `liste-${listenOrte.slice(0, 3).map((o) => o.id).join()}`];
     return start ? [[start.lngLat], `start-${start.lngLat.join()}`] : [[], "leer"];
     // nahe absichtlich nicht: die Karte soll beim Verschieben nicht zurückspringen
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeLinie, zielOrt, listenOrte, start, modus, ansicht.art, personen, gruppeWege, treffErgebnis, treffWahl]);
+  }, [routeLinie, zielOrt, listenOrte, chatListe, start, modus, ansicht.art, personen, gruppeWege, treffErgebnis, treffWahl]);
 
   const abstand: Abstand = desktop ? { top: 0, right: 70, bottom: 0, left: groesse.w + 16 } : { top: 0, right: 0, bottom: groesse.h, left: 0 };
 

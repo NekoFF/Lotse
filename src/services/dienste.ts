@@ -49,8 +49,9 @@ async function laden<T>(url: string, was: string): Promise<T> {
 const zwischenspeicher = new Map<string, Promise<unknown>>();
 const SPEICHER_MAX = 200;
 
-export function holeJson<T>(url: string, was: string): Promise<T> {
-  const da = zwischenspeicher.get(url);
+/** frisch = Zwischenspeicher nicht lesen (z. B. Echtzeit beim Termin-Wächter) */
+export function holeJson<T>(url: string, was: string, frisch = false): Promise<T> {
+  const da = frisch ? undefined : zwischenspeicher.get(url);
   if (da) return da as Promise<T>;
   const p = laden<T>(url, was);
   zwischenspeicher.set(url, p);
