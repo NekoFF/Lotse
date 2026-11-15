@@ -250,8 +250,8 @@
 .formular .info { align-items: center; }
 .formular input { border: 0; background: var(--fuell); border-radius: 9px; padding: 7px 9px; font: inherit; font-size: 14px; color: var(--ink); width: 100%; min-width: 0; }
 .formular input:focus { outline: none; background: var(--flaeche); box-shadow: inset 0 0 0 1.5px var(--akzent); }
-.los-box.gross { font-size: 15px; align-items: flex-start; line-height: 1.45; }
-.los-box.gross .ic { margin-top: 2px; color: var(--akzent); }
+.los-box.breit { font-size: 15px; align-items: flex-start; line-height: 1.45; }
+.los-box.breit .ic { margin-top: 2px; color: var(--akzent); }
 .los-box.warnung { box-shadow: inset 0 0 0 1.5px var(--rot); }
 .segment button { font-size: 12px; }
 .werkzeuge { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
@@ -261,3 +261,18 @@
 .linie-chip { display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px; border-radius: 5px; background: var(--ink); color: var(--flaeche); font-size: 11px; font-weight: 700; }
 .linie-chip em { font-style: normal; color: #ff8a80; }
 .linie-chip.aus { background: var(--rot); text-decoration: line-through; }
+
+/* ---------- Treffpunkt ---------- */
+.personen { display: flex; flex-direction: column; gap: 8px; }
+.person { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 14px; background: var(--flaeche); box-shadow: inset 3px 0 0 var(--p); }
+.person-kopf { display: flex; align-items: center; gap: 8px; }
+.person-punkt { width: 12px; height: 12px; border-radius: 6px; background: var(--p); flex-shrink: 0; }
+.person-name { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-weight: 600; font-size: 15px; color: var(--ink); outline: none; }
+.person-start { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink2); text-align: left; }
+.person-vk { display: flex; flex-wrap: wrap; gap: 6px; }
+.person-vk button { height: 30px; min-width: 36px; padding: 0 9px; border-radius: 9px; background: var(--fuell); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--ink2); }
+.person-vk button.an { background: var(--p); color: #fff; }
+.person-vk button.mit.an { background: var(--p); }
+.zeit-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 10px; font-size: 11px; font-weight: 700; color: #fff; background: var(--p); }
+.zeile.treff { cursor: pointer; }
+.gruppe-punkt { width: 26px; height: 26px; border-radius: 13px; border: 2.5px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); display: grid; place-items: center; font-size: 12px; font-weight: 800; color: #fff; }

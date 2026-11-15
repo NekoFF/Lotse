@@ -8,6 +8,8 @@ import { kiChat, kiStarten, type KiStatus } from "./ki/assistent";
 import { erinnerungenPlanen, kalenderLaden, leseTermine, loescheTermin, speichereTermin, type Termin } from "./lib/termine";
 import { useTerminWaechter } from "./lib/waechter";
 import { TerminForm, TermineListe } from "./blatt/Termine";
+import { TreffpunktInhalt } from "./blatt/Treffpunkt";
+import { FARBEN, wegeZum, type Person, type Vorschlag as TreffVorschlag } from "./lib/treffpunkt";
 import { useFahrten, useRoute } from "./lib/wege";
 import { leseGespeichert, umschalten } from "./lib/gespeichert";
 import { LotseMap, type Abstand, type Pin } from "./map/LotseMap";
@@ -28,6 +30,7 @@ type Ansicht =
   | { art: "route"; ort: Ort }
   | { art: "termin"; ort: Ort | null; zeit: Date | null; id?: string }
   | { art: "termine" }
+  | { art: "treffpunkt" }
   | { art: "info" };
 
 /** Ohne Kartenbewegung: Wetzlar als Kartenmitte (nur Anzeige, nie als Startpunkt verwendet) */
@@ -64,6 +67,14 @@ export default function App() {
   const [termine, setTermine] = useState<Termin[]>(leseTermine);
   const [vorgemerkt, setVorgemerkt] = useState<Date | null>(null);
   const [gespeichert, setGespeichert] = useState<Ort[]>(leseGespeichert);
+  // Treffpunkt
+  const [personen, setPersonen] = useState<Person[]>(() => [
+    { id: "p1", name: "Ich", farbe: FARBEN[0], start: null, verkehr: "fuss", mitBei: null },
+    { id: "p2", name: "Person 2", farbe: FARBEN[1], start: null, verkehr: "fuss", mitBei: null },
+  ]);
+  const [treffErgebnis, setTreffErgebnis] = useState<TreffVorschlag[] | null>(null);
+  const [treffWahl, setTreffWahl] = useState<number | null>(null);
+  const [gruppeWege, setGruppeWege] = useState<{ personId: string; name: string; farbe: string; line: LngLat[]; s: number }[] | null>(null);
   const [ki, setKi] = useState<KiStatus>({ art: "aus" });
   const [toast, setToast] = useState<string | null>(null);
   const [dreiD, setDreiD] = useState(false);
@@ -324,9 +335,10 @@ export default function App() {
 
   const listenOrte = useMemo(() => (ansicht.art === "liste" ? ansicht.l.orte : []), [ansicht]);
   const pins: Pin[] = useMemo(() => {
+    if (ansicht.art === "treffpunkt" && treffErgebnis) return treffErgebnis.map((v, i) => ({ id: v.ort.id, lngLat: v.ort.lngLat, label: v.ort.name.length > 18 ? v.ort.name.slice(0, 16) + "…" : v.ort.name, aktiv: i === treffWahl }));
     if (zielOrt) return [{ id: zielOrt.id, lngLat: zielOrt.lngLat, label: zielOrt.name.length > 24 ? zielOrt.name.slice(0, 22) + "…" : zielOrt.name, aktiv: true }];
     return listenOrte.slice(0, 40).map((o) => ({ id: o.id, lngLat: o.lngLat, label: o.name.length > 18 ? o.name.slice(0, 16) + "…" : o.name, aktiv: false }));
-  }, [zielOrt, listenOrte]);
+  }, [zielOrt, listenOrte, ansicht.art, treffErgebnis, treffWahl]);
 
   const fahrt = oepnv ? fahrten.fahrten[fahrtWahl] ?? null : null;
   const routeLinie = useMemo(() => (ansicht.art === "route" && oepnv
@@ -335,13 +347,17 @@ export default function App() {
     ? { linie: gewaehlteRoute.line, planb: null, modus, alternativen: weg.routen.filter((x) => x !== gewaehlteRoute).map((x) => x.line) }
     : null), [ansicht.art, gewaehlteRoute, weg.routen, modus, oepnv, fahrt]);
   const [rahmen, rahmenKey] = useMemo((): [LngLat[], string] => {
+    if (ansicht.art === "treffpunkt") {
+      const punkte = [...personen.flatMap((p) => (p.start ? [p.start.lngLat] : [])), ...(gruppeWege ?? []).flatMap((g) => g.line), ...(treffErgebnis ?? []).map((v) => v.ort.lngLat)];
+      if (punkte.length) return [punkte, `treff-${personen.map((p) => p.start?.lngLat.join()).join()}-${treffErgebnis?.length ?? 0}-${treffWahl}-${gruppeWege?.length ?? 0}`];
+    }
     if (routeLinie) return [[...routeLinie.linie, ...(routeLinie.alternativen ?? []).flat()], `route-${zielOrt?.id}-${oepnv ? `oepnv${fahrtWahl}` : modus}-${start?.lngLat.join()}`];
     if (zielOrt) return [[zielOrt.lngLat], `ort-${zielOrt.id}`];
     if (listenOrte.length) return [[nahe, ...listenOrte.slice(0, 8).map((o) => o.lngLat)], `liste-${listenOrte.slice(0, 3).map((o) => o.id).join()}`];
     return start ? [[start.lngLat], `start-${start.lngLat.join()}`] : [[], "leer"];
     // nahe absichtlich nicht: die Karte soll beim Verschieben nicht zurückspringen
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeLinie, zielOrt, listenOrte, start, modus]);
+  }, [routeLinie, zielOrt, listenOrte, start, modus, ansicht.art, personen, gruppeWege, treffErgebnis, treffWahl]);
 
   const abstand: Abstand = desktop ? { top: 0, right: 70, bottom: 0, left: groesse.w + 16 } : { top: 0, right: 0, bottom: groesse.h, left: 0 };
 
@@ -390,7 +406,8 @@ export default function App() {
             <VorschlagInhalt text={text} zuletzt={zuletzt} termine={termine} gespeichert={gespeichert} ki={ki} onWahl={waehle}
               onInfo={() => { fertig(); gehe({ art: "info" }); }}
               onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} onZu={schliessen}
-              onTermine={() => { fertig(); gehe({ art: "termine" }); }} />
+              onTermine={() => { fertig(); gehe({ art: "termine" }); }}
+              onTreffpunkt={() => { fertig(); gehe({ art: "treffpunkt" }); }} />
           )}
           {!fokus && !desktop && ansicht.art === "start" && <SchnellLeiste onKategorie={(k) => { setText(k.name); kategorieSuche(k); }} />}
           {!fokus && ansicht.art === "liste" && (
@@ -420,6 +437,17 @@ export default function App() {
                 onKalender={kalenderLaden} />
             );
           })()}
+          {!fokus && ansicht.art === "treffpunkt" && (
+            <TreffpunktInhalt start={start} personen={personen} setPersonen={(p) => { setPersonen(p); setGruppeWege(null); setTreffWahl(null); }}
+              ergebnis={treffErgebnis} setErgebnis={(v) => { setTreffErgebnis(v); setGruppeWege(null); setTreffWahl(null); }}
+              gewaehlt={treffWahl} onZu={schliessen} onOrt={(v) => oeffneOrt(v.ort, false)}
+              onWahl={(i) => {
+                setTreffWahl(i);
+                const v = treffErgebnis?.[i];
+                if (!v) return;
+                wegeZum(personen, v.ort.lngLat).then((w) => setGruppeWege(w.map((x) => ({ ...x, name: personen.find((p) => p.id === x.personId)?.name ?? "" }))), (e) => zeige(fehlerText(e)));
+              }} />
+          )}
           {!fokus && ansicht.art === "termine" && (
             <TermineListe termine={termine} onZu={schliessen}
               onTermin={(t) => gehe({ art: "termin", ort: t.ort, zeit: null, id: t.id })}
@@ -445,6 +473,7 @@ export default function App() {
         onKarteTipp={karteTipp}
         onMitte={setMitte}
         onLeer={() => { if (fokus) fertig(); }}
+        gruppe={ansicht.art === "treffpunkt" ? gruppeWege : null}
       />
 
       <Blatt desktop={desktop} stufe={stufe} setStufe={setStufe} kopf={kopf} oben={desktop ? chatEl : undefined} onGroesse={setGroesse}>

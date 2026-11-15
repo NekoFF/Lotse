@@ -53,13 +53,15 @@ interface Props {
   onMitte?: (lngLat: LngLat) => void;
   /** Klick auf eine leere Stelle */
   onLeer?: () => void;
+  /** Treffpunkt: Wege mehrerer Personen (eigene Farbe), werden animiert abgefahren */
+  gruppe?: { personId: string; name: string; farbe: string; line: LngLat[]; s: number }[] | null;
 }
 
 /** Ebenen mit antippbaren Kartenpunkten (aus public/karte/stil-*.json) */
 const ORT_EBENEN = ["lotse-poi-oepnv", "lotse-poi-medizin", "lotse-poi-orte"];
 const LIZENZ_URL = `${import.meta.env.BASE_URL}karte/LIZENZ.txt`;
 
-export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, abstand, onPin, onPinHover, dreiD = false, onKarteTipp, onMitte, onLeer }: Props) {
+export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, abstand, onPin, onPinHover, dreiD = false, onKarteTipp, onMitte, onLeer, gruppe }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
   const markers = useRef(new Map<string, { m: Marker; el: HTMLButtonElement }>());
@@ -181,6 +183,53 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     else m.once("idle", zeichne);
   }, [route, theme]);
 
+  // Treffpunkt: Wege aller Personen + animierte Punkte (echte Reisezeiten im Verhältnis, 5 Sekunden Gesamtdauer)
+  const gruppeMarker = useRef<Marker[]>([]);
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    gruppeMarker.current.forEach((x) => x.remove());
+    gruppeMarker.current = [];
+    const daten = (fortschritt: number[]): GeoJSON.FeatureCollection => ({
+      type: "FeatureCollection",
+      features: (gruppe ?? []).flatMap((g, i) => [
+        { type: "Feature", properties: { farbe: g.farbe, art: "rest" }, geometry: { type: "LineString", coordinates: g.line } },
+        { type: "Feature", properties: { farbe: g.farbe, art: "weg" }, geometry: { type: "LineString", coordinates: teilLinie(g.line, fortschritt[i] ?? 0) } },
+      ]),
+    });
+    const setzen = (d: GeoJSON.FeatureCollection) => {
+      const q = m.getSource("gruppe") as maplibregl.GeoJSONSource | undefined;
+      if (q) { q.setData(d); return; }
+      if (!m.isStyleLoaded()) return;
+      m.addSource("gruppe", { type: "geojson", data: d });
+      const vor = m.getStyle().layers?.find((l) => l.type === "symbol")?.id;
+      m.addLayer({ id: "gruppe-rest", type: "line", source: "gruppe", filter: ["==", ["get", "art"], "rest"], layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": ["get", "farbe"], "line-width": breite(3, 8), "line-opacity": 0.28 } }, vor);
+      m.addLayer({ id: "gruppe-weg", type: "line", source: "gruppe", filter: ["==", ["get", "art"], "weg"], layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": ["get", "farbe"], "line-width": breite(4, 10) } }, vor);
+    };
+    if (!gruppe?.length) { setzen(daten([])); return; }
+    const smax = Math.max(...gruppe.map((g) => g.s));
+    gruppeMarker.current = gruppe.map((g) => {
+      const el = document.createElement("div");
+      el.className = "gruppe-punkt";
+      el.style.background = g.farbe;
+      el.textContent = g.name.slice(0, 1).toUpperCase();
+      el.title = g.name;
+      return new maplibregl.Marker({ element: el }).setLngLat(g.line[0]).addTo(m);
+    });
+    const dauer = 5000, t0 = performance.now();
+    let frame = 0;
+    const schritt = (t: number) => {
+      const f = gruppe.map((g) => Math.min(1, (t - t0) / (dauer * (g.s / smax || 1))));
+      setzen(daten(f));
+      gruppe.forEach((g, i) => { const l = teilLinie(g.line, f[i]); gruppeMarker.current[i]?.setLngLat(l[l.length - 1]); });
+      if (f.some((x) => x < 1)) frame = requestAnimationFrame(schritt);
+    };
+    frame = requestAnimationFrame(schritt);
+    return () => cancelAnimationFrame(frame);
+  }, [gruppe]);
+
   // Pins als HTML-Marker (bleiben beim Stilwechsel erhalten)
   useEffect(() => {
     const m = map.current;
@@ -281,6 +330,22 @@ function zeichneRoute(m: MlMap, r: Route | null, theme: "light" | "dark") {
       "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-rotation-alignment": "map",
     },
   } as maplibregl.SymbolLayerSpecification, vor);
+}
+
+/** Anfangsstück einer Linie bis zum Anteil f (nach Länge) */
+function teilLinie(line: LngLat[], f: number): LngLat[] {
+  if (line.length < 2 || f >= 1) return line;
+  const d = (a: LngLat, b: LngLat) => Math.hypot((b[0] - a[0]) * Math.cos((a[1] * Math.PI) / 180), b[1] - a[1]);
+  const laengen = line.slice(1).map((p, i) => d(line[i], p));
+  let rest = laengen.reduce((a, b) => a + b, 0) * Math.max(0, f);
+  const aus: LngLat[] = [line[0]];
+  for (let i = 0; i < laengen.length; i++) {
+    if (rest >= laengen[i]) { aus.push(line[i + 1]); rest -= laengen[i]; continue; }
+    const k = laengen[i] ? rest / laengen[i] : 0;
+    aus.push([line[i][0] + (line[i + 1][0] - line[i][0]) * k, line[i][1] + (line[i + 1][1] - line[i][1]) * k]);
+    break;
+  }
+  return aus.length > 1 ? aus : [line[0], line[0]];
 }
 
 /** runder Wegpunkt (weißer Rand) für die Fußroute */

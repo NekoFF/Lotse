@@ -71,7 +71,7 @@ export async function verbindungen(start: LngLat, ziel: LngLat, zeit: { ankunft?
       const vm = ART[l.mode] ?? "ÖPNV";
       return {
         art: fuss ? "fuss" : "oepnv", verkehrsmittel: fuss ? "zu Fuß" : vm,
-        linie: fuss ? "" : (l.displayName || l.routeShortName || vm),
+        linie: fuss ? "" : ((n) => (/^\d+$/.test(n) ? `${vm} ${n}` : n))(l.displayName || l.routeShortName || vm),
         von: l.from.name === "START" ? "Start" : l.from.name, nach: l.to.name === "END" ? "Ziel" : l.to.name,
         ab: new Date(l.startTime), an: new Date(l.endTime),
         verspaetung: !fuss && l.realTime ? Math.round((echt - plan) / 60000) : null,

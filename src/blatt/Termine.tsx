@@ -54,7 +54,7 @@ export function TerminForm({ vorhanden, ort, vorschlag, start, onStartGps, onSpe
   });
 
   return (
-    <div className="inhalt termin">
+    <div className="inhalt termin-form">
       <Kopf titel={vorhanden ? "Termin" : "Neuer Termin"} unter={o?.name} onZurueck={onZurueck} onZu={onZu} />
       <div className="chips">
         {(Object.keys(ART_NAME) as TerminArt[]).map((a) => (
@@ -87,7 +87,7 @@ export function TerminForm({ vorhanden, ort, vorschlag, start, onStartGps, onSpe
             ))}
           </div>
           {planStart && (
-            <div className={`los-box gross${p?.hinweis ? " warnung" : ""}`}>
+            <div className={`los-box breit${p?.hinweis ? " warnung" : ""}`}>
               <Uhr size={20} />
               {plan.laden && <span>Weg wird berechnet …</span>}
               {!plan.laden && p?.los && <span>Los um <b className="mono">{uhr(p.los)}</b>{p.dauerS ? ` · ${min(p.dauerS)} Min unterwegs` : ""}{p.weg ? <><br /><span className="leise">{p.weg}</span></> : null}{p.hinweis ? <><br /><b className="rot-t">{p.hinweis}</b></> : null}</span>}

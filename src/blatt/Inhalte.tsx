@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { fotoLaden, type Foto } from "../services/foto";
+import { doctolibLink, istDoctolib } from "../services/doctolib";
 import { DIENSTE } from "../config";
 import type { Kategorie } from "../core/absicht";
 import { KATEGORIEN } from "../core/absicht";
@@ -83,6 +84,7 @@ export function OrtInhalt({ o, laden, weg, modus, gespeichert, onSpeichern, onRo
   onRoute: () => void; onTermin: () => void; onTeilen: () => void; onZu: () => void; onZurueck?: () => void;
 }) {
   const foto = useFoto(o);
+  const istPraxis = !!o.fach || /arzt|praxis|klinik/i.test(o.art);
   const zeiten = o.oeffnungszeiten ? zeitenLesbar(o.oeffnungszeiten) : [];
   return (
     <div className="inhalt ort">
@@ -99,6 +101,9 @@ export function OrtInhalt({ o, laden, weg, modus, gespeichert, onSpeichern, onRo
         {o.telefon && <a className="aktion" href={telLink(o.telefon)}><Telefon size={20} /><span>Anrufen</span></a>}
         {o.website && <a className="aktion" href={o.website} target="_blank" rel="noopener noreferrer"><Extern size={20} /><span>Website</span></a>}
         {o.email && <a className="aktion" href={`mailto:${o.email}`}><Brief size={20} /><span>E-Mail</span></a>}
+        {istPraxis && (istDoctolib(o.website)
+          ? <a className="aktion" href={o.website!} target="_blank" rel="noopener noreferrer"><Kalender size={20} /><span>Online buchen</span></a>
+          : <a className="aktion" href={doctolibLink(o)} target="_blank" rel="noopener noreferrer" title="Freie Termine bei Doctolib suchen"><Kalender size={20} /><span>Doctolib</span></a>)}
         <button type="button" className="aktion" onClick={onTermin}><Kalender size={20} /><span>Termin</span></button>
         <button type="button" className="aktion" onClick={onTeilen}><Teilen size={20} /><span>Teilen</span></button>
       </div>
