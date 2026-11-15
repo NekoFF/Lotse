@@ -27,6 +27,8 @@ export interface Route {
   modus: "fuss" | "rad" | "auto";
   /** weitere echte Routen, blass gezeichnet */
   alternativen?: LngLat[][];
+  /** Bus & Bahn: Abschnitte (Fußwege gepunktet, Fahrten durchgezogen) */
+  abschnitte?: { line: LngLat[]; art: "fuss" | "oepnv" }[];
 }
 
 export interface Abstand { top: number; right: number; bottom: number; left: number }
@@ -245,7 +247,9 @@ function zeichneRoute(m: MlMap, r: Route | null, theme: "light" | "dark") {
   const f = FARBE[theme];
   const daten: GeoJSON.FeatureCollection = {
     type: "FeatureCollection",
-    features: r ? [...(r.alternativen ?? []).map((l) => linie(l, "alt")), ...(r.planb ? [linie(r.planb, "planb")] : []), linie(r.linie, r.modus)] : [],
+    features: !r ? [] : r.abschnitte?.length
+      ? r.abschnitte.filter((a) => a.line.length > 1).map((a) => linie(a.line, a.art === "fuss" ? "fuss" : "auto"))
+      : [...(r.alternativen ?? []).map((l) => linie(l, "alt")), ...(r.planb ? [linie(r.planb, "planb")] : []), linie(r.linie, r.modus)],
   };
   const quelle = m.getSource("route") as maplibregl.GeoJSONSource | undefined;
   if (quelle) { quelle.setData(daten); return; }

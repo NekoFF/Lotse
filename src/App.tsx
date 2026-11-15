@@ -5,8 +5,10 @@ import { FACHRICHTUNGEN, type FachId } from "./data/fachrichtungen";
 import type { Notfallstufe } from "./data/notfall";
 import type { LngLat, Modus, Start } from "./data/praxen";
 import { kiChat, kiStarten, type KiStatus } from "./ki/assistent";
-import { erinnerungenPlanen, kalenderLaden, leseTermine, loescheTermin, losgehzeit, speichereTermin, type Termin } from "./lib/termine";
-import { useRoute } from "./lib/wege";
+import { erinnerungenPlanen, kalenderLaden, leseTermine, loescheTermin, speichereTermin, type Termin } from "./lib/termine";
+import { useTerminWaechter } from "./lib/waechter";
+import { TerminForm, TermineListe } from "./blatt/Termine";
+import { useFahrten, useRoute } from "./lib/wege";
 import { leseGespeichert, umschalten } from "./lib/gespeichert";
 import { LotseMap, type Abstand, type Pin } from "./map/LotseMap";
 import { Notfall } from "./screens/Notfall";
@@ -15,7 +17,7 @@ import { inDerNaehe, ortAnStelle, ortLaden, ortMitNamen, suchen as ortSuchen, ty
 import { Ablage } from "./blatt/Ablage";
 import { ChatVerlauf, type Nachricht } from "./blatt/Chat";
 import { Blatt, type Stufe } from "./blatt/Blatt";
-import { InfoInhalt, ListenInhalt, OrtInhalt, RouteInhalt, SchnellLeiste, TerminInhalt, VorschlagInhalt, type ListenStand, type Vorschlag } from "./blatt/Inhalte";
+import { InfoInhalt, ListenInhalt, OrtInhalt, RouteInhalt, SchnellLeiste, VorschlagInhalt, type ListenStand, type Vorschlag } from "./blatt/Inhalte";
 import { Ki, Marke, Standort, Suche, Plus, Minus } from "./ui/icons";
 import "./blatt/blatt.css";
 
@@ -24,7 +26,8 @@ type Ansicht =
   | { art: "liste"; l: ListenStand; neu: () => void }
   | { art: "ort"; ort: Ort; laden: boolean }
   | { art: "route"; ort: Ort }
-  | { art: "termin"; ort: Ort; zeit: Date | null }
+  | { art: "termin"; ort: Ort | null; zeit: Date | null; id?: string }
+  | { art: "termine" }
   | { art: "info" };
 
 /** Ohne Kartenbewegung: Wetzlar als Kartenmitte (nur Anzeige, nie als Startpunkt verwendet) */
@@ -88,6 +91,8 @@ export default function App() {
 
   // Erinnerungen ans Losgehen, solange Lotse offen ist
   useEffect(() => erinnerungenPlanen(termine, zeige), [termine, zeige]);
+  // Wege der nächsten Termine regelmäßig neu prüfen (Echtzeit) und warnen, wenn man früher los muss
+  useTerminWaechter(termine, (t) => setTermine(speichereTermin(t)), zeige);
 
   // Geteilter Link: #o=node-123 öffnet den Ort; wer ihn öffnet, plant seinen eigenen Weg
   useEffect(() => {
@@ -231,7 +236,7 @@ export default function App() {
     else if (v.art === "zuletzt") { setText(v.text); void absenden(v.text); }
     else if (v.art === "kategorie") { setText(v.k.name); kategorieSuche(v.k); }
     else if (v.art === "ort") gehe({ art: "ort", ort: v.o, laden: false });
-    else gehe({ art: "ort", ort: v.t.ort, laden: false });
+    else gehe({ art: "termin", ort: v.t.ort, zeit: null, id: v.t.id });
   };
 
   /* ---------- Orte öffnen, Karte antippen ---------- */
@@ -285,16 +290,17 @@ export default function App() {
   const wegRad = useRoute(start?.lngLat ?? null, routeZiel, "rad", versuch);
   const wegAuto = useRoute(start?.lngLat ?? null, routeZiel, "auto", versuch);
   const [routeWahl, setRouteWahl] = useState(0);
+  const [oepnv, setOepnv] = useState(false);
+  const [fahrtWahl, setFahrtWahl] = useState(0);
+  const fahrten = useFahrten(start?.lngLat ?? null, routeZiel, versuch);
   const gewaehlteRoute = weg.routen[routeWahl] ?? weg.route;
-  const terminFuer = (o: Ort) => termine.find((t) => t.ort.id === o.id) ?? null;
+  const terminFuer = (o: Ort | null) => (o ? termine.find((t) => t.ort?.id === o.id) ?? null : null);
 
-  const terminSpeichern = (o: Ort, d: Date) => {
-    const los = gewaehlteRoute ? losgehzeit(d, gewaehlteRoute.s) : null;
-    const t: Termin = { id: terminFuer(o)?.id ?? `${o.id}-${d.getTime()}`, ort: o, zeit: d.toISOString(), los: los?.toISOString() ?? null, modus: weg.route ? modus : null };
+  const terminSpeichern = (t: Termin) => {
     setTermine(speichereTermin(t));
     setVorgemerkt(null);
     try { if ("Notification" in window && Notification.permission === "default") void Notification.requestPermission(); } catch { /* egal */ }
-    zeige(los ? `Gemerkt. Erinnerung um ${los.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} zum Losgehen.` : "Gemerkt. Mit Startpunkt rechnet Lotse auch die Losgehzeit.");
+    zeige(t.los ? `Gemerkt. Lotse erinnert dich um ${new Date(t.los).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} ans Losgehen.` : "Termin gemerkt.");
     zurueck();
   };
 
@@ -322,11 +328,14 @@ export default function App() {
     return listenOrte.slice(0, 40).map((o) => ({ id: o.id, lngLat: o.lngLat, label: o.name.length > 18 ? o.name.slice(0, 16) + "…" : o.name, aktiv: false }));
   }, [zielOrt, listenOrte]);
 
-  const routeLinie = useMemo(() => (ansicht.art === "route" && gewaehlteRoute
+  const fahrt = oepnv ? fahrten.fahrten[fahrtWahl] ?? null : null;
+  const routeLinie = useMemo(() => (ansicht.art === "route" && oepnv
+    ? (fahrt ? { linie: fahrt.abschnitte.flatMap((a) => a.line), planb: null, modus: "auto" as const, abschnitte: fahrt.abschnitte.map((a) => ({ line: a.line, art: a.art })) } : null)
+    : ansicht.art === "route" && gewaehlteRoute
     ? { linie: gewaehlteRoute.line, planb: null, modus, alternativen: weg.routen.filter((x) => x !== gewaehlteRoute).map((x) => x.line) }
-    : null), [ansicht.art, gewaehlteRoute, weg.routen, modus]);
+    : null), [ansicht.art, gewaehlteRoute, weg.routen, modus, oepnv, fahrt]);
   const [rahmen, rahmenKey] = useMemo((): [LngLat[], string] => {
-    if (routeLinie) return [[...routeLinie.linie, ...(routeLinie.alternativen ?? []).flat()], `route-${zielOrt?.id}-${modus}-${start?.lngLat.join()}`];
+    if (routeLinie) return [[...routeLinie.linie, ...(routeLinie.alternativen ?? []).flat()], `route-${zielOrt?.id}-${oepnv ? `oepnv${fahrtWahl}` : modus}-${start?.lngLat.join()}`];
     if (zielOrt) return [[zielOrt.lngLat], `ort-${zielOrt.id}`];
     if (listenOrte.length) return [[nahe, ...listenOrte.slice(0, 8).map((o) => o.lngLat)], `liste-${listenOrte.slice(0, 3).map((o) => o.id).join()}`];
     return start ? [[start.lngLat], `start-${start.lngLat.join()}`] : [[], "leer"];
@@ -380,7 +389,8 @@ export default function App() {
           {fokus && (
             <VorschlagInhalt text={text} zuletzt={zuletzt} termine={termine} gespeichert={gespeichert} ki={ki} onWahl={waehle}
               onInfo={() => { fertig(); gehe({ art: "info" }); }}
-              onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} onZu={schliessen} />
+              onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} onZu={schliessen}
+              onTermine={() => { fertig(); gehe({ art: "termine" }); }} />
           )}
           {!fokus && !desktop && ansicht.art === "start" && <SchnellLeiste onKategorie={(k) => { setText(k.name); kategorieSuche(k); }} />}
           {!fokus && ansicht.art === "liste" && (
@@ -396,15 +406,24 @@ export default function App() {
               onTeilen={() => void teilen(ansicht.ort)} />
           )}
           {!fokus && ansicht.art === "route" && (
-            <RouteInhalt o={ansicht.ort} start={start} modus={modus} setModus={setModus} wege={{ fuss: wegFuss, rad: wegRad, auto: wegAuto }}
+            <RouteInhalt o={ansicht.ort} start={start} modus={modus} setModus={setModus}
+              oepnv={oepnv} setOepnv={setOepnv} fahrten={fahrten} fahrtWahl={fahrtWahl} setFahrtWahl={setFahrtWahl} wege={{ fuss: wegFuss, rad: wegRad, auto: wegAuto }}
               wahl={routeWahl} setWahl={setRouteWahl} termin={terminFuer(ansicht.ort)}
               onStartGps={gps} onStartAdresse={startAdresse} onZurueck={zurueck} onNeu={() => setVersuch((n) => n + 1)} onZu={schliessen} />
           )}
-          {!fokus && ansicht.art === "termin" && (
-            <TerminInhalt o={ansicht.ort} vorschlag={ansicht.zeit ?? morgenNeun()} vorhanden={terminFuer(ansicht.ort)} onZurueck={zurueck} onZu={schliessen}
-              onSpeichern={(d) => terminSpeichern(ansicht.ort, d)}
-              onLoeschen={() => { const t = terminFuer(ansicht.ort); if (t) setTermine(loescheTermin(t.id)); zurueck(); }}
-              onKalender={() => { const t = terminFuer(ansicht.ort); if (t) kalenderLaden(t); }} />
+          {!fokus && ansicht.art === "termin" && (() => {
+            const vorhanden = ansicht.id ? termine.find((t) => t.id === ansicht.id) ?? null : null;
+            return (
+              <TerminForm key={ansicht.id ?? ansicht.ort?.id ?? "neu"} vorhanden={vorhanden} ort={ansicht.ort} vorschlag={ansicht.zeit ?? morgenNeun()} start={start}
+                onStartGps={gps} onSpeichern={terminSpeichern} onZurueck={verlauf.length > 1 ? zurueck : undefined} onZu={schliessen}
+                onLoeschen={() => { if (vorhanden) setTermine(loescheTermin(vorhanden.id)); zurueck(); }}
+                onKalender={kalenderLaden} />
+            );
+          })()}
+          {!fokus && ansicht.art === "termine" && (
+            <TermineListe termine={termine} onZu={schliessen}
+              onTermin={(t) => gehe({ art: "termin", ort: t.ort, zeit: null, id: t.id })}
+              onNeu={() => gehe({ art: "termin", ort: null, zeit: null })} />
           )}
           {!fokus && ansicht.art === "info" && <InfoInhalt onZu={schliessen} />}
         </div>

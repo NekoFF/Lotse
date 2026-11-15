@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { LngLat, Modus } from "../data/praxen";
 import { fehlerText } from "../services/dienste";
 import { routenLaden, type Route } from "../services/orte";
+import { verbindungen, type Fahrt } from "../services/oepnv";
 
 export interface WegStand { route: Route | null; routen: Route[]; status: "aus" | "laden" | "ok" | "fehler"; fehler?: string }
 
@@ -22,4 +23,26 @@ export function useRoute(start: LngLat | null, ziel: LngLat | null, modus: Modus
   }, [key, versuch]);
   if (!key) return { route: null, routen: [], status: "aus" };
   return s.key === key ? s : { route: null, routen: [], status: "laden" };
+}
+
+/* ---------- Bus & Bahn (Transitous, Echtzeit) ---------- */
+
+export interface FahrtenStand { fahrten: Fahrt[]; status: "aus" | "laden" | "ok" | "fehler"; fehler?: string }
+
+export function useFahrten(start: LngLat | null, ziel: LngLat | null, versuch: number): FahrtenStand {
+  const key = start && ziel ? `${start.join(",")}|${ziel.join(",")}` : "";
+  const [s, setS] = useState<FahrtenStand & { key: string }>({ key: "", fahrten: [], status: "aus" });
+  useEffect(() => {
+    if (!key) return;
+    let aus = false;
+    setS({ key, fahrten: [], status: "laden" });
+    verbindungen(start!, ziel!, { ab: new Date() }).then(
+      (fahrten) => { if (!aus) setS({ key, fahrten, status: "ok" }); },
+      (e) => { if (!aus) setS({ key, fahrten: [], status: "fehler", fehler: fehlerText(e) }); },
+    );
+    return () => { aus = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, versuch]);
+  if (!key) return { fahrten: [], status: "aus" };
+  return s.key === key ? s : { fahrten: [], status: "laden" };
 }

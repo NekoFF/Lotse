@@ -52,3 +52,4 @@ export const Wagen = (p: P) => <Ic {...p}><path d="M3 4h2.5l2 11h10l2-8H7" /><ci
 export const Stern = (p: P) => <Ic {...p}><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></Ic>;
 export const Merken = (p: P) => <Ic {...p}><path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1z" /></Ic>;
 export const Brief = (p: P) => <Ic {...p}><rect x="3.5" y="5.5" width="17" height="13" rx="2.5" /><path d="M4.5 7.5l7.5 5.5 7.5-5.5" /></Ic>;
+export const Gruppe = (p: P) => <Ic {...p}><circle cx="8" cy="8" r="3" /><circle cx="16.5" cy="9.5" r="2.5" /><path d="M2.5 19c.5-3.5 2.8-5.5 5.5-5.5s5 2 5.5 5.5M14 14.2c.8-.5 1.6-.7 2.5-.7 2.3 0 4.2 1.7 4.5 5" /></Ic>;

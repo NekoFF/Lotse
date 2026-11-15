@@ -109,7 +109,15 @@ export function verstehe(text: string, jetzt = new Date()): Absicht {
   // Sieht wie eine Adresse aus („Bahnhofstraße 1“)? Dann keine Kategorie aus Wortteilen raten
   if (siehtAusWieAdresse(text)) return { typ: "suche", text: text.trim() };
   for (const [w, f] of FACH_WOERTER) if (containsTerm(n, w)) return { typ: "fach", fach: f };
-  for (const [w, id] of KAT_WOERTER) if (w.endsWith(" ") ? n.includes(" " + w) || n.startsWith(w) : containsTerm(n, w)) return { typ: "kategorie", kategorie: kat(id) };
+  for (const [w, id] of KAT_WOERTER) {
+    if (!(w.endsWith(" ") ? n.includes(" " + w) || n.startsWith(w) : containsTerm(n, w))) continue;
+    // „Gießen Bahnhof“, „Kino Rex“: kurze Eingabe nur aus Namen (alle groß) mit einem Nicht-Kategorie-Wort → bestimmter Ort
+    const teile = text.trim().split(/\s+/);
+    const eigenname = teile.length >= 2 && teile.length <= 3 && teile.every((x) => /^[A-ZÄÖÜ]/.test(x))
+      && teile.some((x) => !KAT_WOERTER.some(([k]) => normalize(x).startsWith(k.trim())));
+    if (eigenname) return { typ: "suche", text: text.trim() };
+    return { typ: "kategorie", kategorie: kat(id) };
+  }
   const z = ordneZu(text);
   if (!z.unsicher) return { typ: "anliegen", zuordnung: z };
   return { typ: "suche", text: text.trim() };

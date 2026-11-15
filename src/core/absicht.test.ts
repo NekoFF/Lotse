@@ -89,3 +89,11 @@ describe("Adressen werden nicht als Kategorie geraten", () => {
     expect(verstehe("Bahnhof", FR).typ).toBe("kategorie");
   });
 });
+
+describe("Bestimmter Ort statt Kategorie", () => {
+  it("Stadt + Bahnhof ist ein Ort", () => {
+    expect(verstehe("Gießen Bahnhof", FR).typ).toBe("suche");
+    expect(verstehe("Apotheke", FR).typ).toBe("kategorie");
+    expect(verstehe("Apotheke in der Nähe", FR).typ).toBe("kategorie");
+  });
+});
