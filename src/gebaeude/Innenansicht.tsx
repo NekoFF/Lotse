@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Schliessen, Suche } from "../ui/icons";
-import { grenzen, raumFinden, umrissKanten, zonenFlaeche, type Etage, type Gebaeude, type Rechteck, type Zone } from "./modell";
+import { grenzen, raumFinden, ringePfad, textPlatz, umrissKanten, zonenFlaeche, type Etage, type Gebaeude, type Rechteck, type Zone } from "./modell";
 import "./innen.css";
 
 const ART_NAME: Record<Zone["art"], string> = {
@@ -8,12 +8,19 @@ const ART_NAME: Record<Zone["art"], string> = {
   luftraum: "offen (Luftraum)", terrasse: "Terrasse", nebengebaeude: "Nebengebäude",
 };
 const RAND = 4;
-/** Schräge des Orientierungsplans im Flur (aus dem Foto gemessen): x verschiebt sich um 0,55 × y */
-const SCHRAEG = 0.55;
+/** Schräge des Orientierungsplans im Flur (aus der Markierung gemessen): x verschiebt sich um 0,556 × y */
+const SCHRAEG = 0.556;
 const n = ([a, b, c, d]: Rechteck): Rechteck => [Math.min(a, c), Math.min(b, d), Math.max(a, c), Math.max(b, d)];
 
-/** größtes Rechteck einer Zone (für die Beschriftung) */
-const groesstes = (z: Zone) => z.flaechen.map(n).sort((p, q) => (q[2] - q[0]) * (q[3] - q[1]) - (p[2] - p[0]) * (p[3] - p[1]))[0];
+/** Form einer Zone: Rechtecke und/oder Vielecke */
+function Form({ z }: { z: Zone }) {
+  return (
+    <>
+      {z.flaechen.map((f, i) => { const [a, b, c, d] = n(f); return <rect key={i} x={a} y={b} width={c - a} height={d - b} />; })}
+      {z.ringe && <path d={ringePfad(z.ringe)} fillRule="evenodd" />}
+    </>
+  );
+}
 
 /**
  * Innenansicht: ein Plan je Etage, alle Etagen im selben Raster (übereinander wie im echten Gebäude).
@@ -32,6 +39,7 @@ export function Innenansicht({ gebaeude, raum, onZu }: { gebaeude: Gebaeude; rau
   const [x1, y1, x2, y2] = useMemo(() => grenzen(gebaeude), [gebaeude]);
   const etage = gebaeude.etagen.find((e) => e.ebene === ebene)!;
   const darunter = gebaeude.etagen.find((e) => e.ebene === ebene - 1) ?? null;
+  const plaetze = useMemo(() => new Map(etage.zonen.map((z) => [z.id, textPlatz(z, (z.name ?? "").length)])), [etage]);
   // SVG: y zeigt nach unten, im Modell nach oben → spiegeln
   const k = schild ? SCHRAEG : 0;
   const vb = `${x1 + k * y1 - RAND} ${-(y2 + RAND)} ${x2 - x1 + k * (y2 - y1) + 2 * RAND} ${y2 - y1 + 2 * RAND}`;
@@ -72,11 +80,11 @@ export function Innenansicht({ gebaeude, raum, onZu }: { gebaeude: Gebaeude; rau
             {etage.zonen.map((z) => (
               <g key={z.id} className={`zone z-${z.art}${wahl?.id === z.id ? " gewaehlt" : ""}`}
                 onClick={(e) => { e.stopPropagation(); setWahl(z); }}>
-                {z.flaechen.map((f, i) => { const [a, b, c, d] = n(f); return <rect key={i} x={a} y={b} width={c - a} height={d - b} />; })}
+                <Form z={z} />
               </g>
             ))}
-            {/* Wände: Umrisse aller Raumgruppen, WCs, Treppen und Nebengebäude */}
-            {etage.zonen.filter((z) => z.art !== "flur" && z.art !== "eingang" && z.art !== "hof").map((z) => (
+            {/* Wände: Umrisse aller Bereiche (auch Flure – deren Außenkante ist die Außenwand) */}
+            {etage.zonen.filter((z) => z.art !== "hof").map((z) => (
               <g key={`w-${z.id}`} className={`wand w-${z.art}`}>
                 {umrissKanten(z).map(([a, b, c, d], i) => <line key={i} x1={a} y1={b} x2={c} y2={d} />)}
               </g>
@@ -85,12 +93,17 @@ export function Innenansicht({ gebaeude, raum, onZu }: { gebaeude: Gebaeude; rau
           </g>
           {/* Beschriftung (nicht gespiegelt, nicht schräg) */}
           {etage.zonen.filter((z) => ["raeume", "hof", "terrasse", "nebengebaeude", "eingang"].includes(z.art)).map((z) => {
-            const [a, b, c, d] = groesstes(z);
-            const w = c - a, h = d - b;
-            if (w < 9 || h < 5) return null;
-            const groesse = Math.min(2.2, w / Math.max(6, (z.name ?? "").length * 0.55));
-            return <text key={`t-${z.id}`} x={(a + c) / 2 + k * (b + d) / 2} y={-(b + d) / 2} className={`etikett e-${z.art}`} fontSize={groesse} textAnchor="middle" dominantBaseline="middle">{kurzName(z, w)}</text>;
+            const p = plaetze.get(z.id);
+            if (!p) return null;
+            const [x, y, w, h] = p;
+            if (w < 8 || h < 4.5) return null;
+            const text = kurzName(z, w);
+            const groesse = Math.min(2.2, h / 2.2, (w * 0.9) / Math.max(4, text.length * 0.56));
+            return <text key={`t-${z.id}`} x={x + k * y} y={-y} className={`etikett e-${z.art}`} fontSize={groesse} textAnchor="middle" dominantBaseline="middle">{text}</text>;
           })}
+          {etage.etiketten?.map((t) => (
+            <text key={t.text} x={t.x + k * t.y} y={-t.y} className="etikett e-frei" fontSize={2.2} textAnchor="middle" dominantBaseline="middle">{t.text}</text>
+          ))}
           {/* Nummern bleiben gerade lesbar: nur die Position wird verschoben */}
           {etage.nummern.map((m) => (
             <g key={m.nr} className={`nummer${ziel?.nummer.nr === m.nr && ziel.etage.ebene === ebene ? " ziel" : ""}`} transform={`translate(${m.x + k * m.y} ${-m.y})`}>
@@ -138,10 +151,7 @@ function kurzName(z: Zone, breite: number) {
 function Geist({ etage }: { etage: Etage }) {
   return (
     <g className="geist" aria-hidden="true">
-      {etage.zonen.filter((z) => z.art !== "luftraum").flatMap((z) => z.flaechen.map((f, i) => {
-        const [a, b, c, d] = n(f);
-        return <rect key={`${z.id}-${i}`} x={a} y={b} width={c - a} height={d - b} />;
-      }))}
+      {etage.zonen.filter((z) => z.art !== "luftraum").map((z) => <Form key={z.id} z={z} />)}
     </g>
   );
 }
