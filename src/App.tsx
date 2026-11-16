@@ -19,6 +19,9 @@ import { Notfall } from "./screens/Notfall";
 import { fehlerText, gpsStandort } from "./services/dienste";
 import { inDerNaehe, ortAnStelle, ortLaden, ortMitNamen, suchen as ortSuchen, type Ort } from "./services/orte";
 import { Ablage } from "./blatt/Ablage";
+import { Innenansicht } from "./gebaeude/Innenansicht";
+import { SCHULE } from "./gebaeude/schule";
+import { raumFinden } from "./gebaeude/modell";
 import { ChatVerlauf, type Nachricht } from "./blatt/Chat";
 import { Blatt, type Stufe } from "./blatt/Blatt";
 import { InfoInhalt, ListenInhalt, OrtInhalt, RouteInhalt, SchnellLeiste, VorschlagInhalt, type ListenStand, type Vorschlag } from "./blatt/Inhalte";
@@ -68,6 +71,8 @@ export default function App() {
   const [groesse, setGroesse] = useState({ w: 0, h: 0 });
   const [termine, setTermine] = useState<Termin[]>(leseTermine);
   const [vorgemerkt, setVorgemerkt] = useState<Date | null>(null);
+  /** Innenansicht des Schulgebäudes (optional mit gesuchter Raumnummer) */
+  const [innen, setInnen] = useState<{ raum?: string } | null>(null);
   const [gespeichert, setGespeichert] = useState<Ort[]>(leseGespeichert);
   // Treffpunkt
   const [personen, setPersonen] = useState<Person[]>(() => [
@@ -238,6 +243,9 @@ export default function App() {
     let t = eingabe.trim();
     if (t.length < 2) return;
     const nr = ++anfrage.current;
+    // „Raum 152“, „wo ist R 247“ → Innenansicht der Schule auf der richtigen Etage
+    const raum = t.match(/\b(?:raum|zimmer|r\.?)\s*(\d{2,3})\b/i)?.[1];
+    if (raum && raumFinden(SCHULE, raum)) { setText(""); setInnen({ raum }); return; }
     let a = verstehe(t);
     if (a.typ === "notfall") { setNotfall({ stufe: a.stufe, text: t }); return; }
     // Chat offen, Gesprächs-/Fragesatz oder genauer Wunsch (Küche, „nahe …“, „jetzt offen“) → Chat mit Ergebnisliste
@@ -441,7 +449,8 @@ export default function App() {
               onInfo={() => { fertig(); gehe({ art: "info" }); }}
               onVerlaufLoeschen={() => { setZuletzt([]); try { localStorage.removeItem("lotse.zuletzt"); } catch { /* egal */ } }} onZu={schliessen}
               onTermine={() => { fertig(); gehe({ art: "termine" }); }}
-              onTreffpunkt={() => { fertig(); gehe({ art: "treffpunkt" }); }} />
+              onTreffpunkt={() => { fertig(); gehe({ art: "treffpunkt" }); }}
+              onGebaeude={() => { fertig(); setInnen({}); }} />
           )}
           {!fokus && !desktop && ansicht.art === "start" && <SchnellLeiste onKategorie={(k) => { setText(k.name); kategorieSuche(k); }} />}
           {!fokus && ansicht.art === "liste" && (
@@ -449,6 +458,7 @@ export default function App() {
           )}
           {!fokus && ansicht.art === "ort" && (
             <OrtInhalt o={ansicht.ort} laden={ansicht.laden} weg={weg} modus={modus} onZu={schliessen}
+              onInnen={/werner-von-siemens-schule/i.test(ansicht.ort.name) ? () => setInnen({}) : undefined}
               gespeichert={gespeichert.some((x) => x.id === ansicht.ort.id)}
               onSpeichern={() => { const l = umschalten(ansicht.ort); setGespeichert(l); zeige(l.some((x) => x.id === ansicht.ort.id) ? "Gespeichert." : "Nicht mehr gespeichert."); }}
               onZurueck={verlauf.length > 1 && verlauf[verlauf.length - 2].art !== "start" ? zurueck : undefined}
@@ -494,6 +504,7 @@ export default function App() {
 
   return (
     <div className={`app ${desktop ? "pc" : "tel"}${notfall ? " im-notfall" : ""}`}>
+      {innen && <Innenansicht gebaeude={SCHULE} raum={innen.raum} onZu={() => setInnen(null)} />}
       <LotseMap
         theme={dunkel ? "dark" : "light"}
         start={start?.lngLat ?? null}

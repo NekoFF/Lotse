@@ -1,0 +1,111 @@
+/* Innenansicht – ruhiger Plan wie in Karten-Apps: helle Räume, graue Flure, klare Wände */
+.innen {
+  --i-raum: #ffffff;
+  --i-raum-rand: #3b3d46;
+  --i-flur: #d6dbe7;
+  --i-treppe: #cfd5e6;
+  --i-stufe: #8d96b3;
+  --i-wc: #d5ecf2;
+  --i-hof: #e2efd9;
+  --i-terrasse: #edf3e6;
+  --i-luft: transparent;
+  --i-luft-rand: #a9adba;
+  --i-eingang: #dfe6fb;
+  --i-neben: #eeeeee;
+  --i-geist: rgba(60, 64, 80, 0.05);
+  --i-nummer: #ffffff;
+  --i-nummer-text: #2a2c35;
+  --i-grund: #f8f8f6;
+  position: fixed; inset: 0; z-index: 40;
+  display: flex; flex-direction: column;
+  background: var(--i-grund); color: var(--ink);
+}
+@media (prefers-color-scheme: dark) {
+  .innen {
+    --i-raum: #2a2b31;
+    --i-raum-rand: #c9cbd4;
+    --i-flur: #3a3c45;
+    --i-treppe: #474b5c;
+    --i-stufe: #8d96b3;
+    --i-wc: #29434b;
+    --i-hof: #2b3a27;
+    --i-terrasse: #2f3829;
+    --i-luft-rand: #6a6e7c;
+    --i-eingang: #2f3a5c;
+    --i-neben: #33343a;
+    --i-geist: rgba(255, 255, 255, 0.05);
+    --i-nummer: #1d1e23;
+    --i-nummer-text: #e9e9ee;
+    --i-grund: #17181b;
+  }
+}
+
+.innen-kopf { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; background: var(--glas); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--linie); }
+.innen-titel { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.innen-titel b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.innen-titel span { font-size: 12px; color: var(--ink2); }
+.innen-suche { display: flex; align-items: center; gap: 6px; padding: 0 10px; height: 36px; border-radius: 10px; background: var(--fuell); color: var(--ink2); width: 150px; }
+.innen-suche input { border: 0; background: none; outline: none; font: inherit; font-size: 15px; color: var(--ink); width: 100%; min-width: 0; }
+
+.innen-flaeche { position: relative; flex: 1; min-height: 0; }
+.innen-plan { width: 100%; height: 100%; display: block; touch-action: manipulation; }
+
+.zone rect { stroke: none; cursor: pointer; transition: fill 0.15s ease; }
+.z-raeume rect { fill: var(--i-raum); }
+.z-flur rect { fill: var(--i-flur); stroke: var(--i-flur); stroke-width: 0.05; }
+.z-eingang rect { fill: var(--i-eingang); }
+.z-treppe rect { fill: url(#innen-stufen); }
+.z-treppe-grund { fill: var(--i-treppe); }
+.z-stufe { stroke: var(--i-stufe); stroke-width: 0.12; }
+.z-wc rect { fill: var(--i-wc); }
+.z-hof rect { fill: var(--i-hof); }
+.z-terrasse rect { fill: var(--i-terrasse); }
+.z-luftraum rect { fill: var(--i-luft); }
+.z-nebengebaeude rect { fill: var(--i-neben); }
+.zone.gewaehlt rect { fill: var(--akzent-weich); }
+.z-raeume.gewaehlt rect, .z-wc.gewaehlt rect { fill: color-mix(in srgb, var(--akzent) 18%, var(--i-raum)); }
+
+.wand line { stroke: var(--i-raum-rand); stroke-width: 0.32; stroke-linecap: square; pointer-events: none; }
+.w-luftraum line, .w-terrasse line, .w-nebengebaeude line { stroke: var(--i-luft-rand); stroke-width: 0.2; stroke-dasharray: 0.8 0.6; }
+.geist rect { fill: var(--i-geist); stroke: none; pointer-events: none; }
+
+.etikett { fill: var(--ink2); font-family: var(--ff); font-weight: 600; pointer-events: none; letter-spacing: -0.01em; }
+.e-hof { fill: #4a7a3a; font-style: italic; }
+@media (prefers-color-scheme: dark) { .e-hof { fill: #9cc58b; } }
+
+.nummer rect { fill: var(--i-nummer); stroke: var(--i-raum-rand); stroke-width: 0.12; }
+.nummer text { fill: var(--i-nummer-text); font-family: var(--mono); font-weight: 600; pointer-events: none; }
+.nummer.ziel rect { fill: var(--akzent); stroke: var(--akzent); }
+.nummer.ziel text { fill: var(--auf-akzent); }
+.puls { fill: var(--akzent); opacity: 0.25; transform-box: fill-box; transform-origin: center; animation: innen-puls 1.6s ease-out infinite; }
+@keyframes innen-puls { from { transform: scale(0.6); opacity: 0.45; } to { transform: scale(1.8); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .puls { animation: none; } }
+
+.innen-etagen { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; border-radius: 14px; background: var(--glas); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: var(--schatten); overflow: hidden; }
+.innen-etagen button { width: 44px; height: 44px; font-size: 16px; font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--linie); }
+.innen-etagen button:last-child { border-bottom: 0; }
+.innen-etagen button.an { background: var(--akzent); color: var(--auf-akzent); }
+
+.innen-fuss { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--glas); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--linie); display: flex; flex-direction: column; gap: 10px; }
+.innen-fuss .leise { margin: 0; font-size: 14px; color: var(--ink2); }
+.innen-fuss .hinweis { margin: 0; }
+.innen-auswahl { display: flex; flex-direction: column; gap: 2px; }
+.innen-auswahl b { font-size: 16px; }
+.innen-auswahl span { font-size: 13px; color: var(--ink2); }
+.innen-legende { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--ink2); }
+.innen-legende span { display: inline-flex; align-items: center; gap: 5px; }
+.innen-legende i { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--i-raum-rand); }
+.l-raeume { background: var(--i-raum); }
+.l-flur { background: var(--i-flur); border-color: transparent !important; }
+.l-treppe { background: repeating-linear-gradient(0deg, var(--i-treppe) 0 2px, var(--i-stufe) 2px 3px); }
+.l-wc { background: var(--i-wc); }
+.l-hof { background: var(--i-hof); border-color: transparent !important; }
+.l-luftraum { background: transparent; border-style: dashed !important; }
+.innen-quelle { font-size: 12px; color: var(--ink2); }
+.innen-quelle summary { cursor: pointer; }
+.innen-quelle ul { margin: 6px 0 0; padding-left: 18px; }
+
+@media (min-width: 900px) {
+  .innen-suche { width: 220px; }
+}
+.innen-ansicht { position: absolute; left: 16px; top: 12px; height: 34px; padding: 0 12px; border-radius: 10px; background: var(--glas); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: var(--schatten); font-size: 13px; font-weight: 600; color: var(--akzent); }

@@ -12,7 +12,7 @@ import { TRANSITOUS_QUELLEN } from "../services/oepnv";
 import { PUFFER_MIN, type Termin } from "../lib/termine";
 import { telLink } from "../services/dienste";
 import type { Ort } from "../services/orte";
-import { Auto, Brief, Bus, Gruppe, Essen, Extern, Gehen, Kalender, Merken, Pille, Rad, Route as RouteIc, Schliessen, Standort, Stern, Stetho, Suche, Tasse, Teilen, Telefon, Uhr, Wagen, Zurueck } from "../ui/icons";
+import { Auto, Brief, Bus, Gebaeude, Gruppe, Essen, Extern, Gehen, Kalender, Merken, Pille, Rad, Route as RouteIc, Schliessen, Standort, Stern, Stetho, Suche, Tasse, Teilen, Telefon, Uhr, Wagen, Zurueck } from "../ui/icons";
 
 export const uhr = (d: Date) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 export const tagKurz = (d: Date) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" });
@@ -80,9 +80,11 @@ function useFoto(o: Ort): Foto | null {
   return f.id === o.id ? f.foto : null;
 }
 
-export function OrtInhalt({ o, laden, weg, modus, gespeichert, onSpeichern, onRoute, onTermin, onTeilen, onZu, onZurueck }: {
+export function OrtInhalt({ o, laden, weg, modus, gespeichert, onSpeichern, onRoute, onTermin, onTeilen, onZu, onZurueck, onInnen }: {
   o: Ort; laden: boolean; weg: WegStand; modus: Modus; gespeichert: boolean; onSpeichern: () => void;
   onRoute: () => void; onTermin: () => void; onTeilen: () => void; onZu: () => void; onZurueck?: () => void;
+  /** nur wenn es für den Ort eine Innenansicht gibt */
+  onInnen?: () => void;
 }) {
   const foto = useFoto(o);
   const istPraxis = !!o.fach || /arzt|praxis|klinik/i.test(o.art);
@@ -106,6 +108,7 @@ export function OrtInhalt({ o, laden, weg, modus, gespeichert, onSpeichern, onRo
         {istPraxis && (istDoctolib(o.website)
           ? <a className="aktion" href={o.website!} target="_blank" rel="noopener noreferrer"><Kalender size={20} /><span>Online buchen</span></a>
           : <DoctolibKnopf o={o} />)}
+        {onInnen && <button type="button" className="aktion" onClick={onInnen}><Gebaeude size={20} /><span>Innen</span></button>}
         <button type="button" className="aktion" onClick={onTermin}><Kalender size={20} /><span>Termin</span></button>
         <button type="button" className="aktion" onClick={onTeilen}><Teilen size={20} /><span>Teilen</span></button>
       </div>
@@ -331,10 +334,10 @@ export function vorschlaegeFuer(text: string, zuletzt: string[], termine: Termin
   return aus.slice(0, 8);
 }
 
-export function VorschlagInhalt({ text, zuletzt, termine, gespeichert, ki, onWahl, onInfo, onVerlaufLoeschen, onZu, onTermine, onTreffpunkt }: {
+export function VorschlagInhalt({ text, zuletzt, termine, gespeichert, ki, onWahl, onInfo, onVerlaufLoeschen, onZu, onTermine, onTreffpunkt, onGebaeude }: {
   text: string; zuletzt: string[]; termine: Termin[]; gespeichert: Ort[]; ki: KiStatus;
   onWahl: (v: Vorschlag) => void; onInfo: () => void; onVerlaufLoeschen: () => void; onZu: () => void;
-  onTermine: () => void; onTreffpunkt?: () => void;
+  onTermine: () => void; onTreffpunkt?: () => void; onGebaeude?: () => void;
 }) {
   const liste = vorschlaegeFuer(text, zuletzt, termine, gespeichert);
   const kopf = <Kopf titel={text.trim() ? "Vorschläge" : "Suche"} onZu={onZu} />;
@@ -362,6 +365,7 @@ export function VorschlagInhalt({ text, zuletzt, termine, gespeichert, ki, onWah
       <div className="werkzeuge">
         <button type="button" className="werkzeug-knopf" onClick={onTermine}><Kalender size={17} /><span>Termine{termine.length ? ` · ${termine.length}` : ""}</span></button>
         {onTreffpunkt && <button type="button" className="werkzeug-knopf" onClick={onTreffpunkt}><Gruppe size={17} /><span>Treffpunkt</span></button>}
+        {onGebaeude && <button type="button" className="werkzeug-knopf" onClick={onGebaeude}><Gebaeude size={17} /><span>Schule innen</span></button>}
       </div>
       {zuletzt.length > 0 && (
         <section>
