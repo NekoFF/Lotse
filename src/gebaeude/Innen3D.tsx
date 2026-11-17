@@ -5,9 +5,9 @@ import { zoneAusFeature } from "./drei";
 import "./innen.css";
 
 /** Steuerung für das Schulgebäude in 3D auf der Karte: Etage wählen, Bereich anzeigen, zurück zum Plan */
-export function Innen3D({ gebaeude, ebene, zone, onEbene, onPlan, onZu }: {
-  gebaeude: Gebaeude; ebene: number; zone: string | null;
-  onEbene: (e: number) => void; onPlan: () => void; onZu: () => void;
+export function Innen3D({ gebaeude, ebene, zone, aussen, onAussen, onEbene, onPlan, onZu }: {
+  gebaeude: Gebaeude; ebene: number; zone: string | null; aussen: boolean;
+  onAussen: (aussen: boolean) => void; onEbene: (e: number) => void; onPlan: () => void; onZu: () => void;
 }) {
   const etage = gebaeude.etagen.find((e) => e.ebene === ebene)!;
   const z = zoneAusFeature(gebaeude, ebene, zone ?? undefined);
@@ -15,18 +15,22 @@ export function Innen3D({ gebaeude, ebene, zone, onEbene, onPlan, onZu }: {
     <div className="innen3d" aria-label="Schulgebäude in 3D">
       <div className="innen3d-kopf">
         <div>
-          <b>{z?.name ?? gebaeude.name}</b>
-          <span>{etage.name}{z?.nummern?.length ? ` · ${z.nummern.join(", ")}` : " · Bereich antippen"}</span>
+          <b>{(!aussen && z?.name) || gebaeude.name}</b>
+          <span>{aussen ? "von außen · echte Dächer (LoD2)" : `${etage.name}${z?.nummern?.length ? ` · ${z.nummern.join(", ")}` : " · Bereich antippen"}`}</span>
+        </div>
+        <div className="innen3d-modus" role="radiogroup" aria-label="Ansicht">
+          <button type="button" role="radio" aria-checked={aussen} className={aussen ? "an" : ""} onClick={() => onAussen(true)}>Außen</button>
+          <button type="button" role="radio" aria-checked={!aussen} className={!aussen ? "an" : ""} onClick={() => onAussen(false)}>Innen</button>
         </div>
         <button type="button" className="innen-ansicht" onClick={onPlan}>Plan</button>
         <button type="button" className="rund" aria-label="3D schließen" onClick={onZu}><Schliessen size={15} /></button>
       </div>
-      <div className="innen-etagen" role="radiogroup" aria-label="Etage">
+      {!aussen && <div className="innen-etagen" role="radiogroup" aria-label="Etage">
         {[...gebaeude.etagen].reverse().map((e) => (
           <button key={e.id} type="button" role="radio" aria-checked={e.ebene === ebene} aria-label={e.name}
             className={e.ebene === ebene ? "an" : ""} onClick={() => onEbene(e.ebene)}>{e.kurz}</button>
         ))}
-      </div>
+      </div>}
       <div className="innen3d-quelle">{HUELLE_QUELLE}</div>
     </div>
   );

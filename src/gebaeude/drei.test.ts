@@ -37,3 +37,34 @@ describe("Schule in 3D auf der Karte", () => {
     }
   });
 });
+
+import huelle3d from "./huelle3d.json";
+describe("echte Dächer (LoD2-Dreiecke)", () => {
+  it("Dreiecke vollständig, um die Schulmitte, Höhen 0–19 m", () => {
+    for (const art of ["wand", "dach", "glas"] as const) {
+      const v = huelle3d[art];
+      expect(v.length % 9, art).toBe(0);
+      expect(v.length, art).toBeGreaterThan(0);
+      for (let i = 0; i < v.length; i += 3) {
+        expect(Math.abs(v[i]), `${art} Ost`).toBeLessThan(110);
+        expect(Math.abs(v[i + 1]), `${art} Nord`).toBeLessThan(110);
+        expect(v[i + 2]).toBeGreaterThanOrEqual(-0.5);
+        expect(v[i + 2]).toBeLessThan(19);
+      }
+    }
+    expect(huelle3d.mitte[0]).toBeCloseTo(MITTE[0], 5);
+    expect(huelle3d.mitte[1]).toBeCloseTo(MITTE[1], 5);
+  });
+  it("Glasdach liegt über dem Innenhof (Plan-Mitte), Dachflächen sind auch geneigt", () => {
+    const g = huelle3d.glas;
+    const ost = g.filter((_, i) => i % 3 === 0), nord = g.filter((_, i) => i % 3 === 1);
+    const c = [ost.reduce((a, b) => a + b) / ost.length, nord.reduce((a, b) => a + b) / nord.length];
+    // Mitte des Innenhofs im Plan ≈ (40, 28) → in Metern um MITTE
+    const [lng, lat] = planNachKarte(40, 28);
+    const soll = [(lng - MITTE[0]) * 70900, (lat - MITTE[1]) * 111200];
+    expect(Math.hypot(c[0] - soll[0], c[1] - soll[1])).toBeLessThan(15);
+    const d = huelle3d.dach; let geneigt = 0;
+    for (let i = 0; i < d.length; i += 9) if (Math.max(d[i + 2], d[i + 5], d[i + 8]) - Math.min(d[i + 2], d[i + 5], d[i + 8]) > 0.5) geneigt++;
+    expect(geneigt).toBeGreaterThan(10);
+  });
+});

@@ -48,9 +48,12 @@ def teile_lesen(gml, gid):
                 mh, rt = bp.find("bldg:measuredHeight", NS), bp.find("bldg:roofType", NS)
                 if boden and mh is not None:
                     p = boden[0]
+                    flaechen = lambda art: [[(q[i], q[i + 1], q[i + 2]) for i in range(0, len(q), 3)]
+                                            for s in bp.iter(B + art) for q in (list(map(float, x.text.split())) for x in s.iter("{http://www.opengis.net/gml}posList"))]
                     teile.append({"id": bp.get("{http://www.opengis.net/gml}id"), "h": float(mh.text),
                                   "dach": rt.text if rt is not None else None,
-                                  "utm": [(p[i], p[i + 1]) for i in range(0, len(p), 3)]})
+                                  "utm": [(p[i], p[i + 1]) for i in range(0, len(p), 3)],
+                                  "boden_z": min(p[2::3]), "dachflaechen": flaechen("RoofSurface"), "waende": flaechen("WallSurface")})
             el.clear()
             break
         el.clear()
@@ -147,8 +150,63 @@ export const MITTE: LngLat = [{mitte[0]:.7f}, {mitte[1]:.7f}];
 export interface HuellenTeil {{ id: string; /** Höhe über Gelände in m (Laserdaten) */ h: number; /** AdV-Dachform: 1000 Flach, 2100 Pult, 3200 Walm */ dach: string | null; ring: LngLat[] }}
 export const HUELLE: HuellenTeil[] = {json.dumps(huelle)};
 export const HUELLE_QUELLE = "Gebäudehülle: 3D-Gebäudemodell LoD2 © HVBG Hessen (2026), bearbeitet";
+
+/** [lng, lat] → Plan-Meter (Umkehrung der affinen Abbildung) */
+export function karteNachPlan([lng, lat]: LngLat): [number, number] {{
+  const [a, b, c] = PLAN_NACH_KARTE.lng, [d, e, f] = PLAN_NACH_KARTE.lat;
+  const det = a * e - b * d;
+  return [((lng - c) * e - (lat - f) * b) / det, ((lat - f) * a - (lng - c) * d) / det];
+}}
 ''', encoding="utf-8")
     print(f"→ {AUS}")
+    huelle3d(teile, mitte)
+
+
+GLAS = {"9df931"}  # Mitte des Hauptbaus: Glasdach über dem Innenhof (im Luftbild DOP20 sichtbar)
+
+
+def huelle3d(teile, mitte):
+    """Dach- und Wandflächen als Dreiecke in Metern relativ zu MITTE (Ost, Nord, Höhe über Gelände)."""
+    import mapbox_earcut as earcut
+    utm2ll = Transformer.from_crs("EPSG:25832", "EPSG:4326", always_xy=True)
+    ll2utm = Transformer.from_crs("EPSG:4326", "EPSG:25832", always_xy=True)
+    mx, my = ll2utm.transform(*mitte)
+    gelaende = min(t["boden_z"] for t in teile)
+    # Meridiankonvergenz: UTM-Nord ist nicht genau geografisch Nord – Ost/Nord-Achsen über einen Punkt 100 m östlich bestimmen
+    lon_o, lat_o = utm2ll.transform(mx + 100, my)
+    lon0, lat0 = mitte
+    k = math.cos(math.radians(lat0))
+    ost = ((lon_o - lon0) * 111320 * k, (lat_o - lat0) * 110574)
+    w = math.atan2(ost[1], ost[0])  # Drehung der UTM-Achsen gegen geografisch Ost
+    def lokal(x, y):
+        dx, dy = x - mx, y - my
+        return (dx * math.cos(w) - dy * math.sin(w), dx * math.sin(w) + dy * math.cos(w))
+    dreiecke = {"dach": [], "glas": [], "wand": []}
+    for t in teile:
+        kurz = t["id"][-6:]
+        for art, liste in (("dach", t["dachflaechen"]), ("wand", t["waende"])):
+            for ring in liste:
+                pts = ring[:-1] if ring[0] == ring[-1] else ring
+                if len(pts) < 3:
+                    continue
+                a = np.array(pts)
+                n = np.zeros(3)
+                for i in range(len(a)):
+                    p0, p1 = a[i], a[(i + 1) % len(a)]
+                    n += [(p0[1] - p1[1]) * (p0[2] + p1[2]), (p0[2] - p1[2]) * (p0[0] + p1[0]), (p0[0] - p1[0]) * (p0[1] + p1[1])]
+                if np.linalg.norm(n) < 1e-9:
+                    continue
+                ax = int(np.argmax(np.abs(n)))
+                zwei = np.delete(a, ax, axis=1)
+                idx = earcut.triangulate_float64(zwei, np.array([len(a)], np.uint32))
+                ziel = dreiecke["glas" if art == "dach" and kurz in GLAS else art]
+                for j in idx:
+                    e_, n_ = lokal(a[j][0], a[j][1])
+                    ziel += [round(e_, 2), round(n_, 2), round(a[j][2] - gelaende, 2)]
+    aus = AUS.with_name("huelle3d.json")
+    aus.write_text(json.dumps({"quelle": "3D-Gebäudemodell LoD2 © HVBG Hessen (2026), bearbeitet: Dreiecke, lokale Meter um MITTE",
+                               "mitte": [round(lon0, 7), round(lat0, 7)], **dreiecke}, separators=(",", ":")), encoding="utf-8")
+    print(f"→ {aus}: " + ", ".join(f"{k} {len(v) // 9} Dreiecke" for k, v in dreiecke.items()))
 
 
 if __name__ == "__main__":

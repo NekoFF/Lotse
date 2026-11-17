@@ -114,9 +114,13 @@
 
 /* 3D auf der Karte: schwebende Steuerung */
 .innen3d { position: fixed; z-index: 30; right: 16px; top: calc(16px + env(safe-area-inset-top)); display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-.innen3d-kopf { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 14px; background: var(--glas); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: var(--schatten); max-width: min(320px, calc(100vw - 32px)); }
-.innen3d-kopf div { display: flex; flex-direction: column; min-width: 0; }
+.innen3d-kopf { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 14px; background: var(--glas); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: var(--schatten); max-width: min(380px, calc(100vw - 32px)); }
+.innen3d-kopf > div:first-child { flex: 1 1 160px; }
+.innen3d-kopf > div:first-child { display: flex; flex-direction: column; min-width: 0; }
 .innen3d-kopf b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .innen3d-kopf span { font-size: 12px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .innen3d .innen-etagen { position: static; transform: none; }
 .innen3d-quelle { font-size: 10px; color: var(--ink3); background: var(--glas); padding: 3px 8px; border-radius: 8px; max-width: 260px; text-align: right; }
+.innen3d-modus { display: flex; flex-shrink: 0; border-radius: 10px; background: var(--fuell); padding: 2px; }
+.innen3d-modus button { height: 30px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink2); }
+.innen3d-modus button.an { background: var(--flaeche); color: var(--akzent); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }

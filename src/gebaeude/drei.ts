@@ -1,10 +1,10 @@
 import type { LngLat } from "../data/praxen";
-import { HUELLE, MASSSTAB, planNachKarte } from "./karte";
+import { MASSSTAB, planNachKarte } from "./karte";
 import { umrissKanten, type Gebaeude, type Kante, type Zone } from "./modell";
 
 /**
  * 3D-Szene für die Karte (MapLibre fill-extrusion):
- *  - Hülle: echte Gebäudeteile aus LoD2 mit gemessener Höhe (durchscheinend)
+ *  - Hülle: eigene WebGL-Ebene mit echten Dächern (huellenEbene.ts)
  *  - gewählte Etage: Boden je Bereich + Wände (aus den Umrissen der Markierung)
  *  - Etagen darunter: nur Böden, blass – wie ein Schnitt durchs Haus
  */
@@ -42,7 +42,7 @@ const poly = (coords: LngLat[][], p: F["properties"]): F => ({ type: "Feature", 
 export function szene3D(g: Gebaeude, ebene: number, gewaehlt?: string | null): GeoJSON.FeatureCollection {
   const H = geschoss(g);
   const f: F[] = [];
-  for (const t of HUELLE) f.push(poly([t.ring], { art: "huelle", farbe: "#9aa3b5", basis: 0, hoehe: t.h }));
+  // Die Hülle zeichnet jetzt die eigene WebGL-Ebene (echte Dächer, huellenEbene.ts)
   for (const e of g.etagen.filter((x) => x.ebene <= ebene)) {
     const aktiv = e.ebene === ebene;
     const z0 = e.ebene * H;

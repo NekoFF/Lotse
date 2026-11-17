@@ -1,3 +1,4 @@
+import { huellenEbene, type HuellenModus } from "../gebaeude/huellenEbene";
 import { useEffect, useRef } from "react";
 import maplibregl, { type Map as MlMap, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -56,7 +57,7 @@ interface Props {
   /** Treffpunkt: Wege mehrerer Personen (eigene Farbe), werden animiert abgefahren */
   gruppe?: { personId: string; name: string; farbe: string; line: LngLat[]; s: number }[] | null;
   /** Gebäude von innen in 3D (Hülle + Etage); peilung = Kamera-Richtung */
-  innen3d?: { daten: GeoJSON.FeatureCollection; mitte: LngLat; peilung: number; /** Höhe der gewählten Etage (Oberkante Boden) in m */ boden: number } | null;
+  innen3d?: { daten: GeoJSON.FeatureCollection; mitte: LngLat; peilung: number; /** Höhe der gewählten Etage (Oberkante Boden) in m */ boden: number; /** echte Hülle: geschlossen oder aufgeschnitten */ modus: HuellenModus } | null;
   /** Antippen in der 3D-Ansicht: Punkt auf dem Boden der gewählten Etage */
   onInnenTipp?: (lngLat: LngLat | null) => void;
 }
@@ -110,6 +111,7 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
       zeige3D(m, dreiDRef.current && !innenRef.current);
       zeichneRoute(m, routeRef.current, themeRef.current);
       innenZeichnen(m, innenRef.current?.daten ?? null);
+      huelleSetzen(m, innenRef.current?.modus ?? "aus");
     });
     // falls ein Symbol vor dem Einsetzen gebraucht wird
     m.on("styleimagemissing", (e) => { if (e.id.startsWith("lotse-")) symboleEinsetzen(m, themeRef.current); });
@@ -185,8 +187,9 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
   useEffect(() => {
     const m = map.current;
     if (!m) return;
-    if (m.isStyleLoaded()) innenZeichnen(m, innen3d?.daten ?? null);
-    else m.once("idle", () => innenZeichnen(m, innenRef.current?.daten ?? null));
+    const setzen = () => { innenZeichnen(m, innenRef.current?.daten ?? null); huelleSetzen(m, innenRef.current?.modus ?? "aus"); };
+    if (m.isStyleLoaded()) setzen();
+    else m.once("idle", setzen);
   }, [innen3d]);
   const vorInnen = useRef<{ center: maplibregl.LngLatLike; zoom: number } | null>(null);
   useEffect(() => {
@@ -348,6 +351,15 @@ function innenZeichnen(m: MlMap, daten: GeoJSON.FeatureCollection | null) {
       },
     });
   }
+}
+
+/** Echte Gebäudehülle (eigene WebGL-Ebene) – je Karte ein Objekt, nach Stilwechsel neu einhängen */
+const huellen = new WeakMap<MlMap, ReturnType<typeof huellenEbene>>();
+function huelleSetzen(m: MlMap, modus: HuellenModus) {
+  let e = huellen.get(m);
+  if (!e) { e = huellenEbene(); huellen.set(m, e); }
+  if (modus !== "aus" && !m.getLayer(e.id)) m.addLayer(e);
+  e.setModus(modus);
 }
 
 /** Bildschirmpunkt → Kartenpunkt auf einer Ebene in `hoehe` Metern (Schnitt des Kamerastrahls mit der Ebene) */

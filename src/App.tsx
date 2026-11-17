@@ -77,8 +77,12 @@ export default function App() {
   /** Innenansicht des Schulgebäudes (optional mit gesuchter Raumnummer) */
   const [innen, setInnen] = useState<{ raum?: string } | null>(null);
   /** Schulgebäude in 3D auf der Karte */
-  const [innen3d, setInnen3d] = useState<{ ebene: number; zone: string | null } | null>(null);
-  const innen3dDaten = useMemo(() => (innen3d ? { daten: szene3D(SCHULE, innen3d.ebene, innen3d.zone), mitte: SCHULE_MITTE, peilung: PEILUNG_PLAN_OBEN, boden: innen3d.ebene * SCHULE.geschosshoehe + 0.3 } : null), [innen3d]);
+  const [innen3d, setInnen3d] = useState<{ ebene: number; zone: string | null; aussen?: boolean } | null>(null);
+  const innen3dDaten = useMemo(() => (innen3d ? {
+    daten: innen3d.aussen ? { type: "FeatureCollection" as const, features: [] } : szene3D(SCHULE, innen3d.ebene, innen3d.zone),
+    mitte: SCHULE_MITTE, peilung: PEILUNG_PLAN_OBEN, boden: innen3d.ebene * SCHULE.geschosshoehe + 0.3,
+    modus: (innen3d.aussen ? "aussen" : "innen") as "aussen" | "innen",
+  } : null), [innen3d]);
   const [gespeichert, setGespeichert] = useState<Ort[]>(leseGespeichert);
   // Treffpunkt
   const [personen, setPersonen] = useState<Person[]>(() => [
@@ -511,7 +515,8 @@ export default function App() {
   return (
     <div className={`app ${desktop ? "pc" : "tel"}${notfall ? " im-notfall" : ""}`}>
       {innen && <Innenansicht gebaeude={SCHULE} raum={innen.raum} onZu={() => setInnen(null)} on3D={(ebene, zone) => { setInnen(null); setInnen3d({ ebene, zone }); }} />}
-      {innen3d && <Innen3D gebaeude={SCHULE} ebene={innen3d.ebene} zone={innen3d.zone}
+      {innen3d && <Innen3D gebaeude={SCHULE} ebene={innen3d.ebene} zone={innen3d.zone} aussen={!!innen3d.aussen}
+        onAussen={(aussen) => setInnen3d((v) => (v ? { ...v, aussen } : v))}
         onEbene={(ebene) => setInnen3d({ ebene, zone: null })} onPlan={() => { setInnen3d(null); setInnen({}); }} onZu={() => setInnen3d(null)} />}
       <LotseMap
         theme={dunkel ? "dark" : "light"}
@@ -531,6 +536,7 @@ export default function App() {
         onInnenTipp={(ll) => setInnen3d((v) => {
           if (!v) return v;
           const etage = SCHULE.etagen.find((e) => e.ebene === v.ebene)!;
+          if (v.aussen) return v; // von außen gibt es nichts anzutippen
           const z = ll ? zoneAn(etage, ...karteNachPlan(ll)) : null;
           return { ...v, zone: z && z.art !== "luftraum" ? z.id : null };
         })}
