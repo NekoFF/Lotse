@@ -21,7 +21,10 @@ import { inDerNaehe, ortAnStelle, ortLaden, ortMitNamen, suchen as ortSuchen, ty
 import { Ablage } from "./blatt/Ablage";
 import { Innenansicht } from "./gebaeude/Innenansicht";
 import { SCHULE } from "./gebaeude/schule";
-import { raumFinden } from "./gebaeude/modell";
+import { raumFinden, zoneAn } from "./gebaeude/modell";
+import { Innen3D } from "./gebaeude/Innen3D";
+import { szene3D } from "./gebaeude/drei";
+import { karteNachPlan, MITTE as SCHULE_MITTE, PEILUNG_PLAN_OBEN } from "./gebaeude/karte";
 import { ChatVerlauf, type Nachricht } from "./blatt/Chat";
 import { Blatt, type Stufe } from "./blatt/Blatt";
 import { InfoInhalt, ListenInhalt, OrtInhalt, RouteInhalt, SchnellLeiste, VorschlagInhalt, type ListenStand, type Vorschlag } from "./blatt/Inhalte";
@@ -73,6 +76,9 @@ export default function App() {
   const [vorgemerkt, setVorgemerkt] = useState<Date | null>(null);
   /** Innenansicht des Schulgebäudes (optional mit gesuchter Raumnummer) */
   const [innen, setInnen] = useState<{ raum?: string } | null>(null);
+  /** Schulgebäude in 3D auf der Karte */
+  const [innen3d, setInnen3d] = useState<{ ebene: number; zone: string | null } | null>(null);
+  const innen3dDaten = useMemo(() => (innen3d ? { daten: szene3D(SCHULE, innen3d.ebene, innen3d.zone), mitte: SCHULE_MITTE, peilung: PEILUNG_PLAN_OBEN, boden: innen3d.ebene * SCHULE.geschosshoehe + 0.3 } : null), [innen3d]);
   const [gespeichert, setGespeichert] = useState<Ort[]>(leseGespeichert);
   // Treffpunkt
   const [personen, setPersonen] = useState<Person[]>(() => [
@@ -504,7 +510,9 @@ export default function App() {
 
   return (
     <div className={`app ${desktop ? "pc" : "tel"}${notfall ? " im-notfall" : ""}`}>
-      {innen && <Innenansicht gebaeude={SCHULE} raum={innen.raum} onZu={() => setInnen(null)} />}
+      {innen && <Innenansicht gebaeude={SCHULE} raum={innen.raum} onZu={() => setInnen(null)} on3D={(ebene, zone) => { setInnen(null); setInnen3d({ ebene, zone }); }} />}
+      {innen3d && <Innen3D gebaeude={SCHULE} ebene={innen3d.ebene} zone={innen3d.zone}
+        onEbene={(ebene) => setInnen3d({ ebene, zone: null })} onPlan={() => { setInnen3d(null); setInnen({}); }} onZu={() => setInnen3d(null)} />}
       <LotseMap
         theme={dunkel ? "dark" : "light"}
         start={start?.lngLat ?? null}
@@ -519,6 +527,13 @@ export default function App() {
         onMitte={setMitte}
         onLeer={() => { if (fokus) fertig(); }}
         gruppe={ansicht.art === "treffpunkt" ? gruppeWege : null}
+        innen3d={innen3dDaten}
+        onInnenTipp={(ll) => setInnen3d((v) => {
+          if (!v) return v;
+          const etage = SCHULE.etagen.find((e) => e.ebene === v.ebene)!;
+          const z = ll ? zoneAn(etage, ...karteNachPlan(ll)) : null;
+          return { ...v, zone: z && z.art !== "luftraum" ? z.id : null };
+        })}
       />
 
       <Blatt desktop={desktop} stufe={stufe} setStufe={setStufe} kopf={kopf} oben={desktop ? chatEl : undefined} onGroesse={setGroesse}>

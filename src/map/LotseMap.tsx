@@ -55,13 +55,17 @@ interface Props {
   onLeer?: () => void;
   /** Treffpunkt: Wege mehrerer Personen (eigene Farbe), werden animiert abgefahren */
   gruppe?: { personId: string; name: string; farbe: string; line: LngLat[]; s: number }[] | null;
+  /** Gebäude von innen in 3D (Hülle + Etage); peilung = Kamera-Richtung */
+  innen3d?: { daten: GeoJSON.FeatureCollection; mitte: LngLat; peilung: number; /** Höhe der gewählten Etage (Oberkante Boden) in m */ boden: number } | null;
+  /** Antippen in der 3D-Ansicht: Punkt auf dem Boden der gewählten Etage */
+  onInnenTipp?: (lngLat: LngLat | null) => void;
 }
 
 /** Ebenen mit antippbaren Kartenpunkten (aus public/karte/stil-*.json) */
 const ORT_EBENEN = ["lotse-poi-oepnv", "lotse-poi-medizin", "lotse-poi-orte"];
 const LIZENZ_URL = `${import.meta.env.BASE_URL}karte/LIZENZ.txt`;
 
-export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, abstand, onPin, onPinHover, dreiD = false, onKarteTipp, onMitte, onLeer, gruppe }: Props) {
+export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, abstand, onPin, onPinHover, dreiD = false, onKarteTipp, onMitte, onLeer, gruppe, innen3d, onInnenTipp }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
   const markers = useRef(new Map<string, { m: Marker; el: HTMLButtonElement }>());
@@ -70,8 +74,10 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
   const meRef = useRef<Marker | null>(null);
   const startRef = useRef(start);
   startRef.current = start;
-  const cb = useRef({ onPin, onPinHover, onKarteTipp, onMitte, onLeer });
-  cb.current = { onPin, onPinHover, onKarteTipp, onMitte, onLeer };
+  const cb = useRef({ onPin, onPinHover, onKarteTipp, onMitte, onLeer, onInnenTipp });
+  cb.current = { onPin, onPinHover, onKarteTipp, onMitte, onLeer, onInnenTipp };
+  const innenRef = useRef(innen3d);
+  innenRef.current = innen3d;
   const dreiDRef = useRef(dreiD);
   dreiDRef.current = dreiD;
   routeRef.current = route;
@@ -101,14 +107,20 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     m.touchZoomRotate.disableRotation();
     m.on("style.load", () => {
       symboleEinsetzen(m, themeRef.current);
-      zeige3D(m, dreiDRef.current);
+      zeige3D(m, dreiDRef.current && !innenRef.current);
       zeichneRoute(m, routeRef.current, themeRef.current);
+      innenZeichnen(m, innenRef.current?.daten ?? null);
     });
     // falls ein Symbol vor dem Einsetzen gebraucht wird
     m.on("styleimagemissing", (e) => { if (e.id.startsWith("lotse-")) symboleEinsetzen(m, themeRef.current); });
     // Kartenpunkte antippen: Name und Art aus OpenStreetMap
     m.on("moveend", () => { const c = m.getCenter(); cb.current.onMitte?.([c.lng, c.lat]); });
     m.on("click", (e) => {
+      if (innenRef.current) {
+        // in der 3D-Schule: Strahl von der Kamera bis zur Bodenhöhe der Etage (die Hülle würde die Abfrage verdecken)
+        cb.current.onInnenTipp?.(punktAufHoehe(m, e.point, innenRef.current.boden));
+        return;
+      }
       const ebenen = ORT_EBENEN.filter((id) => m.getLayer(id));
       const f = ebenen.length ? m.queryRenderedFeatures([[e.point.x - 10, e.point.y - 10], [e.point.x + 10, e.point.y + 10]], { layers: ebenen })[0] : undefined;
       const p = f?.properties;
@@ -163,9 +175,34 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
   useEffect(() => {
     const m = map.current;
     if (!m) return;
+    if (innenRef.current) return; // Schule in 3D hat eigene Kamera und blendet OSM-Gebäude aus
     if (m.isStyleLoaded()) zeige3D(m, dreiD);
     m.easeTo({ pitch: dreiD ? 50 : 0, zoom: dreiD ? Math.max(m.getZoom(), 15.8) : m.getZoom(), duration: 700 });
   }, [dreiD]);
+
+  // Gebäude innen in 3D: Daten tauschen; beim Einschalten Kamera schräg aufs Gebäude
+  const innenAn = !!innen3d;
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    if (m.isStyleLoaded()) innenZeichnen(m, innen3d?.daten ?? null);
+    else m.once("idle", () => innenZeichnen(m, innenRef.current?.daten ?? null));
+  }, [innen3d]);
+  const vorInnen = useRef<{ center: maplibregl.LngLatLike; zoom: number } | null>(null);
+  useEffect(() => {
+    const m = map.current, i = innenRef.current;
+    if (!m) return;
+    if (innenAn && i) {
+      vorInnen.current = { center: m.getCenter(), zoom: m.getZoom() };
+      m.touchZoomRotate.enableRotation();
+      m.easeTo({ center: i.mitte, zoom: 18.4, pitch: 58, bearing: i.peilung, duration: 900 });
+    } else if (vorInnen.current) {
+      m.touchZoomRotate.disableRotation();
+      m.easeTo({ ...vorInnen.current, pitch: dreiDRef.current ? 50 : 0, bearing: 0, duration: 700 });
+      vorInnen.current = null;
+    }
+    if (m.getLayer("lotse-3d")) m.setLayoutProperty("lotse-3d", "visibility", innenAn ? "none" : dreiDRef.current ? "visible" : "none");
+  }, [innenAn]);
 
   // Hell/Dunkel
   useEffect(() => {
@@ -283,6 +320,46 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
   }, [rahmenSchluessel]);
 
   return <div ref={box} className="karte" aria-label="Karte" />;
+}
+
+const INNEN_EBENEN: [string, string, number][] = [
+  ["innen-boden-unten", "boden-unten", 0.35],
+  ["innen-boden", "boden", 0.95],
+  ["innen-wand", "wand", 0.92],
+  ["innen-huelle", "huelle", 0.16],
+];
+
+/** Schule innen: eine Quelle, je Art eine Ebene (Deckkraft ist je Ebene fest) */
+function innenZeichnen(m: MlMap, daten: GeoJSON.FeatureCollection | null) {
+  const leer: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
+  const q = m.getSource("innen") as maplibregl.GeoJSONSource | undefined;
+  if (q) { q.setData(daten ?? leer); return; }
+  if (!daten) return;
+  m.addSource("innen", { type: "geojson", data: daten });
+  for (const [id, art, deck] of INNEN_EBENEN) {
+    m.addLayer({
+      id, type: "fill-extrusion", source: "innen", filter: ["==", ["get", "art"], art],
+      paint: {
+        "fill-extrusion-color": ["get", "farbe"],
+        "fill-extrusion-base": ["get", "basis"],
+        "fill-extrusion-height": ["get", "hoehe"],
+        "fill-extrusion-opacity": deck,
+        "fill-extrusion-vertical-gradient": art !== "huelle",
+      },
+    });
+  }
+}
+
+/** Bildschirmpunkt → Kartenpunkt auf einer Ebene in `hoehe` Metern (Schnitt des Kamerastrahls mit der Ebene) */
+function punktAufHoehe(m: MlMap, p: maplibregl.Point, hoehe: number): LngLat {
+  const g = m.unproject(p);
+  const hoeheKamera = m.transform.getCameraAltitude();
+  if (!hoehe || !(hoeheKamera > hoehe)) return [g.lng, g.lat];
+  const boden = maplibregl.MercatorCoordinate.fromLngLat(g, 0);
+  const kamera = maplibregl.MercatorCoordinate.fromLngLat(m.transform.getCameraLngLat(), 0);
+  const t = (hoeheKamera - hoehe) / hoeheKamera; // Anteil des Weges Kamera → Gelände bis zur Etagenhöhe
+  const q = new maplibregl.MercatorCoordinate(kamera.x + (boden.x - kamera.x) * t, kamera.y + (boden.y - kamera.y) * t, 0).toLngLat();
+  return [q.lng, q.lat];
 }
 
 function zeige3D(m: MlMap, an: boolean) {

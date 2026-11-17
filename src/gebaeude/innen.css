@@ -108,5 +108,15 @@
 @media (min-width: 900px) {
   .innen-suche { width: 220px; }
 }
-.innen-ansicht { position: absolute; left: 16px; top: 12px; height: 34px; padding: 0 12px; border-radius: 10px; background: var(--glas); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: var(--schatten); font-size: 13px; font-weight: 600; color: var(--akzent); }
+.innen-ansichten { position: absolute; left: 16px; top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.innen-ansicht { height: 34px; padding: 0 12px; border-radius: 10px; background: var(--glas); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: var(--schatten); font-size: 13px; font-weight: 600; color: var(--akzent); }
 .e-frei { fill: var(--ink3); font-style: italic; font-weight: 600; }
+
+/* 3D auf der Karte: schwebende Steuerung */
+.innen3d { position: fixed; z-index: 30; right: 16px; top: calc(16px + env(safe-area-inset-top)); display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.innen3d-kopf { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 14px; background: var(--glas); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: var(--schatten); max-width: min(320px, calc(100vw - 32px)); }
+.innen3d-kopf div { display: flex; flex-direction: column; min-width: 0; }
+.innen3d-kopf b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.innen3d-kopf span { font-size: 12px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.innen3d .innen-etagen { position: static; transform: none; }
+.innen3d-quelle { font-size: 10px; color: var(--ink3); background: var(--glas); padding: 3px 8px; border-radius: 8px; max-width: 260px; text-align: right; }

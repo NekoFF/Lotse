@@ -26,7 +26,7 @@ function Form({ z }: { z: Zone }) {
  * Innenansicht: ein Plan je Etage, alle Etagen im selben Raster (übereinander wie im echten Gebäude).
  * Die Etage darunter schimmert durch, damit man die Lage versteht.
  */
-export function Innenansicht({ gebaeude, raum, onZu }: { gebaeude: Gebaeude; raum?: string; onZu: () => void }) {
+export function Innenansicht({ gebaeude, raum, onZu, on3D }: { gebaeude: Gebaeude; raum?: string; onZu: () => void; /** 3D auf der Karte, mit Etage und gewähltem Bereich */ on3D?: (ebene: number, zone: string | null) => void }) {
   const start = raum ? raumFinden(gebaeude, raum) : null;
   const [ebene, setEbene] = useState(start?.etage.ebene ?? 0);
   const [suche, setSuche] = useState(raum ?? "");
@@ -114,9 +114,12 @@ export function Innenansicht({ gebaeude, raum, onZu }: { gebaeude: Gebaeude; rau
           ))}
         </svg>
 
-        <button type="button" className="innen-ansicht" onClick={() => setSchild(!schild)} aria-pressed={schild}>
-          {schild ? "Draufsicht" : "Wie das Schild"}
-        </button>
+        <div className="innen-ansichten">
+          <button type="button" className="innen-ansicht" onClick={() => setSchild(!schild)} aria-pressed={schild}>
+            {schild ? "Draufsicht" : "Wie das Schild"}
+          </button>
+          {on3D && <button type="button" className="innen-ansicht" onClick={() => on3D(ebene, wahl?.id ?? null)}>3D auf der Karte</button>}
+        </div>
         <div className="innen-etagen" role="radiogroup" aria-label="Etage">
           {[...gebaeude.etagen].reverse().map((e) => (
             <button key={e.id} type="button" role="radio" aria-checked={e.ebene === ebene} aria-label={e.name}

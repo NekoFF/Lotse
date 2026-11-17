@@ -30,10 +30,11 @@ export const SCHULE: Gebaeude = {
     "Alle Etagen nach Dimas Markierung des Schilds: grau = begehbar, weiß = Räume, blau = Treppen.",
     "Der Anbau ist auf dem Schild daneben gezeichnet; hier über seine Treppe auf den Anbau im Erdgeschoss gesetzt.",
     "In der Mitte des 1. und 2. OG ist kein Raum: offen, man sieht auf das Dach des Erdgeschosses.",
-    "Maßstab aus dem Abstand der Treppen und dem Gebäudeumriss in OpenStreetMap geschätzt; Geschosshöhe geschätzt.",
-    "Raumgruppen ohne einzelne Wände zwischen den Räumen; WCs noch nicht markiert. Noch nicht auf die Karte gelegt (Himmelsrichtung des Plans fehlt).",
+    "Lage, Drehung und Maßstab: Umriss auf das amtliche 3D-Gebäudemodell (LoD2, HVBG) gelegt; Geschosshöhe aus den gemessenen Gebäudehöhen geschätzt.",
+    "Raumgruppen ohne einzelne Wände zwischen den Räumen; WCs noch nicht markiert.",
   ],
-  geschosshoehe: 3.6,
+  // aus LoD2: dreigeschossige Teile 14,7 m hoch (Flachdach) → etwa 4,2 m je Geschoss inkl. Decke (Schätzung)
+  geschosshoehe: 4.2,
   treppen: Object.entries(TREPPEN).map(([id, ringe]) => ({ id: `treppe-${id}`, ringe, etagen: id === "anbau" ? [0, 1] : [0, 1, 2] })),
   etagen: [
     /* ---------------- Erdgeschoss (nach Markierung) ---------------- */

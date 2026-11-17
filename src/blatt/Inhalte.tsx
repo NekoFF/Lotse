@@ -274,6 +274,7 @@ export function InfoInhalt({ onZurueck, onZu }: { onZurueck?: () => void; onZu: 
         <li><b>KI</b> (wenn eingeschaltet) läuft im Browser. Nur das Modell wird einmal von Hugging Face geladen.</li>
         <li><b>Fotos</b> nur aus Wikimedia Commons, wenn ein Ort in OpenStreetMap damit verknüpft ist – immer mit Urheber und Lizenz.</li>
         <li><b>Termine, gespeicherte Orte und Startpunkt</b> bleiben in diesem Browser.</li>
+        <li><b>Schule innen</b>: Plan nach dem Orientierungsschild im Gebäude; Lage, Maßstab und Gebäudehülle aus dem 3D-Gebäudemodell LoD2 © HVBG Hessen (2026), bearbeitet; Luftbild DOP20 nur zur Prüfung genutzt. Liegt in der App, es wird nichts abgefragt.</li>
       </ul>
       <p className="fein">
         Kartendaten <a href={DIENSTE.osmLizenz} target="_blank" rel="noopener noreferrer">© OpenStreetMap-Mitwirkende</a> ·

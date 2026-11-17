@@ -60,3 +60,14 @@ LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE A
 EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
 THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+================================================================================
+Schulgebäude (Innenansicht / 3D)
+================================================================================
+Gebäudehülle, Lage und Maßstab: 3D-Gebäudemodell LoD2, © Hessische Verwaltung für
+Bodenmanagement und Geoinformation (HVBG), Lieferung 2026. Bearbeitet: Auswahl eines
+Gebäudes (Dammstraße 62, Wetzlar), Umrechnung nach WGS84, Rundung, Ausrichtung des
+Innenplans. Nutzung nach § 18 HVGG ohne Einschränkung oder Bedingung erlaubt.
+Luftbild DOP20 (HVBG) nur zur Sichtprüfung genutzt, nicht enthalten.
+Innenplan: nach dem Orientierungsschild im Gebäude (Raumgruppen), eigene Markierung.
