@@ -5,7 +5,7 @@ import type { Gebaeude, Rechteck, Ringe, Zone } from "./modell";
  * Erdgeschoss: genau nach Dimas Markierung (grau = begehbar, weiß = Räume, blau = Treppen),
  * Pixel für Pixel ausgelesen, Schräge des Schilds (0,556) und leichte Drehung (0,66°) herausgerechnet.
  * Maßstab: Abstand der beiden Südtreppen = 49 m; die Nordtreppen landen damit von selbst an ihrer Stelle (< 1 m).
- * Obergeschosse: noch von Hand nach dem Foto, auf dieselben Treppen ausgerichtet.
+ * 1. OG ebenso nach Markierung (Treppen passen mit < 0,25 m auf die EG-Treppen). 2. OG und Anbau 1. OG noch von Hand.
  */
 
 // Treppenhäuser: auf jeder Etage genau dieselbe Form (aus der EG-Markierung)
@@ -40,9 +40,10 @@ export const SCHULE: Gebaeude = {
   quelle: "Orientierungsplan im Flur (Foto vom 16.11.2026); Erdgeschoss nach Dimas Markierung ausgelesen",
   hinweise: [
     "Erdgeschoss genau nach der Markierung: grau = begehbar (Flure, Halle, Innenhof), weiß = Räume, blau = Treppen.",
-    "Obergeschosse noch schematisch nach dem Foto (Raumgruppen, keine einzelnen Wände zwischen Räumen).",
+    "Erdgeschoss und 1. OG nach Markierung (Anbau im 1. OG und das 2. OG noch schematisch nach dem Foto).",
+    "In der Mitte des 1. OG ist kein Raum: offen, man sieht auf das Dach des Erdgeschosses.",
     "Maßstab aus dem Abstand der Treppen und dem Gebäudeumriss in OpenStreetMap geschätzt; Geschosshöhe geschätzt.",
-    "WCs im Erdgeschoss sind noch nicht markiert. Noch nicht auf die Karte gelegt (Himmelsrichtung des Plans fehlt).",
+    "WCs sind im Erdgeschoss und 1. OG noch nicht markiert. Noch nicht auf die Karte gelegt (Himmelsrichtung des Plans fehlt).",
   ],
   geschosshoehe: 3.6,
   treppen: Object.entries(TREPPEN).map(([id, ringe]) => ({ id: `treppe-${id}`, ringe, etagen: id === "anbau" ? [0, 1] : [0, 1, 2] })),
@@ -70,40 +71,26 @@ export const SCHULE: Gebaeude = {
         { text: "Haupteingang", x: 5, y: 33 },
       ],
     },
-    /* ---------------- 1. Obergeschoss ---------------- */
+    /* ---------------- 1. Obergeschoss (nach Markierung; Anbau noch von Hand) ---------------- */
     {
       id: "og1", kurz: "1", name: "1. Obergeschoss", ebene: 1,
       zonen: [
-        { id: "og1-flur", art: "flur", name: "Flur", flaechen: [
-          ...RING, [12, 22, 22, 25], [12, 33, 22, 37], [12, 25, 14, 33], [19.5, 25, 22, 33],
-          [4, 31, 8.5, 37], [2, 20, 8.5, 23.5], [74.5, 37, 80, 40.5], [76.5, 30, 80, 37], [74.5, 10.5, 78, 14], [74.5, 14, 78, 22],
-        ] },
+        { id: "og1-flur", art: "flur", name: "Flur", flaechen: [], ringe: [[[17.5, 13.25], [18.5, 13.75], [18.5, 22], [8.25, 22], [8.25, 40.75], [7, 40.75], [7, 43.5], [7.5, 44], [8, 44.5], [9, 43.5], [11, 43.5], [12.75, 41.75], [16.75, 41.75], [17, 40.75], [17.5, 40.25], [73.5, 40.25], [73.5, 42.75], [80, 42.75], [80, 40.75], [81.25, 40.75], [81.5, 40.25], [81.5, 33.5], [78.25, 33.5], [78.25, 37], [77.25, 38], [72.25, 38], [71.25, 37.25], [71.25, 14], [72.25, 13.25], [77.5, 13.25], [78, 14], [78, 20.5], [81.5, 20.5], [81.5, 10.75], [81, 10.5], [17.75, 10.5], [17.5, 10.75]], [[23.5, 37], [23.5, 22], [22.5, 22], [22.5, 13.5], [23.25, 13], [67, 13], [67.75, 14], [67.75, 22], [67, 22], [67, 37]], [[11.25, 36.75], [10.5, 36.25], [10.5, 27.25], [11, 26.25], [17.75, 26.25], [18.75, 26.75], [18.75, 36], [18.25, 36.75]]] },
+        { id: "og1-farbe", art: "raeume", name: "Laborräume / Werkstätten Farbtechnik / Raumgestaltung", flaechen: [], ringe: [[[67.5, 41], [68, 40.5], [23.25, 40.5], [23.25, 48.25], [67.5, 48.25]], [[67.75, 50.75], [67.5, 50.25], [67.5, 48.25], [23.25, 48.25], [23.25, 50.75], [23, 50.75], [23, 53], [31.75, 53], [31.75, 56.75], [58.75, 56.75], [59.25, 56.5], [59.25, 53], [67.75, 53]]], nummern: ["182", "180"] },
+        { id: "og1-ost", art: "raeume", name: "Klassenräume / Seminarbereich", flaechen: [], ringe: [[[89.25, 48], [89.25, 40.75], [89.5, 40.5], [90.5, 40.5], [90.75, 39.75], [90.75, 32.5], [89, 32.5], [89, 18.25], [90.25, 18.25], [90.5, 18], [90.5, 10.25], [89, 10.25], [89, 2.25], [71.5, 2.25], [71.5, 10.5], [81, 10.5], [81.75, 10.75], [81.75, 19.75], [81.5, 20.5], [78, 20.5], [78, 14], [77.5, 13.25], [72.25, 13.25], [71.5, 14], [71.5, 37.25], [72.25, 37.75], [77.25, 37.75], [78.25, 37], [78.25, 33.5], [81.5, 33.5], [81.5, 40.25], [81.25, 40.75], [80, 40.75], [80, 42.75], [73.5, 42.75], [73.5, 40.25], [72, 40.25], [72, 48.25], [72.25, 48.5], [89, 48.5]]], nummern: ["163", "160", "155", "152"] },
+        { id: "og1-west", art: "raeume", name: "Verwaltung / Lehrerzimmer / Bibliothek", flaechen: [], ringe: [[[19, 47.75], [19, 40.5], [17.25, 40.5], [17, 41.75], [16.5, 42], [12.75, 42], [11, 43.5], [9, 43.5], [8, 44.5], [7, 43.75], [7, 40.75], [8.25, 40.75], [8.25, 22], [18.25, 22], [18.5, 21.5], [18.5, 14], [17.5, 13.25], [17.5, 10.75], [17.75, 10.5], [18.25, 10.5], [18.25, 2.5], [18, 2.25], [3.25, 2.25], [3.25, 1.5], [1.75, 1.5], [1.5, 2], [0.75, 2], [0.5, 2.25], [0.5, 3], [-0.25, 3.25], [0, 4.5], [0.5, 5], [1, 32.75], [-0.25, 32.75], [-0.5, 34.25], [0.5, 34.25], [0.75, 35.25], [-1.25, 37], [0.75, 39.25], [0.75, 39.75], [0, 39.75], [0, 41.25], [1.25, 41.5], [1.25, 48.5], [18.5, 48.5]]], nummern: ["130", "134", "137", "139"] },
+        { id: "og1-offen", art: "luftraum", name: "Offen – Blick aufs Dach des Erdgeschosses", flaechen: [], ringe: [[[66.75, 22], [23.5, 22], [23.5, 36.75], [66.75, 36.75]]] },
+        { id: "og1-raum-west", art: "raeume", name: "Raum (im Plan ohne Beschriftung)", flaechen: [], ringe: [[[18.75, 36], [18.75, 26.75], [17.75, 26.25], [11, 26.25], [10.75, 27.25], [10.75, 36.25], [11.25, 36.75], [18.25, 36.75]]] },
+        { id: "og1-metall-innen", art: "raeume", name: "Laborräume Metall", flaechen: [], ringe: [[[67.75, 14], [67, 13.25], [23.25, 13.25], [22.75, 13.5], [22.5, 14.25], [22.5, 22], [67.75, 22]]], nummern: ["145", "151"] },
+        { id: "og1-sued", art: "raeume", name: "Laborräume Metall / Klassenräume", flaechen: [], ringe: [[[63.25, 0.5], [63.25, 2.25], [26.75, 2.25], [26.75, 0.25], [22.5, 0.25], [22.5, 10], [22.25, 10.5], [67.25, 10.5], [67.25, 0.75], [67.25, 0.5]]], nummern: ["144", "150"] },
         { id: "og1-flur-anbau", art: "flur", name: "Flur Anbau", flaechen: [A(83, 56.5, 86, 80.5), A(86, 76.5, 103, 80.5), A(100, 66.5, 103, 76.5), A(86, 66.5, 100, 70.5), A(80.5, 56.5, 83, 62.5)] },
-        { id: "og1-lichthof", art: "luftraum", name: "Lichthof", flaechen: [[14, 25, 19.5, 33]] },
-        { id: "og1-luftraum", art: "luftraum", name: "Luftraum über dem Innenhof", flaechen: [[22, 22, 71, 37]] },
         { id: "og1-luftraum-anbau", art: "luftraum", name: "Luftraum", flaechen: [A(86, 70.5, 100, 76.5)] },
-        { id: "og1-verwaltung-n", art: "raeume", name: "Verwaltung", flaechen: [[0, 40.5, 19, 50]], nummern: ["130"] },
-        { id: "og1-farbe", art: "raeume", name: "Laborräume / Werkstätten Farbtechnik / Raumgestaltung", flaechen: [[23.25, 40.5, 68, 50], [26, 50, 64, 56]], nummern: ["182", "180"] },
-        { id: "og1-klassen-no", art: "raeume", name: "Klassenräume", flaechen: [[72, 40.5, 90, 50]], nummern: ["163"] },
-        { id: "og1-verwaltung-w", art: "raeume", name: "Verwaltung", flaechen: [[0, 23.5, 4, 40.5], [4, 23.5, 8.5, 31], [4, 37, 8.5, 40.5]], nummern: ["134"] },
-        { id: "og1-lehrer", art: "raeume", name: "Lehrerzimmer", flaechen: [[0, 10.5, 8.5, 20], [0, 20, 2, 23.5]], nummern: ["137"] },
-        { id: "og1-metall-innen", art: "raeume", name: "Laborräume Metall", flaechen: [[12, 14, 71, 22]], nummern: ["139", "145", "151"] },
-        { id: "og1-seminar", art: "raeume", name: "Seminarbereich", flaechen: [[78, 14, 90, 22], [74.5, 22, 90, 30], [80, 30, 90, 40.5], [74.5, 30, 76.5, 37]], nummern: ["155", "160"] },
-        { id: "og1-bibliothek", art: "raeume", name: "Bibliothek", flaechen: [[0, 0, 18.25, 10.5]] },
-        { id: "og1-metall-sued", art: "raeume", name: "Laborräume Metall", flaechen: [[22.25, 0, 45, 6], [25.75, 6, 45, 10.5]], nummern: ["144"] },
-        { id: "og1-klassen-sued", art: "raeume", name: "Klassenräume", flaechen: [[45, 0, 67.25, 6], [45, 6, 63.75, 10.5]], nummern: ["150"] },
-        { id: "og1-klassen-so", art: "raeume", name: "Klassenräume", flaechen: [[71.25, 0, 90, 10.5]], nummern: ["152"] },
         { id: "og1-anbau-klassen-n", art: "raeume", name: "Klassenräume", flaechen: [A(77, 80.5, 107, 84.5)], nummern: ["176", "173"] },
         { id: "og1-anbau-klassen-w", art: "raeume", name: "Klassenräume", flaechen: [A(77, 62.5, 83, 80.5)], nummern: ["177", "178"] },
         { id: "og1-bautechnik", art: "raeume", name: "Laborraum Bautechnik", flaechen: [A(86, 56.5, 107, 66.5), A(103, 66.5, 107, 80.5)], nummern: ["170", "172"] },
-        ...wcSued(),
         ...treppen(1),
       ],
-      nummern: [
-        { nr: "130", x: 15, y: 41.5 }, { nr: "182", x: 25, y: 41.5 }, { nr: "180", x: 64, y: 41.5 }, { nr: "163", x: 74, y: 41.5 },
-        { nr: "134", x: 6, y: 38.5 }, { nr: "137", x: 6, y: 18.5 }, { nr: "139", x: 13.5, y: 20.5 }, { nr: "145", x: 15, y: 15 },
-        { nr: "151", x: 67, y: 15 }, { nr: "155", x: 79, y: 21 }, { nr: "160", x: 81.5, y: 31 }, { nr: "144", x: 28, y: 8.5 },
-        { nr: "150", x: 61, y: 8.5 }, { nr: "152", x: 73.5, y: 8.5 },
+      nummern: [{ nr: "130", x: 14.75, y: 45.25 }, { nr: "134", x: 4.25, y: 41.5 }, { nr: "137", x: 3.75, y: 24.75 }, { nr: "182", x: 28, y: 43.5 }, { nr: "180", x: 64.5, y: 42.5 }, { nr: "163", x: 78, y: 44.25 }, { nr: "160", x: 83.75, y: 31.75 }, { nr: "155", x: 82.5, y: 21 }, { nr: "152", x: 76.75, y: 8.25 }, { nr: "139", x: 15, y: 21 }, { nr: "145", x: 25, y: 15 }, { nr: "151", x: 66.5, y: 14.25 }, { nr: "144", x: 31.75, y: 9.25 }, { nr: "150", x: 62.25, y: 8.25 },
         { nr: "176", x: 85, y: 82.5 }, { nr: "173", x: 104, y: 82.5 }, { nr: "177", x: 81.5, y: 74.5 }, { nr: "178", x: 81.5, y: 64 },
         { nr: "170", x: 88, y: 65 }, { nr: "172", x: 101, y: 65 },
       ],

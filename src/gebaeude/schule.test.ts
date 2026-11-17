@@ -86,7 +86,7 @@ describe("Schulgebäude als Modell", () => {
 
   it("Raumsuche: Nummer → Etage und Bereich", () => {
     expect(raumFinden(SCHULE, "Raum 152")?.etage.kurz).toBe("1");
-    expect(raumFinden(SCHULE, "152")?.zone?.name).toBe("Klassenräume");
+    expect(raumFinden(SCHULE, "152")?.zone?.name).toBe("Klassenräume / Seminarbereich");
     expect(raumFinden(SCHULE, "88")?.zone?.name).toBe("Laborräume Naturwissenschaften");
     expect(raumFinden(SCHULE, "247")?.etage.kurz).toBe("2");
     expect(raumFinden(SCHULE, "999")).toBeNull();
