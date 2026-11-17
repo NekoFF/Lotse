@@ -51,6 +51,12 @@ Dima: „Push wie nötig, nicht fragen“; App bleibt unveröffentlicht, bis er 
 - 83 Tests (neu: Öffnungszeiten inkl. Feiertage, Wunsch, Gesundheitsschutz, Polylinie, Doctolib, Treffpunkt-Fairness/Abholen). Zweite Prüfrunde (Review-Agent) 15.11.: Krankheitswort nach „bei …“ wäre an Nominatim gegangen → `gesundheitlich()` sperrt das (im Browser nachgeprüft); Wächter jetzt nur Bus & Bahn, frische Echtzeit, 3-h-Fenster, Tagesgrenze 150 Transitous-Anfragen je Browser.
 - **Offen / Entscheidung Dima:** Lizenz des Repos (Transitous verlangt Open Source; beeinflusst die Startup-Idee); für kommerziellen Betrieb eigene Server (MOTIS, OSRM, Nominatim/Overpass).
 
+## 4d. Innenansicht Schule (16.–17.11.2026)
+- `src/gebaeude/`: Modell (`modell.ts`: Zonen als Rechtecke oder Vielecke, Raumnummern, Treppen, Wandkanten), Daten (`schule.ts`: EG, 1. OG mit Anbau, 2. OG), Ansicht (`Innenansicht.tsx`: Etagen E/1/2, Raumsuche, „wie das Schild“ / Draufsicht).
+- Grundlage: Foto des Orientierungsplans im Flur + Dimas Markierung je Etage (grau begehbar, weiß Räume, blau Treppen). Ausgelesen mit `scripts/gebaeude/markierung_auslesen.py` (eigenes venv mit numpy/opencv/shapely, siehe Kopf der Datei). Alle Etagen über die Treppen ausgerichtet (Rest ≤ 0,25 m); Anbau ist auf dem Schild daneben gezeichnet und wird über seine Treppe gesetzt.
+- Eingänge: „Raum 152“ in der Suche, Knopf „Schule innen“, „Innen“ an der Schule.
+- Offen: WCs nicht markiert; keine einzelnen Wände zwischen Räumen (Plan zeigt Raumgruppen); Maßstab/Geschosshöhe geschätzt; noch nicht auf die Karte gelegt (Himmelsrichtung fehlt); 3D-Modell als nächster Schritt. Foto liegt NICHT im Repo; vor öffentlicher Nutzung Schule fragen.
+
 ## 5. Umstellung auf Live-Daten – lauffähig in `arbeit/echte-daten` (NOCH NICHT in `main`)
 Stand 13.11. abends: Commit 1e798c5 (Live-Daten) + Prüfrunde danach (Claude lokal, im echten Browser mit echten Diensten geprüft, Start Bahnhofstraße 1 Wetzlar: Orthopädie 5, Zahnmedizin 23, HNO 1 Praxis; Weg, Plan B, Öffnungszeiten, Kontakt aus OSM).
 Prüfrunde hat behoben:

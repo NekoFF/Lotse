@@ -1,4 +1,4 @@
-import type { Gebaeude, Rechteck, Ringe, Zone } from "./modell";
+import type { Gebaeude, Ringe, Zone } from "./modell";
 
 /**
  * Hauptgebäude nach dem Orientierungsplan im Flur (Foto, 16.11.2026).
@@ -6,7 +6,7 @@ import type { Gebaeude, Rechteck, Ringe, Zone } from "./modell";
  * Pixel für Pixel ausgelesen, Schräge des Schilds (0,556) und leichte Drehung (0,66°) herausgerechnet.
  * Maßstab: Abstand der beiden Südtreppen = 49 m; die Nordtreppen landen damit von selbst an ihrer Stelle (< 1 m).
  * 1. OG ebenso (Treppen passen mit < 0,25 m auf die EG-Treppen); der Anbau – auf dem Schild daneben gezeichnet –
- * wird über seine Treppe ausgerichtet und landet damit genau über dem EG-Anbau. 2. OG noch von Hand.
+ * wird über seine Treppe ausgerichtet und landet damit genau über dem EG-Anbau. 2. OG ebenso.
  */
 
 // Treppenhäuser: auf jeder Etage genau dieselbe Form (aus der EG-Markierung)
@@ -21,29 +21,17 @@ const treppen = (ebene: number): Zone[] =>
   Object.entries(TREPPEN).filter(([id]) => id !== "anbau" || ebene <= 1)
     .map(([id, ringe]) => ({ id: `treppe-${id}`, art: "treppe" as const, name: id === "anbau" ? "Treppe Anbau" : "Treppe", flaechen: [], ringe }));
 
-// Obergeschosse: gemeinsamer Flurring
-const RING: Rechteck[] = [
-  [8.5, 10.5, 74.5, 14],  // Flur Süd
-  [8.5, 37, 74.5, 40.5],  // Flur Nord
-  [8.5, 14, 12, 37],      // Flur West
-  [71, 14, 74.5, 37],     // Flur Ost
-];
-const wcSued = (): Zone[] => [
-  { id: "wc-sw", art: "wc", name: "WC", flaechen: [[22.25, 6, 25.75, 10.5]] },
-  { id: "wc-so", art: "wc", name: "WC", flaechen: [[63.75, 6, 67.25, 10.5]] },
-];
 
 export const SCHULE: Gebaeude = {
   id: "wvss-hauptgebaeude",
   name: "Werner-von-Siemens-Schule – Hauptgebäude",
-  quelle: "Orientierungsplan im Flur (Foto vom 16.11.2026); Erdgeschoss nach Dimas Markierung ausgelesen",
+  quelle: "Orientierungsplan im Flur (Foto vom 16.11.2026); alle Etagen nach Dimas Markierung ausgelesen",
   hinweise: [
-    "Erdgeschoss genau nach der Markierung: grau = begehbar (Flure, Halle, Innenhof), weiß = Räume, blau = Treppen.",
-    "Erdgeschoss und 1. OG (mit Anbau) nach Markierung; das 2. OG noch schematisch nach dem Foto.",
+    "Alle Etagen nach Dimas Markierung des Schilds: grau = begehbar, weiß = Räume, blau = Treppen.",
     "Der Anbau ist auf dem Schild daneben gezeichnet; hier über seine Treppe auf den Anbau im Erdgeschoss gesetzt.",
-    "In der Mitte des 1. OG ist kein Raum: offen, man sieht auf das Dach des Erdgeschosses.",
+    "In der Mitte des 1. und 2. OG ist kein Raum: offen, man sieht auf das Dach des Erdgeschosses.",
     "Maßstab aus dem Abstand der Treppen und dem Gebäudeumriss in OpenStreetMap geschätzt; Geschosshöhe geschätzt.",
-    "WCs sind im Erdgeschoss und 1. OG noch nicht markiert. Noch nicht auf die Karte gelegt (Himmelsrichtung des Plans fehlt).",
+    "Raumgruppen ohne einzelne Wände zwischen den Räumen; WCs noch nicht markiert. Noch nicht auf die Karte gelegt (Himmelsrichtung des Plans fehlt).",
   ],
   geschosshoehe: 3.6,
   treppen: Object.entries(TREPPEN).map(([id, ringe]) => ({ id: `treppe-${id}`, ringe, etagen: id === "anbau" ? [0, 1] : [0, 1, 2] })),
@@ -91,29 +79,20 @@ export const SCHULE: Gebaeude = {
       ],
       nummern: [{ nr: "130", x: 14.75, y: 45.25 }, { nr: "134", x: 4.25, y: 41.5 }, { nr: "137", x: 3.75, y: 24.75 }, { nr: "182", x: 28, y: 43.5 }, { nr: "180", x: 64.5, y: 42.5 }, { nr: "163", x: 78, y: 44.25 }, { nr: "160", x: 83.75, y: 31.75 }, { nr: "155", x: 82.5, y: 21 }, { nr: "152", x: 76.75, y: 8.25 }, { nr: "139", x: 15, y: 21 }, { nr: "145", x: 25, y: 15 }, { nr: "151", x: 66.5, y: 14.25 }, { nr: "144", x: 31.75, y: 9.25 }, { nr: "150", x: 62.25, y: 8.25 }, { nr: "176", x: 75.5, y: 79.25 }, { nr: "173", x: 101, y: 79.75 }, { nr: "170", x: 88.5, y: 63.75 }, { nr: "172", x: 101.75, y: 64 }, { nr: "177", x: 77.5, y: 73.75 }, { nr: "178", x: 78.75, y: 62.5 }],
     },
-    /* ---------------- 2. Obergeschoss ---------------- */
+    /* ---------------- 2. Obergeschoss (nach Markierung) ---------------- */
     {
       id: "og2", kurz: "2", name: "2. Obergeschoss", ebene: 2,
       zonen: [
-        { id: "og2-flur", art: "flur", name: "Flur", flaechen: [...RING, [74.5, 37, 78, 40.5], [4, 29, 8.5, 37], [4, 14, 8.5, 18]] },
-        { id: "og2-luftraum", art: "luftraum", name: "Luftraum über dem Innenhof", flaechen: [[12, 21, 71, 37]] },
-        { id: "og2-terrasse", art: "terrasse", name: "Terrasse", flaechen: [[23.25, 40.5, 68, 50]] },
-        { id: "og2-klassen-nw", art: "raeume", name: "Klassenräume", flaechen: [[0, 40.5, 19, 50]], nummern: ["230"] },
-        { id: "og2-259", art: "raeume", name: "Raum 259", flaechen: [[72, 40.5, 90, 50]], nummern: ["259"] },
-        { id: "og2-metall", art: "raeume", name: "Laborräume Metall", flaechen: [[0, 10.5, 4, 40.5], [4, 18, 8.5, 29], [4, 37, 8.5, 40.5], [4, 10.5, 8.5, 14]], nummern: ["234", "238"] },
-        { id: "og2-etechnik", art: "raeume", name: "Laborräume E-Technik", flaechen: [[74.5, 10.5, 90, 37], [78, 37, 90, 40.5]] },
-        { id: "og2-edv", art: "raeume", name: "Klassenräume / EDV-Räume", flaechen: [[12, 14, 71, 21]], nummern: ["241", "247"] },
-        { id: "og2-240", art: "raeume", name: "Raum 240", flaechen: [[0, 0, 18.25, 10.5]], nummern: ["240"] },
-        { id: "og2-klassen-sued", art: "raeume", name: "Klassenräume", flaechen: [[22.25, 0, 67.25, 6], [25.75, 6, 63.75, 10.5]], nummern: ["242", "248"] },
-        { id: "og2-klassen-so", art: "raeume", name: "Klassenräume", flaechen: [[71.25, 0, 90, 10.5]], nummern: ["250"] },
-        ...wcSued(),
+        { id: "og2-flur", art: "flur", name: "Flur", flaechen: [], ringe: [[[75.25, 38], [72.25, 38], [71.5, 37], [71.5, 28.25], [72.25, 27.25], [74.75, 27.25], [75, 26.75], [75, 24], [72, 24], [71.25, 23.25], [71.25, 13.75], [72.25, 12.75], [75, 12.75], [75, 10.5], [18.25, 10.5], [18.25, 10.75], [10.5, 10.75], [10.5, 17.75], [13.25, 17.75], [13.25, 13.75], [14.25, 13], [17.75, 13], [18.75, 13.5], [18.75, 35.75], [18, 36.5], [14.25, 36.5], [13.5, 35.5], [13.5, 31.75], [11, 31.75], [11, 41.5], [17, 41.5], [17, 41.25], [17, 40.25], [19, 40.25], [19, 40.5], [72, 40.5], [72, 40.75], [73.25, 41.75], [73.5, 42], [75.25, 42], [75.25, 41.5]], [[23.5, 36.75], [23.5, 22], [22.5, 22], [22.5, 14.25], [23, 13.25], [23.5, 12.75], [67, 12.75], [67.75, 13.75], [67.75, 21.5], [67.5, 22], [67.25, 22], [67, 22.25], [67, 36.75]]] },
+        { id: "og2-ost", art: "raeume", name: "Laborräume E-Technik / Klassenräume", flaechen: [], ringe: [[[89.5, 48.25], [89.5, 40.75], [90.5, 40.5], [90.5, 33], [89, 32.75], [89, 18.75], [89, 18.25], [90.5, 18], [90.5, 10], [89, 10], [89, 2], [71.75, 2], [71.5, 3], [71.5, 10.25], [75.25, 10.25], [75.25, 12.75], [72.25, 12.75], [71.5, 13.75], [71.5, 23.25], [72.25, 24], [75, 24], [75, 26.75], [74.75, 27.25], [72.25, 27.25], [71.5, 28.25], [71.5, 37], [72.5, 38], [75.25, 38], [75.25, 41.5], [75.25, 42], [73.5, 42], [72.75, 41.5], [72, 42], [72, 48.75], [89.25, 48.75]]], nummern: ["259", "250"] },
+        { id: "og2-terrasse", art: "terrasse", name: "Terrasse", flaechen: [], ringe: [[[67.75, 40.5], [23.25, 40.5], [23.25, 48.25], [23.25, 48.5], [67.75, 48.5]]] },
+        { id: "og2-west", art: "raeume", name: "Klassenräume / Laborräume Metall", flaechen: [], ringe: [[[19, 47.5], [19, 40.25], [17, 40.25], [17, 41.75], [10.75, 41.75], [10.75, 32.75], [11, 31.5], [13.75, 31.5], [13.75, 35.5], [14.25, 36.5], [18, 36.5], [18.75, 35.75], [18.75, 13.5], [17.75, 13.25], [14.25, 13.25], [13.25, 13.75], [13.25, 17.75], [10.5, 17.75], [10.5, 10.75], [18.25, 10.75], [18.25, 2.5], [17.5, 2.25], [3.75, 2.25], [3.25, 2.25], [3.5, 1.75], [2, 1.75], [1.75, 2.5], [0.5, 2.5], [0.75, 3.5], [0, 3.75], [0, 5], [0.5, 5], [0.5, 6], [1.5, 48.25], [18.75, 48.25]]], nummern: ["230", "234", "238", "240"] },
+        { id: "og2-offen", art: "luftraum", name: "Offen – Blick aufs Dach des Erdgeschosses", flaechen: [], ringe: [[[67, 22], [23.5, 22], [23.5, 36.75], [67, 36.75]]] },
+        { id: "og2-edv", art: "raeume", name: "Klassenräume / EDV-Räume", flaechen: [], ringe: [[[67.75, 21.5], [67.75, 13.75], [67, 13], [23.5, 13], [23, 13.5], [22.5, 14.5], [22.5, 22], [67.5, 22]]], nummern: ["241", "247"] },
+        { id: "og2-sued", art: "raeume", name: "Klassenräume", flaechen: [], ringe: [[[63.25, 0.25], [63.25, 2.25], [26.5, 2.25], [26.5, 0.5], [22.5, 0.5], [22.5, 9.5], [22.25, 10.5], [67.25, 10.5], [67.25, 0.75], [67.5, 0.25]]], nummern: ["242", "248"] },
         ...treppen(2),
       ],
-      nummern: [
-        { nr: "230", x: 15, y: 41.5 }, { nr: "259", x: 76, y: 41.5 }, { nr: "234", x: 6, y: 28 }, { nr: "238", x: 6, y: 19 },
-        { nr: "241", x: 15, y: 15 }, { nr: "247", x: 67, y: 15 }, { nr: "240", x: 15, y: 8.5 }, { nr: "242", x: 28, y: 8.5 },
-        { nr: "248", x: 61, y: 8.5 }, { nr: "250", x: 73.5, y: 8.5 },
-      ],
+      nummern: [{ nr: "230", x: 15.25, y: 42.75 }, { nr: "234", x: 11.5, y: 30 }, { nr: "238", x: 9.75, y: 18.5 }, { nr: "240", x: 14.5, y: 9.25 }, { nr: "259", x: 79.5, y: 40.25 }, { nr: "250", x: 79.5, y: 12 }, { nr: "241", x: 25.75, y: 14.75 }, { nr: "247", x: 65.25, y: 14.75 }, { nr: "242", x: 29.75, y: 9.25 }, { nr: "248", x: 61.75, y: 9.5 }],
     },
   ],
 };
