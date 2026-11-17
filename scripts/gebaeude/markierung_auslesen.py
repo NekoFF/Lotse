@@ -113,28 +113,61 @@ def main(eingabe, ausgabe):
         return (x + k * y, -y)  # Bild-y nach unten → Modell-y nach oben, Schräge raus
 
     ref = {n: Polygon(r[0]).centroid for n, r in modell_treppen().items()}
-    treppen = [i for i, v in polys.items() if v["art"] == "treppe"]
-    src = {i: Polygon([gerade(p) for p in polys[i]["rings"][0]]).centroid for i in treppen}
-    best = None
-    for namen in itertools.permutations(ref, len(treppen)):
-        a, b = [], []
-        for i, n in zip(treppen, namen):
-            a += [[src[i].x, 1, 0], [src[i].y, 0, 1]]
-            b += [ref[n].x, ref[n].y]
-        x, *_ = np.linalg.lstsq(np.array(a), np.array(b), rcond=None)
-        if x[0] <= 0:
+    # Getrennt gezeichnete Teile (z. B. ein Anbau neben dem Hauptbau) werden einzeln ausgerichtet:
+    # das Schild zeichnet sie oft nicht an ihrer echten Stelle, aber im selben Maßstab.
+    _, teil_von = cv2.connectedComponents((lab > 0).astype(np.uint8), connectivity=8)
+    teil = {i: int(np.bincount(teil_von[lab == i]).argmax()) for i in polys}
+    teile = sorted(set(teil.values()), key=lambda t: -sum(1 for i in polys if teil[i] == t and polys[i]["art"] == "treppe"))
+    src = {i: Polygon([gerade(p) for p in polys[i]["rings"][0]]).centroid for i in polys if polys[i]["art"] == "treppe"}
+    frei_ref = dict(ref)
+    lage, zuordnung, sc = {}, {}, None
+    print(f"Drehung {rot:.2f}°, Schräge {k:.3f}")
+    for t in teile:
+        treppen = [i for i in polys if teil[i] == t and polys[i]["art"] == "treppe"]
+        if not treppen:
+            print(f"  Teil {t}: ohne Treppe – kann nicht ausgerichtet werden, übersprungen")
             continue
-        rest = np.abs(np.array(a) @ x - np.array(b)).reshape(-1, 2)
-        if best is None or rest.max() < best[0].max():
-            best = (rest, x, namen)
-    rest, (sc, tx, ty), namen = best
-    print(f"Drehung {rot:.2f}°, Schräge {k:.3f}, Maßstab {sc:.4f} m/px")
-    for i, n, r in zip(treppen, namen, rest):
-        print(f"  Treppe {i} → {n}: Rest {r.max():.2f} m")
+        best = None
+        for namen in itertools.permutations(frei_ref, len(treppen)):
+            if len(treppen) >= 2:  # Maßstab + Verschiebung
+                a, b = [], []
+                for i, n in zip(treppen, namen):
+                    a += [[src[i].x, 1, 0], [src[i].y, 0, 1]]
+                    b += [frei_ref[n].x, frei_ref[n].y]
+                x, *_ = np.linalg.lstsq(np.array(a), np.array(b), rcond=None)
+                if x[0] <= 0:
+                    continue
+                rest = np.abs(np.array(a) @ x - np.array(b)).reshape(-1, 2)
+                kand = (rest.max(), tuple(x), namen)
+            else:  # eine Treppe: nur verschieben, Maßstab vom Hauptbau
+                i, n = treppen[0], namen[0]
+                kand = (0.0, (sc, frei_ref[n].x - sc * src[i].x, frei_ref[n].y - sc * src[i].y), namen)
+            if best is None or kand[0] < best[0]:
+                best = kand
+        if len(treppen) == 1:
+            # bei nur einer Treppe gewinnt die Treppe mit der ähnlichsten Form (Breite/Höhe)
+            def form(r):
+                xs, ys = [p[0] for p in r], [p[1] for p in r]
+                return (max(xs) - min(xs)) / max(1e-6, max(ys) - min(ys))
+            i = treppen[0]
+            mein = form([gerade(p) for p in polys[i]["rings"][0]])
+            n = min(frei_ref, key=lambda n: abs(np.log(form(modell_treppen()[n][0]) / mein)))
+            best = (0.0, (sc, frei_ref[n].x - sc * src[i].x, frei_ref[n].y - sc * src[i].y), (n,))
+        rest, x, namen = best
+        sc = sc or x[0]
+        for i in polys:
+            if teil[i] == t:
+                lage[i] = x
+        for i, n in zip(treppen, namen):
+            zuordnung[i] = n
+            frei_ref.pop(n)
+            print(f"  Teil {t}: Treppe {i} → {n}" + (f", Rest {rest:.2f} m" if len(treppen) > 1 else " (nur verschoben)"))
+    print(f"Maßstab {sc:.4f} m/px")
 
-    def meter(p):
+    def meter(p, i):
         x, y = gerade(p)
-        return (x * sc + tx, y * sc + ty)
+        s_, tx, ty = lage[i]
+        return (x * s_ + tx, y * s_ + ty)
 
     def ortho(ring):
         pts = [list(p) for p in ring]
@@ -147,11 +180,11 @@ def main(eingabe, ausgabe):
                     a[1] = b[1] = round((a[1] + b[1]) * 2) / 4
         return pts
 
-    belegt = unary_union([Polygon(modell_treppen()[n][0]) for n in namen])
+    belegt = unary_union([Polygon(modell_treppen()[n][0]) for n in zuordnung.values()])
     r4 = lambda v: round(v * 4) / 4
-    out = {"treppen": dict(zip(map(str, treppen), namen)), "bereiche": {}}
-    for i, v in sorted(((i, v) for i, v in polys.items() if v["art"] != "treppe"), key=lambda iv: iv[1]["art"] == "flur"):
-        ringe = [ortho([meter(p) for p in r]) for r in v["rings"]]
+    out = {"treppen": {str(i): n for i, n in zuordnung.items()}, "bereiche": {}}
+    for i, v in sorted(((i, v) for i, v in polys.items() if v["art"] != "treppe" and i in lage), key=lambda iv: iv[1]["art"] == "flur"):
+        ringe = [ortho([meter(p, i) for p in r]) for r in v["rings"]]
         g = Polygon(ringe[0], ringe[1:]).buffer(0).difference(belegt)
         if isinstance(g, MultiPolygon):
             g = max(g.geoms, key=lambda p: p.area)
