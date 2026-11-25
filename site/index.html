@@ -10,9 +10,6 @@
 <body>
 <title>Lotse</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
 /* Layout: Scrollytelling. Links die Erzählung in Schritten, rechts eine feststehende App-Bühne,
    die sich mit dem Scrollen verändert: Chat → Zuordnung → Liste → Karte → Störung → Ankunft → Notfall. */
@@ -23,8 +20,8 @@
   --crit:#d4392c; --crit-soft:#fdebe9; --good:#1b8556;
   --map-bg:#eceff3; --map-minor:#dde2e8; --map-major:#c8d0da; --river:#cfdcf0;
   --car:#c97a12;
-  --ff:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;
-  --ff-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --ff:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --ff-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0b0d11; --surface:#141820; --surface-2:#1a1f29;
@@ -629,23 +626,13 @@ footer p+p{margin-top:6px}
 <section class="block" id="feedback"><div class="in">
   <div class="kick">Deine Meinung</div>
   <h2>Würdest du Lotse benutzen?</h2>
-  <div class="fb">
-    <div>
-      <span class="lbl" id="sl">Bewertung</span>
-      <div class="scale" id="scale" role="group" aria-labelledby="sl"></div>
-      <div class="cap"><span>eher nicht</span><span>auf jeden Fall</span></div>
-      <label class="lbl" for="cmt" style="margin-top:28px;margin-bottom:0">Kommentar, freiwillig</label>
-      <textarea id="cmt" maxlength="600" placeholder="Was fehlt dir? Was würdest du anders machen?"></textarea>
-      <div class="send"><button class="btn" id="send" disabled>Absenden</button><span class="status" id="status"></span></div>
-      <p class="priv">Anonym: kein Name, keine E-Mail. Damit Mehrfachabgaben auffallen, speichert die Seite eine zufällige Kennung in deinem Browser. Beiträge vom selben Gerät werden markiert.</p>
-    </div>
-    <div><div class="agg" id="agg"></div><div class="cmts" id="cmts"></div></div>
-  </div>
+  <p><b>Online-Umfrage pausiert.</b> Bis die Datenschutzhinweise und die Angaben zur verantwortlichen Person auf dieser Seite stehen, sammelt diese Seite keine Antworten. Im Unterricht liegt der Fragebogen auf Papier aus.</p>
 </div></section>
 
 <footer><div class="in">
   <p>Lotse · Projektarbeit, Werner-von-Siemens-Schule, Schuljahr 2026/27 · Prototyp für Mittelhessen</p>
   <p>Lotse ersetzt keine ärztliche Beratung. Notruf 112 · Ärztlicher Bereitschaftsdienst 116117</p>
+  <p><b>Datenschutz:</b> Diese Seite setzt keine Cookies, speichert nichts in deinem Browser, lädt keine Inhalte von anderen Anbietern und hat keine Formulare. Beim Aufruf verarbeitet nur der Hoster GitHub Pages (GitHub Inc., USA) technisch notwendige Verbindungsdaten wie die IP-Adresse (Server-Protokoll, siehe Datenschutzerklärung von GitHub). Angaben zur verantwortlichen Person folgen.</p>
 </div></footer>
 
 <script>
@@ -933,124 +920,9 @@ footer p+p{margin-top:6px}
   render(0.55);
   measure();
 
-  /* ---------- Feedback ---------- */
-  var DEV = "lotse_dev_id";
-  function devId(){ try { var v = localStorage.getItem(DEV); if (!v) { v = "g" + Math.random().toString(36).slice(2,10); localStorage.setItem(DEV, v); } return v; } catch (e) { return "unbekannt"; } }
-  var scale = $("scale"), sendB = $("send"), statusEl = $("status"), cmtIn = $("cmt"), agg = $("agg"), cmts = $("cmts");
-  var chosen = 0, db = null, uid = null, mode = null;
-  /* Öffentlicher Supabase-Schlüssel: darf nur einfügen und die Zusammenfassung lesen (Row Level Security). */
-  var SB_URL = "https://wigbijqzdrplwfwgczxl.supabase.co";
-  var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpZ2JpanF6ZHJwbHdmd2djenhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNTgyMzIsImV4cCI6MjEwODkzNDIzMn0.ISzRFJZ5NRbKTy7_elLh3-OcaLmKtBfnhkYbR75t6-A";
-  function sbHeaders(){ return { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json" }; }
-  async function sbSummary(){
-    var r = await fetch(SB_URL + "/rest/v1/rpc/feedback_summary", { method:"POST", headers: sbHeaders(), body:"{}" });
-    if (!r.ok) throw new Error("summary " + r.status);
-    return r.json();
-  }
-  function paintSummary(s){
-    clear(agg);
-    var cnt = s && s.count ? s.count : 0;
-    if (!cnt) { msg("Noch keine Bewertung. Deine wäre die erste."); return; }
-    agg.appendChild(el("div","num", Number(s.avg).toFixed(1).replace(".",",")));
-    agg.appendChild(el("div","of","von 5 · " + cnt + (cnt === 1 ? " Bewertung" : " Bewertungen")));
-  }
-  for (var v = 1; v <= 5; v++) (function(x){
-    var b = el("button", null, String(x)); b.type = "button"; b.setAttribute("aria-label", x + " von 5");
-    b.addEventListener("click", function(){ chosen = x; var all = scale.querySelectorAll("button"); for (var k = 0; k < all.length; k++) all[k].classList.toggle("on", k === x-1); sendB.disabled = !mode; });
-    scale.appendChild(b);
-  })(v);
-  function msg(t){ clear(agg); agg.appendChild(el("div","empty",t)); }
-  msg("Lädt …");
-  function fmt(ts){ try { var d = new Date(ts), p = function(x){ return (x<10?"0":"")+x; }; return p(d.getDate())+"."+p(d.getMonth()+1)+"."+d.getFullYear(); } catch(e){ return ""; } }
-  function paint(rows){
-    rows.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
-    var sum = 0, cnt = 0, seen = {};
-    rows.forEach(function(r){ if (typeof r.rating === "number") { sum += r.rating; cnt++; } seen[r.dev] = (seen[r.dev]||0)+1; });
-    clear(agg);
-    if (!cnt) msg("Noch keine Bewertung. Deine wäre die erste.");
-    else { agg.appendChild(el("div","num",(sum/cnt).toFixed(1).replace(".",","))); agg.appendChild(el("div","of","von 5 · " + cnt + (cnt===1?" Bewertung":" Bewertungen"))); }
-    clear(cmts);
-    rows.forEach(function(r){
-      if (!r.text) return;
-      var c = el("div","cmt"), m = el("div","meta");
-      m.appendChild(el("b",null,(r.rating||"–")+"/5")); m.appendChild(el("span",null,fmt(r.ts)));
-      if (seen[r.dev] > 1) m.appendChild(el("span","dup",seen[r.dev]+" Beiträge vom selben Gerät"));
-      c.appendChild(m); c.appendChild(el("p",null,r.text)); cmts.appendChild(c);
-    });
-  }
-  (async function(){
-    // 1. Wahl: Supabase (öffentlich gehostete Seite). Kommentare liest dort nur das Team.
-    try {
-      var s = await sbSummary();
-      mode = "sb";
-      paintSummary(s);
-      var pv = document.querySelector(".priv");
-      if (pv) pv.textContent = "Anonym: kein Name, keine E-Mail. Kommentare liest nur das Projektteam. Damit Mehrfachabgaben auffallen, speichert die Seite eine zufällige Kennung in deinem Browser.";
-      cmts.style.display = "none";
-      sendB.disabled = chosen === 0;
-      return;
-    } catch (e) { /* nicht erreichbar, weiter mit Plan B */ }
-    // 2. Wahl: der Speicher der Claude-Seite (nur angemeldet).
-    try { db = await window.claude.use("db"); var user = await window.claude.use("user"); uid = user ? await user.id() : null; } catch (e) { db = null; }
-    if (!db) { msg("Bewerten ist hier gerade nicht möglich. Im Unterricht liegt der Fragebogen auf Papier aus."); sendB.disabled = true; return; }
-    mode = "db";
-    sendB.disabled = chosen === 0;
-    try {
-      db.collection("feedback").onSnapshot(function(snap){
-        var rows = []; (snap && snap.docs ? snap.docs : []).forEach(function(d){ var x = d && d.data ? d.data() : null; if (x) rows.push(x); }); paint(rows);
-      });
-    } catch (e) { msg("Bewertungen konnten nicht geladen werden."); }
-  })();
-  sendB.addEventListener("click", async function(){
-    if (!mode || !chosen) return;
-    sendB.disabled = true; statusEl.textContent = "Wird gesendet …";
-    var text = (cmtIn.value || "").trim().slice(0, 600);
-    if (mode === "sb") {
-      try {
-        var r = await fetch(SB_URL + "/rest/v1/feedback", {
-          method:"POST",
-          headers: Object.assign(sbHeaders(), { "Prefer":"return=minimal" }),
-          body: JSON.stringify({ rating: chosen, comment: text || null, device: devId() })
-        });
-        if (!r.ok) {
-          var body = ""; try { body = await r.text(); } catch (_) {}
-          statusEl.textContent = /Zu viele/.test(body) ? "Zu viele Beiträge von diesem Gerät. Bitte später noch einmal." : "Hat nicht geklappt. Bitte noch einmal versuchen.";
-          sendB.disabled = false; return;
-        }
-        statusEl.textContent = "Angekommen. Danke.";
-        cmtIn.value = "";
-        try { paintSummary(await sbSummary()); } catch (_) {}
-      } catch (e) { statusEl.textContent = "Keine Verbindung. Bitte noch einmal versuchen."; sendB.disabled = false; }
-      return;
-    }
-    var rec = { rating: chosen, text: text, dev: devId(), by: uid || null, ts: Date.now() };
-    try { await db.collection("feedback").doc("f"+rec.ts.toString(36)+Math.random().toString(36).slice(2,7)).set(rec); statusEl.textContent = "Angekommen. Danke."; cmtIn.value = ""; }
-    catch (e) { statusEl.textContent = "Hat nicht geklappt. Bitte noch einmal versuchen."; sendB.disabled = false; }
-  });
-  /* ---------- Warteliste ---------- */
-  (function(){
-    var f = document.getElementById("wl"); if (!f) return;
-    var mail = document.getElementById("wl-mail"), ok = document.getElementById("wl-ok");
-    var btn = document.getElementById("wl-send"), st = document.getElementById("wl-status");
-    var re = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-    function check(){ btn.disabled = !(re.test((mail.value || "").trim()) && ok.checked); }
-    mail.addEventListener("input", check); ok.addEventListener("change", check);
-    f.addEventListener("submit", async function(e){
-      e.preventDefault(); if (btn.disabled) return;
-      btn.disabled = true; st.textContent = "Wird eingetragen …";
-      try {
-        var r = await fetch(SB_URL + "/rest/v1/warteliste", {
-          method: "POST",
-          headers: Object.assign(sbHeaders(), { "Prefer": "return=minimal" }),
-          body: JSON.stringify({ email: mail.value.trim(), einwilligung: true, device: devId() })
-        });
-        if (r.ok || r.status === 409) { st.textContent = "Eingetragen. Wir melden uns einmal, wenn die App da ist."; mail.value = ""; ok.checked = false; return; }
-        var t = ""; try { t = await r.text(); } catch (_) {}
-        st.textContent = /Zu viele/.test(t) ? "Zu viele Versuche. Bitte später noch einmal." : "Hat nicht geklappt. Bitte prüf die Adresse.";
-        check();
-      } catch (err) { st.textContent = "Keine Verbindung. Bitte noch einmal versuchen."; check(); }
-    });
-  })();
+  /* Feedback und Warteliste pausiert: keine Verbindungen zu Supabase, keine Kennung im Browser.
+     Eine früher gesetzte Kennung wird entfernt. */
+  try { localStorage.removeItem("lotse_dev_id"); } catch (e) {}
 })();
 </script>
 

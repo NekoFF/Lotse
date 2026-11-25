@@ -107,3 +107,12 @@ describe("gesundheitlich – nichts davon geht an Suchdienste", () => {
     expect(gesundheitlich(t)).toBe(false);
   });
 });
+
+describe("Einwilligung auch bei Termin + Beschwerde", () => {
+  it("„Termin morgen 10 Uhr wegen Karies“ hat Gesundheitsbezug", () => {
+    const t = "ich brauche Termin morgen 10 Uhr wegen Karies";
+    const v0 = verstehe(t);
+    const v = v0.typ === "termin" ? verstehe(ohneZeit(t.replace(/termin/gi, " "))) : v0;
+    expect(v.typ === "anliegen" || gesundheitlich(t)).toBe(true);
+  });
+});

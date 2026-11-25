@@ -20,7 +20,7 @@ import { fehlerText, gpsStandort } from "./services/dienste";
 import { inDerNaehe, ortAnStelle, ortLaden, ortMitNamen, suchen as ortSuchen, type Ort } from "./services/orte";
 import { Ablage } from "./blatt/Ablage";
 import { Einwilligung, RechtlichesInhalt } from "./blatt/Rechtliches";
-import { allesLoeschen, einwilligen, hatEinwilligung } from "./lib/datenLoeschen";
+import { allesLoeschen, einwilligen, hatEinwilligung, widerrufen } from "./lib/datenLoeschen";
 import { Innenansicht } from "./gebaeude/Innenansicht";
 import { SCHULE } from "./gebaeude/schule";
 import { raumFinden, zoneAn } from "./gebaeude/modell";
@@ -170,8 +170,11 @@ export default function App() {
   const ersetze = (id: number, n: Omit<Nachricht, "id">) => setChat((c) => c.map((x) => (x.id === id ? { ...n, id } : x)));
 
   const chatSenden = async (t: string, nr: number, schonGesucht = false) => {
-    const v = verstehe(t);
-    if ((v.typ === "anliegen" || klingtNachBeschwerde(t)) && v.typ !== "notfall" && !hatEinwilligung()) {
+    // Einwilligung vor jeder Suche mit Gesundheitsbezug – auch wenn eine Zeitangabe („Termin morgen … wegen Karies“) davor steht
+    const v0 = verstehe(t);
+    let v = v0;
+    if (v0.typ === "termin") { const rest = ohneZeit(t.replace(/termin/gi, " ")); if (rest.length > 1) v = verstehe(rest); }
+    if (v0.typ !== "notfall" && v.typ !== "notfall" && (v.typ === "anliegen" || gesundheitlich(t)) && !hatEinwilligung()) {
       setEinwilligungFrage(() => () => chatSenden(t, nr, schonGesucht)); return;
     }
     sag({ von: "ich", text: t });
@@ -518,6 +521,7 @@ export default function App() {
               onNeu={() => gehe({ art: "termin", ort: null, zeit: null })} />
           )}
           {!fokus && ansicht.art === "info" && <InfoInhalt onZu={schliessen} onRecht={() => gehe({ art: "recht" })}
+            onWiderruf={hatEinwilligung() ? () => { widerrufen(); zeige("Einwilligung widerrufen. Vor der nächsten Praxissuche fragt Lotse wieder."); gehe({ art: "info" }); } : undefined}
             onLoeschen={async () => {
               if (!window.confirm("Alle Termine, gespeicherten Orte, Verlauf, Einwilligung und das KI-Modell auf diesem Gerät löschen? Das lässt sich nicht rückgängig machen.")) return;
               await allesLoeschen(); window.location.reload();

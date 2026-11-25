@@ -34,6 +34,11 @@ jobs:
           APP_VEROEFFENTLICHEN: "false"
         run: |
           mkdir -p out
+          # Projektseite: keine Inhalte von Dritten (Schriften, Datenbanken), solange keine vollständigen Datenschutzangaben vorliegen
+          if grep -Eq "fonts\.googleapis|fonts\.gstatic|supabase\.co" site/index.html; then
+            echo "::error::site/index.html lädt Inhalte von Dritten – Veröffentlichung abgebrochen."
+            exit 1
+          fi
           cp -r site/. out/
           if [ "$APP_VEROEFFENTLICHEN" = "true" ]; then
             # Ohne vollständiges Impressum/Datenschutz keine Veröffentlichung

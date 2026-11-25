@@ -16,10 +16,10 @@ export const RECHT_VOLLSTAENDIG = !Object.values(ANBIETER).some((v) => v.include
 /** Wer sieht was – jede Zeile muss zum Code passen (services/, map/, ki/, gebaeude/) */
 export const EMPFAENGER: { dienst: string; wer: string; was: string; wann: string }[] = [
   { dienst: "Webseite selbst", wer: "GitHub Pages (GitHub Inc., USA)", was: "IP-Adresse, aufgerufene Datei, Zeitpunkt (Server-Protokoll)", wann: "beim Laden der App" },
-  { dienst: "Karte", wer: "OpenFreeMap", was: "IP-Adresse, Kartenausschnitt", wann: "beim Anzeigen der Karte" },
+  { dienst: "Karte", wer: "OpenFreeMap (Open-Source-Projekt, tiles.openfreemap.org: Kacheln, Schriften, Symbole)", was: "IP-Adresse, Kartenausschnitt", wann: "beim Anzeigen der Karte" },
   { dienst: "Suche, Orte, Adressen", wer: "Nominatim (OpenStreetMap Foundation, UK)", was: "IP-Adresse, Suchbegriff bzw. Ort/Kategorie, Kartenausschnitt", wann: "beim Suchen oder Antippen eines Orts" },
   { dienst: "Wege", wer: "FOSSGIS e. V. (routing.openstreetmap.de)", was: "IP-Adresse, Start- und Zielkoordinaten", wann: "bei Wegzeiten und Routen" },
   { dienst: "Bus & Bahn", wer: "Transitous (MOTIS, Freiwilligenprojekt)", was: "IP-Adresse, Start, Ziel, Zeit", wann: "bei Bus-&-Bahn-Verbindungen und Terminen" },
-  { dienst: "Fotos von Orten", wer: "Wikimedia Commons / Wikidata (Wikimedia Foundation, USA)", was: "IP-Adresse, Bildname", wann: "wenn ein Ort ein verknüpftes Foto hat" },
-  { dienst: "KI auf dem Gerät", wer: "Hugging Face (USA)", was: "IP-Adresse, Abruf der Modelldatei", wann: "nur wenn du die KI einschaltest – dein Text verlässt das Gerät nicht" },
+  { dienst: "Fotos von Orten", wer: "Wikimedia Commons / Wikidata, Bilder von upload.wikimedia.org (Wikimedia Foundation, USA)", was: "IP-Adresse, Bildname", wann: "wenn ein Ort ein verknüpftes Foto hat" },
+  { dienst: "KI auf dem Gerät", wer: "Hugging Face (USA) und raw.githubusercontent.com (GitHub, USA)", was: "IP-Adresse, Abruf von Modell und Programmbibliothek", wann: "nur wenn du die KI einschaltest – dein Text verlässt das Gerät nicht" },
 ];

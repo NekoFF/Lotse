@@ -9,10 +9,11 @@ export async function allesLoeschen(): Promise<void> {
   } catch { /* egal */ }
   try {
     const dbs = (await indexedDB.databases?.()) ?? [];
-    for (const d of dbs) if (d.name && /webllm|mlc|tvmjs/i.test(d.name)) indexedDB.deleteDatabase(d.name);
+    for (const d of dbs) if (d.name && /webllm|mlc|tvmjs/i.test(d.name)) await new Promise<void>((fertig) => { const r = indexedDB.deleteDatabase(d.name!); r.onsuccess = r.onerror = r.onblocked = () => fertig(); });
   } catch { /* egal */ }
 }
 
 export const EINWILLIGUNG = "lotse.einwilligung.gesundheit";
 export const hatEinwilligung = () => { try { return localStorage.getItem(EINWILLIGUNG) === "ja"; } catch { return false; } };
+export const widerrufen = () => { try { localStorage.removeItem(EINWILLIGUNG); } catch { /* egal */ } };
 export const einwilligen = () => { try { localStorage.setItem(EINWILLIGUNG, "ja"); } catch { /* privates Fenster: gilt nur für diesen Aufruf */ } };

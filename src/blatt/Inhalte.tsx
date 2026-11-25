@@ -262,7 +262,7 @@ function DoctolibKnopf({ o }: { o: Ort }) {
 
 /* ---------- Daten & Quellen ---------- */
 
-export function InfoInhalt({ onZurueck, onZu, onRecht, onLoeschen }: { onZurueck?: () => void; onZu: () => void; onRecht?: () => void; onLoeschen?: () => void }) {
+export function InfoInhalt({ onZurueck, onZu, onRecht, onLoeschen, onWiderruf }: { onZurueck?: () => void; onZu: () => void; onRecht?: () => void; onLoeschen?: () => void; /** nur wenn eine Einwilligung besteht */ onWiderruf?: () => void }) {
   return (
     <div className="inhalt info-seite">
       <Kopf titel="Daten & Quellen" onZurueck={onZurueck} onZu={onZu} />
@@ -284,6 +284,7 @@ export function InfoInhalt({ onZurueck, onZu, onRecht, onLoeschen }: { onZurueck
       </p>
       <div className="werkzeuge">
         {onRecht && <button type="button" className="werkzeug-knopf" onClick={onRecht}><Info size={17} /><span>Impressum & Datenschutz</span></button>}
+        {onWiderruf && <button type="button" className="werkzeug-knopf" onClick={onWiderruf}><Zurueck size={17} /><span>Einwilligung widerrufen</span></button>}
         {onLoeschen && <button type="button" className="werkzeug-knopf gefahr" onClick={onLoeschen}><Schliessen size={17} /><span>Alle meine Daten löschen</span></button>}
       </div>
     </div>
