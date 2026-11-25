@@ -19,6 +19,8 @@ import { Notfall } from "./screens/Notfall";
 import { fehlerText, gpsStandort } from "./services/dienste";
 import { inDerNaehe, ortAnStelle, ortLaden, ortMitNamen, suchen as ortSuchen, type Ort } from "./services/orte";
 import { Ablage } from "./blatt/Ablage";
+import { Einwilligung, RechtlichesInhalt } from "./blatt/Rechtliches";
+import { allesLoeschen, einwilligen, hatEinwilligung } from "./lib/datenLoeschen";
 import { Innenansicht } from "./gebaeude/Innenansicht";
 import { SCHULE } from "./gebaeude/schule";
 import { raumFinden, zoneAn } from "./gebaeude/modell";
@@ -39,7 +41,8 @@ type Ansicht =
   | { art: "termin"; ort: Ort | null; zeit: Date | null; id?: string }
   | { art: "termine" }
   | { art: "treffpunkt" }
-  | { art: "info" };
+  | { art: "info" }
+  | { art: "recht" };
 
 /** Ohne Kartenbewegung: Wetzlar als Kartenmitte (nur Anzeige, nie als Startpunkt verwendet) */
 const WETZLAR: LngLat = [8.5044, 50.5558];
@@ -148,7 +151,10 @@ export default function App() {
     if (!desktop) setStufe("mittel");
   }, [desktop, nahe]);
 
+  /** Vor der ersten Praxissuche anhand einer Beschwerde: Einwilligung (Art. 9 DSGVO) */
+  const [einwilligungFrage, setEinwilligungFrage] = useState<(() => void) | null>(null);
   const fachSuche = useCallback((fach: FachId, z?: Zuordnung) => {
+    if (z && !hatEinwilligung()) { setEinwilligungFrage(() => () => fachSuche(fach, z)); return; }
     const f = FACHRICHTUNGEN[fach];
     liste(f.name, async () => (await inDerNaehe([fach === "zahn" ? "dentist" : "doctors"], nahe, 5)).filter((o) => o.fach === fach),
       { unter: z ? "passt zu deiner Beschreibung · keine Diagnose" : "in der Nähe", hinweis: z?.alternative ? `Auch möglich: ${z.alternative.name}` : undefined });
@@ -164,6 +170,10 @@ export default function App() {
   const ersetze = (id: number, n: Omit<Nachricht, "id">) => setChat((c) => c.map((x) => (x.id === id ? { ...n, id } : x)));
 
   const chatSenden = async (t: string, nr: number, schonGesucht = false) => {
+    const v = verstehe(t);
+    if ((v.typ === "anliegen" || klingtNachBeschwerde(t)) && v.typ !== "notfall" && !hatEinwilligung()) {
+      setEinwilligungFrage(() => () => chatSenden(t, nr, schonGesucht)); return;
+    }
     sag({ von: "ich", text: t });
     setText("");
     let a = verstehe(t);
@@ -507,13 +517,19 @@ export default function App() {
               onTermin={(t) => gehe({ art: "termin", ort: t.ort, zeit: null, id: t.id })}
               onNeu={() => gehe({ art: "termin", ort: null, zeit: null })} />
           )}
-          {!fokus && ansicht.art === "info" && <InfoInhalt onZu={schliessen} />}
+          {!fokus && ansicht.art === "info" && <InfoInhalt onZu={schliessen} onRecht={() => gehe({ art: "recht" })}
+            onLoeschen={async () => {
+              if (!window.confirm("Alle Termine, gespeicherten Orte, Verlauf, Einwilligung und das KI-Modell auf diesem Gerät löschen? Das lässt sich nicht rückgängig machen.")) return;
+              await allesLoeschen(); window.location.reload();
+            }} />}
+          {!fokus && ansicht.art === "recht" && <RechtlichesInhalt onZurueck={zurueck} onZu={schliessen} />}
         </div>
     </>
   );
 
   return (
     <div className={`app ${desktop ? "pc" : "tel"}${notfall ? " im-notfall" : ""}`}>
+      {einwilligungFrage && <Einwilligung onNein={() => setEinwilligungFrage(null)} onJa={() => { einwilligen(); const f = einwilligungFrage; setEinwilligungFrage(null); f(); }} />}
       {innen && <Innenansicht gebaeude={SCHULE} raum={innen.raum} onZu={() => setInnen(null)} on3D={(ebene, zone) => { setInnen(null); setInnen3d({ ebene, zone }); }} />}
       {innen3d && <Innen3D gebaeude={SCHULE} ebene={innen3d.ebene} zone={innen3d.zone} aussen={!!innen3d.aussen}
         onAussen={(aussen) => setInnen3d((v) => (v ? { ...v, aussen } : v))}

@@ -36,6 +36,11 @@ jobs:
           mkdir -p out
           cp -r site/. out/
           if [ "$APP_VEROEFFENTLICHEN" = "true" ]; then
+            # Ohne vollständiges Impressum/Datenschutz keine Veröffentlichung
+            if grep -q "BITTE EINTRAGEN" src/rechtliches.ts; then
+              echo "::error::Impressum/Datenschutz unvollständig (src/rechtliches.ts) – App wird nicht veröffentlicht."
+              exit 1
+            fi
             mkdir -p out/app
             cp -r dist/. out/app/
           else

@@ -1,5 +1,5 @@
 import { huellenEbene, type HuellenModus } from "../gebaeude/huellenEbene";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import maplibregl, { type Map as MlMap, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { DIENSTE } from "../config";
@@ -68,6 +68,7 @@ const LIZENZ_URL = `${import.meta.env.BASE_URL}karte/LIZENZ.txt`;
 
 export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, abstand, onPin, onPinHover, dreiD = false, onKarteTipp, onMitte, onLeer, gruppe, innen3d, onInnenTipp }: Props) {
   const box = useRef<HTMLDivElement>(null);
+  const [bereit, setBereit] = useState(false);
   const map = useRef<MlMap | null>(null);
   const markers = useRef(new Map<string, { m: Marker; el: HTMLButtonElement }>());
   const routeRef = useRef(route);
@@ -106,6 +107,7 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
       touchPitch: false,
     });
     m.touchZoomRotate.disableRotation();
+    m.once("idle", () => setBereit(true));
     m.on("style.load", () => {
       symboleEinsetzen(m, themeRef.current);
       zeige3D(m, dreiDRef.current && !innenRef.current);
@@ -278,7 +280,9 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     for (const [id, { m: mk }] of markers.current) {
       if (!neu.has(id)) { mk.remove(); markers.current.delete(id); }
     }
-    for (const p of pins) {
+    // Viele Treffer: nur die nächsten 8 mit Namen, der Rest als Punkt (sonst überdecken sich die Schilder)
+    const mitNamen = pins.length > 10 ? 8 : pins.length;
+    pins.forEach((p, i) => {
       let e = markers.current.get(p.id);
       if (!e) {
         const el = document.createElement("button");
@@ -294,8 +298,10 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
       e.el.textContent = p.label;
       e.el.setAttribute("aria-label", p.label);
       e.el.classList.toggle("aktiv", p.aktiv);
-      e.el.style.zIndex = p.aktiv ? "3" : "1";
-    }
+      e.el.classList.toggle("klein", i >= mitNamen && !p.aktiv);
+      e.el.title = p.label;
+      e.el.style.zIndex = p.aktiv ? "3" : i < mitNamen ? "2" : "1";
+    });
   }, [pins]);
 
   // Ausschnitt einpassen – nur wenn sich der Inhalt ändert (nicht bei jeder Größenänderung des Blatts: das ruckelte)
@@ -322,7 +328,12 @@ export function LotseMap({ theme, start, pins, route, rahmen, rahmenSchluessel, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rahmenSchluessel]);
 
-  return <div ref={box} className="karte" aria-label="Karte" />;
+  return (
+    <>
+      <div ref={box} className="karte" aria-label="Karte" />
+      {!bereit && <div className="karte-laedt" role="status"><span className="karte-laedt-punkt" />Karte lädt …</div>}
+    </>
+  );
 }
 
 const INNEN_EBENEN: [string, string, number][] = [

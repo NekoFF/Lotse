@@ -255,7 +255,7 @@
 .los-box.warnung { box-shadow: inset 0 0 0 1.5px var(--rot); }
 .segment button { font-size: 12px; }
 .werkzeuge { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
-.werkzeug-knopf { display: flex; align-items: center; justify-content: center; gap: 7px; height: 40px; border-radius: 12px; background: var(--flaeche); font-size: 13px; font-weight: 600; color: var(--akzent); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.werkzeug-knopf { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 58px; padding: 6px 4px; text-align: center; line-height: 1.15; border-radius: 12px; background: var(--flaeche); font-size: 13px; font-weight: 600; color: var(--akzent); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
 .zeile-t .rot-t { font-size: 12px; font-weight: 600; }
 .linien { display: flex !important; flex-wrap: wrap; gap: 4px; align-items: center; white-space: normal !important; }
 .linie-chip { display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px; border-radius: 5px; background: var(--ink); color: var(--flaeche); font-size: 11px; font-weight: 700; }
@@ -281,3 +281,23 @@
 .zu-t { color: var(--rot) !important; font-weight: 600; font-size: 12px; }
 .leise-t { color: var(--text-2, #8a8f98) !important; font-size: 12px; }
 .doctolib-name { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.beispiele { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; margin: 0 -2px; scrollbar-width: none; }
+.beispiele::-webkit-scrollbar { display: none; }
+.beispiel { flex: 0 0 auto; max-width: 220px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 10px 12px; border-radius: 14px; background: var(--flaeche); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.beispiel b { font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.beispiel span { font-size: 12px; color: var(--ink2); }
+
+.recht-tabelle { display: flex; flex-direction: column; border-radius: 14px; background: var(--flaeche); overflow: hidden; }
+.recht-zeile { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-bottom: 1px solid var(--linie); font-size: 14px; }
+.recht-zeile:last-child { border-bottom: 0; }
+.recht p { font-size: 14px; line-height: 1.5; }
+.einwilligung { display: flex; flex-direction: column; gap: 12px; }
+.einwilligung p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink2); }
+.einwilligung .knoepfe { display: flex; gap: 8px; }
+.einwilligung .knoepfe > * { flex: 1; }
+.einwilligung-schleier { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(10, 12, 20, 0.35); padding: 16px; }
+@media (min-width: 900px) { .einwilligung-schleier { align-items: center; } }
+.einwilligung-schleier .einwilligung { max-width: 440px; width: 100%; padding: 20px; border-radius: 22px; background: var(--flaeche); box-shadow: var(--schatten); }
+.einwilligung h2 { margin: 0; font-size: 19px; }
+.werkzeug-knopf.gefahr { color: var(--rot); }

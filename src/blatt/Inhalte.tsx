@@ -12,7 +12,7 @@ import { TRANSITOUS_QUELLEN } from "../services/oepnv";
 import { PUFFER_MIN, type Termin } from "../lib/termine";
 import { telLink } from "../services/dienste";
 import type { Ort } from "../services/orte";
-import { Auto, Brief, Bus, Gebaeude, Gruppe, Essen, Extern, Gehen, Kalender, Merken, Pille, Rad, Route as RouteIc, Schliessen, Standort, Stern, Stetho, Suche, Tasse, Teilen, Telefon, Uhr, Wagen, Zurueck } from "../ui/icons";
+import { Auto, Brief, Bus, Gebaeude, Gruppe, Info, Essen, Extern, Gehen, Kalender, Merken, Pille, Rad, Route as RouteIc, Schliessen, Standort, Stern, Stetho, Suche, Tasse, Teilen, Telefon, Uhr, Wagen, Zurueck } from "../ui/icons";
 
 export const uhr = (d: Date) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 export const tagKurz = (d: Date) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" });
@@ -262,7 +262,7 @@ function DoctolibKnopf({ o }: { o: Ort }) {
 
 /* ---------- Daten & Quellen ---------- */
 
-export function InfoInhalt({ onZurueck, onZu }: { onZurueck?: () => void; onZu: () => void }) {
+export function InfoInhalt({ onZurueck, onZu, onRecht, onLoeschen }: { onZurueck?: () => void; onZu: () => void; onRecht?: () => void; onLoeschen?: () => void }) {
   return (
     <div className="inhalt info-seite">
       <Kopf titel="Daten & Quellen" onZurueck={onZurueck} onZu={onZu} />
@@ -282,6 +282,10 @@ export function InfoInhalt({ onZurueck, onZu }: { onZurueck?: () => void; onZu: 
         {" "}<a href={TRANSITOUS_QUELLEN} target="_blank" rel="noopener noreferrer">Fahrplandaten: Transitous und Quellen</a> ·
         {" "}<a href={DIENSTE.osmFehlerMelden} target="_blank" rel="noopener noreferrer">Kartenfehler melden</a> · Schulprojekt der Werner-von-Siemens-Schule Wetzlar.
       </p>
+      <div className="werkzeuge">
+        {onRecht && <button type="button" className="werkzeug-knopf" onClick={onRecht}><Info size={17} /><span>Impressum & Datenschutz</span></button>}
+        {onLoeschen && <button type="button" className="werkzeug-knopf gefahr" onClick={onLoeschen}><Schliessen size={17} /><span>Alle meine Daten löschen</span></button>}
+      </div>
     </div>
   );
 }
@@ -335,6 +339,15 @@ export function vorschlaegeFuer(text: string, zuletzt: string[], termine: Termin
   return aus.slice(0, 8);
 }
 
+/** Beispiele für neue Nutzer: zeigen in einem Tipp, was Lotse kann */
+const BEISPIELE: { text: string; was: string }[] = [
+  { text: "Zahn abgebrochen", was: "Beschwerde → passende Praxis" },
+  { text: "Pizza nahe Römer in Frankfurt jetzt offen", was: "Essen, geöffnet" },
+  { text: "Termin morgen 10 Uhr Hausarzt", was: "Termin + Losgehzeit" },
+  { text: "Raum 152", was: "Schule innen" },
+  { text: "Bahnhof Gießen", was: "Ort & Route" },
+];
+
 export function VorschlagInhalt({ text, zuletzt, termine, gespeichert, ki, onWahl, onInfo, onVerlaufLoeschen, onZu, onTermine, onTreffpunkt, onGebaeude }: {
   text: string; zuletzt: string[]; termine: Termin[]; gespeichert: Ort[]; ki: KiStatus;
   onWahl: (v: Vorschlag) => void; onInfo: () => void; onVerlaufLoeschen: () => void; onZu: () => void;
@@ -368,6 +381,16 @@ export function VorschlagInhalt({ text, zuletzt, termine, gespeichert, ki, onWah
         {onTreffpunkt && <button type="button" className="werkzeug-knopf" onClick={onTreffpunkt}><Gruppe size={17} /><span>Treffpunkt</span></button>}
         {onGebaeude && <button type="button" className="werkzeug-knopf" onClick={onGebaeude}><Gebaeude size={17} /><span>Schule innen</span></button>}
       </div>
+      <section>
+        <h3 className="abschnitt">Probier mal</h3>
+        <div className="beispiele">
+          {BEISPIELE.map((b) => (
+            <button key={b.text} type="button" className="beispiel" onClick={() => onWahl({ art: "suchen", text: b.text })}>
+              <b>{b.text}</b><span>{b.was}</span>
+            </button>
+          ))}
+        </div>
+      </section>
       {zuletzt.length > 0 && (
         <section>
           <div className="abschnitt-kopf"><h3 className="abschnitt">Zuletzt</h3><button type="button" className="link klein-link" onClick={onVerlaufLoeschen}>Löschen</button></div>
