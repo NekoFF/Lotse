@@ -60,6 +60,14 @@ Dima: „Push wie nötig, nicht fragen“; App bleibt unveröffentlicht, bis er 
 - **Echte Dächer (17.11.)**: `huelle3d.json` (Dreiecke aller Dach- und Wandflächen aus LoD2, lokale Meter um MITTE, erzeugt von `georef_lod2.py`) + eigene WebGL-Ebene `huellenEbene.ts` (MapLibre custom layer, Matrix aus `defaultProjectionData.mainMatrix`, Licht, Glasdach durchscheinend). 3D-Steuerung: „Außen“ (Haus geschlossen) / „Innen“ (Dächer weg, Wände durchscheinend, Etagen).
 - Offen: WCs nicht markiert; keine einzelnen Wände zwischen Räumen. Foto und Rohdaten liegen NICHT im Repo; vor öffentlicher Nutzung Schule fragen.
 
+## 4e. Für alle nutzbar + Recht (25.11.2026)
+- Startblatt „Probier mal“ (Beispiele), ruhigere Karte (nur 8 Namen), „Karte lädt …“.
+- `src/rechtliches.ts` (Anbieterangaben **BITTE EINTRAGEN** – Dima), `blatt/Rechtliches.tsx` (Impressum § 5 DDG, Datenschutz mit „Wer sieht was“, Drittländer, Rechte, HBDI), Einwilligung vor Praxissuche aus Beschwerde (Art. 9; auch Chat/Termin), „Einwilligung widerrufen“, „Alle meine Daten löschen“ (`lib/datenLoeschen.ts`).
+- Workflow: App nur mit vollständigen Angaben; Projektseite bricht ab, wenn sie Google Fonts/Supabase lädt.
+- **Projektseite (live) am 25.11. entschärft:** Google Fonts entfernt (Systemschriften), Online-Umfrage pausiert (keine Supabase-Abfragen, Gerätekennung `lotse_dev_id` wird gelöscht). Bereits in Supabase gespeicherte Umfrage-/Wartelisten-Einträge unverändert – Dima entscheidet über Löschung.
+- Zweitprüfung (Review-Agent) erledigt; nicht geprüft: DPF-Zertifizierung je Anbieter, Supabase-Region/AV-Vertrag.
+- **Lotse Scan** (iPhone-App, `~/Documents/LotseScan`, nur lokal): ARKit-Rundgang, Punkte, geführte 360°-Aufnahme, Verpixeln von Personen, Raumkarte, Betrachter, Export per AirDrop; Mac: `werkzeuge/panorama.py`. Kostenlose Signierung = 7 Tage, dann neu installieren.
+
 ## 5. Umstellung auf Live-Daten – lauffähig in `arbeit/echte-daten` (NOCH NICHT in `main`)
 Stand 13.11. abends: Commit 1e798c5 (Live-Daten) + Prüfrunde danach (Claude lokal, im echten Browser mit echten Diensten geprüft, Start Bahnhofstraße 1 Wetzlar: Orthopädie 5, Zahnmedizin 23, HNO 1 Praxis; Weg, Plan B, Öffnungszeiten, Kontakt aus OSM).
 Prüfrunde hat behoben:
